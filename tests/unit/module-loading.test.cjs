@@ -27,6 +27,8 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(api.exerciseCatalog.length, 17);
     assert.deepEqual(api.validateExerciseCatalog(api.exerciseCatalog), []);
     assert.deepEqual(api.getApprovedExercises(), api.exerciseCatalog);
+    assert.ok(Array.isArray(api.EQUIPMENT_IDS) && api.EQUIPMENT_IDS.includes('stable_chair'));
+    assert.deepEqual(api.DOSE_KEYS, ['sets', 'reps', 'rpe', 'restSec', 'durationMin', 'holdSec']);
   });
 
   await t.test('tracker fields export all 25 fields', () => {
