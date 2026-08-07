@@ -1,13 +1,18 @@
 (function(root, factory) {
   const isCommonJS = typeof module === 'object' && module.exports;
   const Move28 = isCommonJS ? require('../namespace.js') : (root.Move28 = root.Move28 || {});
-  const api = factory();
+  const api = factory(root);
   Move28.domain = Object.assign(Move28.domain || {}, api);
   if (isCommonJS) module.exports = api;
-})(globalThis, function() {
+})(globalThis, function(root) {
   'use strict';
 
+  const nativeStructuredClone = typeof root.structuredClone === 'function'
+    ? root.structuredClone.bind(root)
+    : null;
   const RULE_VERSION = 'pilot-v1';
+  const MIN_AGE = 0;
+  const MAX_AGE = 120;
   const RISK_LEVELS = Object.freeze(['normal', 'conservative', 'manual_review', 'stop']);
   const PRIORITY = Object.freeze({ normal: 0, conservative: 1, manual_review: 2, stop: 3 });
   const TRI_STATE_VALUES = Object.freeze(['no', 'yes', 'unsure']);
@@ -15,7 +20,8 @@
   const ACTIVITY_STATUS_VALUES = Object.freeze(['active', 'returning', 'inactive_long_term']);
   const STABLE_PAIN_VALUES = Object.freeze(['none', 'mild_stable', 'unsure', 'acute_or_worsening']);
 
-  // 字段顺序也是理由输出顺序的一部分；修改顺序必须升级规则版本。
+  // 任何风险语义、理由码或理由顺序变化都必须升级 RULE_VERSION。
+  // 字段顺序也是理由输出顺序的一部分。
   const STOP_FIELD_DEFINITIONS = Object.freeze([
     Object.freeze({ field: 'chestSymptoms', stem: 'chest_symptoms', label: '胸部症状' }),
     Object.freeze({ field: 'exertionalDizziness', stem: 'exertional_dizziness', label: '活动时头晕' }),
@@ -69,10 +75,11 @@
       if (PRIORITY[nextLevel] > PRIORITY[level]) level = nextLevel;
     }
 
-    // 只复制风险规则认可的自有数据属性。描述符读取不会触发 getter，且所有
-    // Proxy/撤销 Proxy 异常均在边界内收敛为人工复核，后续规则不再接触 intake。
+    // 先检查所有自有属性均为数据描述符，再用初始化时捕获的 structuredClone
+    // 拒绝 Proxy 和不可克隆值。规则只读取白名单描述符快照，不读取 clone 结果。
     const source = Object.create(null);
     const presentFields = new Set();
+    const descriptors = new Map();
     let intakeUnreadable = false;
     let canReadProperties = intake !== null && typeof intake === 'object';
     if (canReadProperties) {
@@ -87,19 +94,41 @@
     if (!canReadProperties) {
       if (intake !== null && typeof intake === 'object') intakeUnreadable = true;
     } else {
-      for (const field of KNOWN_INTAKE_FIELDS) {
-        let descriptor;
+      let ownKeys = [];
+      try {
+        ownKeys = Reflect.ownKeys(intake);
+      } catch (_error) {
+        intakeUnreadable = true;
+      }
+
+      for (const key of ownKeys) {
         try {
-          descriptor = Object.getOwnPropertyDescriptor(intake, field);
+          const descriptor = Object.getOwnPropertyDescriptor(intake, key);
+          if (descriptor === undefined || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+            intakeUnreadable = true;
+          } else {
+            descriptors.set(key, descriptor);
+          }
         } catch (_error) {
           intakeUnreadable = true;
-          continue;
         }
-        if (descriptor === undefined) continue;
-        if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+      }
+
+      if (!intakeUnreadable) {
+        if (nativeStructuredClone === null) {
           intakeUnreadable = true;
-          continue;
+        } else {
+          try {
+            nativeStructuredClone(intake);
+          } catch (_error) {
+            intakeUnreadable = true;
+          }
         }
+      }
+
+      for (const field of KNOWN_INTAKE_FIELDS) {
+        const descriptor = descriptors.get(field);
+        if (descriptor === undefined) continue;
         presentFields.add(field);
         source[field] = descriptor.value;
       }
@@ -109,8 +138,10 @@
       add('manual_review', 'intake_unreadable', 'intake', '部分输入无法安全读取，需要人工复核。');
     }
 
-    if (!Number.isFinite(source.age) || !Number.isInteger(source.age)) {
+    if (!presentFields.has('age') || typeof source.age !== 'number' || Number.isNaN(source.age)) {
       add('manual_review', 'age_invalid_or_missing', 'age', '年龄缺失或不是有限整数，需要人工复核。');
+    } else if (!Number.isSafeInteger(source.age) || source.age < MIN_AGE || source.age > MAX_AGE) {
+      add('manual_review', 'age_out_of_range', 'age', '年龄超出产品支持的有效输入范围，需要人工复核。');
     } else if (source.age < 16) {
       add('manual_review', 'age_below_16', 'age', '年龄低于16岁，需要人工复核。');
     }
@@ -136,7 +167,7 @@
         add('stop', `${definition.stem}_reported`, definition.field, `已报告${definition.label}，应停止自动生成计划。`);
       } else if (value === 'unsure') {
         add('stop', `${definition.stem}_uncertain`, definition.field, `${definition.label}不确定，按停止风险处理。`);
-      } else if (value !== 'no') {
+      } else if (!TRI_STATE_VALUES.includes(value)) {
         add('stop', `${definition.stem}_invalid`, definition.field, `${definition.label}答案无效，按不确定的停止风险处理。`);
       }
     }
@@ -151,7 +182,7 @@
         add('stop', 'doctor_restriction_prohibited', 'doctorRestriction', '医生已明确禁止，应停止自动生成计划。');
       } else if (restriction === 'unsure') {
         add('manual_review', 'doctor_restriction_uncertain', 'doctorRestriction', '是否存在医生限制不确定，需要人工复核。');
-      } else if (restriction !== 'none') {
+      } else if (!DOCTOR_RESTRICTION_VALUES.includes(restriction)) {
         add('manual_review', 'doctor_restriction_invalid', 'doctorRestriction', '医生限制答案无效，需要人工复核。');
       }
     }
@@ -163,7 +194,7 @@
         add('manual_review', `${definition.stem}_reported`, definition.field, `已报告${definition.label}，需要人工复核。`);
       } else if (value === 'unsure') {
         add('manual_review', `${definition.stem}_uncertain`, definition.field, `${definition.label}不确定，需要人工复核。`);
-      } else if (value !== 'no') {
+      } else if (!TRI_STATE_VALUES.includes(value)) {
         add('manual_review', `${definition.stem}_invalid`, definition.field, `${definition.label}答案无效，按不确定风险人工复核。`);
       }
     }
@@ -176,7 +207,7 @@
         add('manual_review', 'stable_pain_uncertain', 'stablePain', '疼痛状态不确定，需要人工复核。');
       } else if (pain === 'acute_or_worsening') {
         add('stop', 'stable_pain_acute_or_worsening', 'stablePain', '疼痛急性或正在加重，应停止自动生成计划。');
-      } else if (pain !== 'none') {
+      } else if (!STABLE_PAIN_VALUES.includes(pain)) {
         add('manual_review', 'stable_pain_invalid', 'stablePain', '疼痛答案无效，按不确定风险人工复核。');
       }
     }
@@ -187,7 +218,7 @@
         add('conservative', 'activity_returning', 'activityStatus', '正在恢复训练，应采用保守方案。');
       } else if (activity === 'inactive_long_term') {
         add('conservative', 'activity_inactive_long_term', 'activityStatus', '长期不活动，应采用保守方案。');
-      } else if (activity !== 'active') {
+      } else if (!ACTIVITY_STATUS_VALUES.includes(activity)) {
         add('manual_review', 'activity_status_invalid', 'activityStatus', '活动状态答案无效，需要人工复核。');
       }
     }
@@ -199,6 +230,8 @@
     evaluateRisk,
     PRIORITY,
     RULE_VERSION,
+    MIN_AGE,
+    MAX_AGE,
     RISK_LEVELS,
     TRI_STATE_VALUES,
     DOCTOR_RESTRICTION_VALUES,

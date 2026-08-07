@@ -40,6 +40,19 @@ test('三条核心分流断言不可回归', () => {
   assert.equal(evaluate({ age: 17, redFlags: false }).level, 'normal');
 });
 
+test('年龄仅接受 0～120 的安全整数，并导出产品输入边界', () => {
+  const api = loadScript('riskEngine');
+  assert.equal(api.MIN_AGE, 0);
+  assert.equal(api.MAX_AGE, 120);
+  for (const age of [-1, 121, 1e100, Number.MAX_SAFE_INTEGER + 1, Infinity]) {
+    const result = api.evaluateRisk({ age, redFlags: false });
+    assert.notEqual(result.level, 'normal');
+    assert.ok(result.reasons.some(reason => reason.code === 'age_out_of_range'));
+  }
+  assert.equal(api.evaluateRisk({ age: 16, redFlags: false }).level, 'normal');
+  assert.equal(api.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
+});
+
 test('固定优先级确保低风险规则不能覆盖高风险，且所有理由保留', () => {
   const api = loadScript('riskEngine');
   assert.deepEqual(api.PRIORITY, { normal: 0, conservative: 1, manual_review: 2, stop: 3 });
@@ -154,6 +167,20 @@ test('恶意 getter 永不执行，已知字段不可读时固定人工复核且
   assert.equal(safetyResult.level, 'manual_review');
   assert.equal(safetyResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
   assert.ok(safetyResult.reasons.some(reason => reason.code === 'incomplete_safety_screen'));
+
+  let unknownCalls = 0;
+  const unknownGetter = { age: 30, redFlags: false };
+  Object.defineProperty(unknownGetter, 'unknownHealthField', {
+    enumerable: true,
+    get() {
+      unknownCalls += 1;
+      throw new Error('UNKNOWN_SECRET_THROW');
+    }
+  });
+  const unknownResult = evaluate(unknownGetter);
+  assert.equal(unknownCalls, 0);
+  assert.notEqual(unknownResult.level, 'normal');
+  assert.equal(unknownResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
 });
 
 test('抛异常的描述符 Proxy 与 revoked Proxy 均不抛、不判 normal 且不泄露异常文本', () => {
@@ -175,6 +202,32 @@ test('抛异常的描述符 Proxy 与 revoked Proxy 均不抛、不判 normal �
   assert.doesNotThrow(() => { revokedResult = evaluate(revocable.proxy); });
   assert.notEqual(revokedResult.level, 'normal');
   assert.ok(revokedResult.reasons.some(reason => reason.code === 'intake_unreadable'));
+});
+
+test('撒谎 Proxy 即使伪造安全描述符并隐藏停止值，也必须 canonical 门禁失败', () => {
+  const target = { age: 30, redFlags: true, chestSymptoms: 'yes' };
+  const lyingProxy = new Proxy(target, {
+    ownKeys() {
+      return ['age', 'redFlags'];
+    },
+    getOwnPropertyDescriptor(_target, key) {
+      if (key === 'age') return { configurable: true, enumerable: true, writable: true, value: 30 };
+      if (key === 'redFlags') return { configurable: true, enumerable: true, writable: true, value: false };
+      return undefined;
+    },
+    getPrototypeOf() {
+      return Object.prototype;
+    }
+  });
+  const result = evaluate(lyingProxy);
+  assert.notEqual(result.level, 'normal');
+  assert.equal(result.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+});
+
+test('普通 plain data 与 null prototype 数据仍正常按规则求值', () => {
+  assert.equal(evaluate({ age: 17, redFlags: false }).level, 'normal');
+  const nullPrototype = Object.assign(Object.create(null), { age: 30, redFlags: false, chestSymptoms: 'yes' });
+  assert.equal(evaluate(nullPrototype).level, 'stop');
 });
 
 test('用户修改答案时重新计算，可由低到高及高到低变化且不缓存旧结论', () => {
@@ -201,9 +254,19 @@ test('输出只包含公共契约，不泄露原始 intake 或额外健康值', 
 
 test('经典浏览器 script 加载安全并挂载到 Move28.domain，且不需要 DOM 或 storage', () => {
   const source = fs.readFileSync(path.join(projectRoot, 'src', 'domain', 'risk-engine.js'), 'utf8');
-  const context = { globalThis: {} };
+  const context = { globalThis: { structuredClone } };
   vm.createContext(context);
   vm.runInContext(source, context);
   assert.equal(typeof context.globalThis.Move28.domain.evaluateRisk, 'function');
   assert.equal(context.globalThis.Move28.domain.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
+});
+
+test('经典浏览器环境缺少 structuredClone 时 fail closed', () => {
+  const source = fs.readFileSync(path.join(projectRoot, 'src', 'domain', 'risk-engine.js'), 'utf8');
+  const context = { globalThis: {} };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+  const result = context.globalThis.Move28.domain.evaluateRisk({ age: 17, redFlags: false });
+  assert.notEqual(result.level, 'normal');
+  assert.equal(result.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
 });
