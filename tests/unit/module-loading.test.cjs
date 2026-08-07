@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { modules, clearMove28ModuleCache } = require('../helpers/load-script.cjs');
+const { modules, clearMove28ModuleCache, loadScript } = require('../helpers/load-script.cjs');
 
 test('all static modules load through CommonJS with useful exports', async (t) => {
   await t.test('namespace exports the shared application shape', () => {
@@ -58,4 +58,13 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     const api = require(modules.app);
     assert.equal(typeof api.init, 'function');
   });
+});
+
+test('先加载legacy计划再加载目录仍共享同一个缓存实例', () => {
+  clearMove28ModuleCache();
+  const { legacyDemoPlan } = loadScript('legacyPlan');
+  const { exerciseCatalog } = loadScript('exerciseCatalog');
+  const namespace = loadScript('namespace');
+  assert.strictEqual(legacyDemoPlan.exercises, exerciseCatalog);
+  assert.strictEqual(namespace.data.exerciseCatalog, exerciseCatalog);
 });

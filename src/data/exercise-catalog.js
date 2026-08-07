@@ -6,11 +6,20 @@ Move28.data=Object.assign(Move28.data||{},api);
 if(isCommonJS)module.exports=api;
 })(globalThis,function(){
 'use strict';
-const PATTERNS=['mobility','knee_dominant','knee_flexion','hip_extension','horizontal_push','horizontal_pull','anti_rotation','knee_extension','hip_abduction','anti_extension','cardio','locomotion','hinge'];
-const SETTINGS=['gym','home','outdoors'];
-const REVIEW_STATUSES=['draft','approved','retired'];
-const EQUIPMENT_IDS=['stable_chair','stable_high_bench','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','leg_extension_machine','hip_abduction_machine','wall','elliptical_trainer','treadmill','flat_walking_route'];
-const DOSE_KEYS=['sets','reps','rpe','restSec','durationMin','holdSec'];
+function deepFreeze(value,seen=new WeakSet()){
+  if(value===null||(typeof value!=='object'&&typeof value!=='function')||seen.has(value))return value;
+  seen.add(value);
+  for(const key of Reflect.ownKeys(value)){
+    const descriptor=Object.getOwnPropertyDescriptor(value,key);
+    if(descriptor&&Object.hasOwn(descriptor,'value'))deepFreeze(descriptor.value,seen);
+  }
+  return Object.freeze(value);
+}
+const PATTERNS=deepFreeze(['mobility','knee_dominant','knee_flexion','hip_extension','horizontal_push','horizontal_pull','anti_rotation','knee_extension','hip_abduction','anti_extension','cardio','locomotion','hinge']);
+const SETTINGS=deepFreeze(['gym','home','outdoors']);
+const REVIEW_STATUSES=deepFreeze(['draft','approved','retired']);
+const EQUIPMENT_IDS=deepFreeze(['stable_chair','stable_high_bench','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','leg_extension_machine','hip_abduction_machine','wall','elliptical_trainer','treadmill','flat_walking_route']);
+const DOSE_KEYS=deepFreeze(['sets','reps','rpe','restSec','durationMin','holdSec']);
 const strengthDose={sets:[2,3],reps:[8,12],rpe:[5,6],restSec:[60,90]};
 const warmupDose={sets:[1,1],reps:[10,10],rpe:[1,3],restSec:[0,30]};
 const cardioDose={sets:[1,1],reps:[1,1],rpe:[4,5],restSec:[0,0],durationMin:[8,40]};
@@ -26,7 +35,7 @@ function exercise(meta,legacy){
     groups:[...legacy.groups],start:legacy.start,steps:legacy.steps,breath:legacy.breath,errors:legacy.errors,safety:legacy.safety
   });
 }
-const exerciseCatalog=[
+const exerciseCatalog=deepFreeze([
 exercise({id:'seated-leg-raise',name:'坐姿抬腿',pattern:'mobility',settings:['gym','home'],equipmentOptions:[['stable_chair']],difficulty:1,dose:warmupDose,gif:'assets/gifs/02_坐姿抬腿.gif'},{groups:['力量A','力量B'],start:'坐在有靠背的椅子上，双脚踩地，腹部轻收，双手扶椅侧保持稳定。',steps:'交替抬起一侧膝盖约5～10厘米，再缓慢放下；躯干保持直立，不向后甩。',breath:'抬腿时呼气，放下时吸气。',errors:'用身体后仰借力；动作过快；抬得过高导致腰部紧张。',safety:'只作为热身；腰部不适时减小幅度。'}),
 exercise({id:'ankle-circle',name:'脚踝绕环',pattern:'mobility',settings:['gym','home'],equipmentOptions:[['stable_chair']],difficulty:1,dose:warmupDose,gif:'assets/gifs/03_脚踝绕环.gif'},{groups:['力量A','力量B'],start:'坐稳，一只脚稍离地，膝盖保持不动。',steps:'用脚尖缓慢画圆，顺时针10次、逆时针10次，然后换脚。',breath:'自然呼吸。',errors:'小腿和膝盖跟着大幅摆动；速度过快。',safety:'踝部出现锐痛时停止；不要强压活动范围。'}),
 exercise({id:'seated-leg-press',name:'坐姿腿举',pattern:'knee_dominant',settings:['gym'],equipmentOptions:[['leg_press_machine']],difficulty:2,dose:strengthDose,regressionIds:['high-seat-sit-to-stand'],gif:'assets/gifs/04_坐姿腿举.gif'},{groups:['力量A'],start:'背部和臀部贴靠垫，双脚与肩同宽放在踏板中部，膝盖与脚尖同向。',steps:'解除安全锁后缓慢屈膝至舒适范围；脚掌均匀发力推开踏板；顶端不锁死膝盖，再受控返回。',breath:'推起时呼气，回落时吸气；绝不憋气。',errors:'膝盖内扣；臀部离开坐垫；下放过深；顶端锁膝；追求大重量。',safety:'先轻重量；膝或腰出现锐痛立即停止；高血压不做力竭。'}),
@@ -44,22 +53,33 @@ exercise({id:'elliptical-trainer',name:'椭圆机／交叉训练机',pattern:'ca
 exercise({id:'flat-walk',name:'平地慢走',pattern:'locomotion',settings:['gym','home','outdoors'],equipmentOptions:[['treadmill'],['flat_walking_route']],difficulty:1,dose:cardioDose,gif:'assets/gifs/16_平地慢走.gif'},{groups:['力量A','力量B','有氧C'],start:'跑步机坡度设为0；先站稳、系好鞋带，再从最低速度启动。',steps:'力量日前慢走8～10分钟热身；有氧阶段保持自然小步幅，结束前逐步降速3～5分钟。只走路，不跑步。',breath:'自然呼吸，能说短句。',errors:'扶住扶手悬挂身体；跨大步；坡度过高；突然下机。',safety:'GIF来源展示跑台步行轨迹；实际计划保持0坡度。平衡不稳时降低速度并扶固定把手，仍不稳则停止。'}),
 exercise({id:'hamstring-stretch',name:'大腿后侧拉伸',pattern:'mobility',settings:['gym','home'],equipmentOptions:[['stable_chair'],['exercise_mat']],difficulty:1,dose:stretchDose,gif:'assets/gifs/17_大腿后侧拉伸.gif'},{groups:['有氧C'],start:'坐姿或仰卧选择稳定版本，背部保持自然，一侧腿轻微伸直。',steps:'缓慢移动至大腿后侧出现轻微牵拉，保持20秒后换侧；不追求碰脚尖。',breath:'持续自然呼吸。',errors:'弹震；弓腰硬压；拉到疼痛。',safety:'只做轻柔放松；出现神经样放射痛立即停止。'}),
 exercise({id:'calf-stretch',name:'小腿拉伸',pattern:'mobility',settings:['gym','home'],equipmentOptions:[['stable_chair']],difficulty:1,dose:stretchDose,gif:'assets/gifs/18_小腿拉伸.gif'},{groups:['有氧C'],start:'坐稳，一腿向前伸，膝盖保持微屈或自然伸直。',steps:'脚尖缓慢向身体方向勾，至小腿后侧轻微牵拉，保持20秒后换侧。',breath:'自然呼吸。',errors:'猛拉脚尖；膝盖锁死；出现疼痛仍继续。',safety:'不要弹震；踝关节疼痛时停止。'})
-];
+]);
 function validateExerciseCatalog(catalog){
   const errors=[];
   const add=(path,message)=>errors.push({path,message});
   if(!Array.isArray(catalog)){add('catalog','必须是数组');return errors}
   const ids=new Set(),names=new Set();
-  catalog.forEach((item,index)=>{
+  const slugPattern=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  for(let index=0;index<catalog.length;index++){
     const base=`catalog[${index}]`;
-    if(!item||typeof item!=='object'){add(base,'必须是对象');return}
+    if(!Object.hasOwn(catalog,index)){add(base,'必须是对象，数组不得包含空位');continue}
+    const item=catalog[index];
+    if(!item||typeof item!=='object'){add(base,'必须是对象');continue}
     for(const field of ['id','name','pattern','settings','equipment','equipmentOptions','difficulty','dose','contraindications','regressionIds','progressionIds','gif','reviewStatus','cues'])if(!Object.hasOwn(item,field))add(`${base}.${field}`,'缺少必需字段');
-    if(typeof item.id!=='string'||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.id))add(`${base}.id`,'必须是稳定英文slug');
+    if(typeof item.id!=='string'||!slugPattern.test(item.id))add(`${base}.id`,'必须是稳定英文slug');
     else if(ids.has(item.id))add(`${base}.id`,'ID重复');else ids.add(item.id);
     if(typeof item.name!=='string'||!item.name)add(`${base}.name`,'必须是非空名称');
     else if(names.has(item.name))add(`${base}.name`,'名称重复');else names.add(item.name);
     if(!PATTERNS.includes(item.pattern))add(`${base}.pattern`,'模式枚举非法');
-    if(!Array.isArray(item.settings)||!item.settings.length||item.settings.some(value=>!SETTINGS.includes(value)))add(`${base}.settings`,'必须包含合法场景');
+    if(!Array.isArray(item.settings)||!item.settings.length)add(`${base}.settings`,'必须包含合法场景');
+    else{
+      const seenSettings=new Set();
+      for(let settingIndex=0;settingIndex<item.settings.length;settingIndex++){
+        if(!Object.hasOwn(item.settings,settingIndex)||!SETTINGS.includes(item.settings[settingIndex]))add(`${base}.settings`,'必须包含合法场景');
+        else if(seenSettings.has(item.settings[settingIndex]))add(`${base}.settings`,'场景不得重复');
+        else seenSettings.add(item.settings[settingIndex]);
+      }
+    }
     const equipmentValid=Array.isArray(item.equipment)&&item.equipment.length>0;
     if(!equipmentValid)add(`${base}.equipment`,'器械数组不能为空');
     else{
@@ -67,22 +87,36 @@ function validateExerciseCatalog(catalog){
       if(item.equipment.some(id=>typeof id!=='string'||!EQUIPMENT_IDS.includes(id)))add(`${base}.equipment`,'包含未知器械ID');
     }
     const optionsValid=Array.isArray(item.equipmentOptions)&&item.equipmentOptions.length>0;
-    const optionUnion=new Set();
+    const optionUnion=new Set(),optionSignatures=new Set();
     if(!optionsValid)add(`${base}.equipmentOptions`,'器械方案数组不能为空');
-    else item.equipmentOptions.forEach((option,optionIndex)=>{
+    else for(let optionIndex=0;optionIndex<item.equipmentOptions.length;optionIndex++){
       const optionPath=`${base}.equipmentOptions[${optionIndex}]`;
-      if(!Array.isArray(option)||!option.length){add(optionPath,'器械方案不能为空');return}
+      if(!Object.hasOwn(item.equipmentOptions,optionIndex)){add(optionPath,'器械方案不能为空');continue}
+      const option=item.equipmentOptions[optionIndex];
+      if(!Array.isArray(option)||!option.length){add(optionPath,'器械方案不能为空');continue}
       if(new Set(option).size!==option.length)add(optionPath,'方案内器械ID不得重复');
       if(option.some(id=>typeof id!=='string'||!EQUIPMENT_IDS.includes(id)))add(optionPath,'包含未知器械ID');
       option.forEach(id=>optionUnion.add(id));
-    });
+      const signature=JSON.stringify([...option].sort());
+      if(optionSignatures.has(signature))add(optionPath,'器械方案不得重复');else optionSignatures.add(signature);
+    }
     if(equipmentValid&&optionsValid){
       const equipmentSet=new Set(item.equipment);
       if(equipmentSet.size!==optionUnion.size||[...equipmentSet].some(id=>!optionUnion.has(id)))add(`${base}.equipment`,'必须精确等于equipmentOptions的器械ID并集');
     }
     if(!Number.isInteger(item.difficulty)||item.difficulty<1||item.difficulty>3)add(`${base}.difficulty`,'难度必须是1～3整数');
     if(!REVIEW_STATUSES.includes(item.reviewStatus))add(`${base}.reviewStatus`,'审核状态非法');
-    for(const field of ['contraindications','regressionIds','progressionIds'])if(!Array.isArray(item[field]))add(`${base}.${field}`,'必须是数组');
+    if(!Array.isArray(item.contraindications))add(`${base}.contraindications`,'必须是数组');
+    for(const field of ['regressionIds','progressionIds']){
+      const relations=item[field];
+      if(!Array.isArray(relations)){add(`${base}.${field}`,'必须是数组');continue}
+      const seenRelations=new Set();
+      for(let relationIndex=0;relationIndex<relations.length;relationIndex++){
+        const relationPath=`${base}.${field}[${relationIndex}]`;
+        if(!Object.hasOwn(relations,relationIndex)||typeof relations[relationIndex]!=='string'||!slugPattern.test(relations[relationIndex])){add(relationPath,'必须是稳定英文slug');continue}
+        if(seenRelations.has(relations[relationIndex]))add(`${base}.${field}`,'关系ID不得重复');else seenRelations.add(relations[relationIndex]);
+      }
+    }
     if(typeof item.gif!=='string'||!/^assets\/gifs\/[^/]+\.gif$/.test(item.gif))add(`${base}.gif`,'必须是assets/gifs下的GIF相对路径');
     if(!item.dose||typeof item.dose!=='object'||Array.isArray(item.dose))add(`${base}.dose`,'必须是剂量对象');
     else{
@@ -98,14 +132,17 @@ function validateExerciseCatalog(catalog){
       }
     }
     if(!item.cues||['setup','movement','breathing','pain'].some(key=>typeof item.cues[key]!=='string'))add(`${base}.cues`,'必须包含四项文字提示');
-  });
-  catalog.forEach((item,index)=>{
-    if(!item||typeof item!=='object')return;
+  }
+  for(let index=0;index<catalog.length;index++){
+    if(!Object.hasOwn(catalog,index))continue;
+    const item=catalog[index];
+    if(!item||typeof item!=='object')continue;
     for(const field of ['regressionIds','progressionIds'])for(const relatedId of Array.isArray(item[field])?item[field]:[]){
+      if(typeof relatedId!=='string'||!slugPattern.test(relatedId))continue;
       if(relatedId===item.id)add(`catalog[${index}].${field}`,'不能自引用');
       else if(!ids.has(relatedId))add(`catalog[${index}].${field}`,'引用的动作不存在');
     }
-  });
+  }
   return errors;
 }
 function getApprovedExercises(catalog=exerciseCatalog){return catalog.filter(exercise=>exercise.reviewStatus==='approved')}

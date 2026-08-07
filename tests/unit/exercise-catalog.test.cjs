@@ -1,3 +1,4 @@
+'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -159,7 +160,10 @@ test('审核过滤器只返回approved动作且不改变默认目录', () => {
     { ...exerciseCatalog[2], reviewStatus: 'retired' }
   ];
   assert.deepEqual(getApprovedExercises(sample), [exerciseCatalog[1]]);
-  assert.deepEqual(getApprovedExercises(), exerciseCatalog);
+  const approved = getApprovedExercises();
+  assert.deepEqual(approved, exerciseCatalog);
+  assert.notStrictEqual(approved, exerciseCatalog);
+  assert.strictEqual(approved[0], exerciseCatalog[0]);
 });
 
 test('legacyDemoPlan.exercises直接引用目录对象，不复制动作内容', () => {
@@ -197,6 +201,7 @@ test('验证器拒绝非法器械方案和非精确equipment并集', () => {
     { mutate: item => { item.equipmentOptions = [[]]; }, path: '.equipmentOptions[0]' },
     { mutate: item => { item.equipmentOptions = [['unknown_machine']]; }, path: '.equipmentOptions[0]' },
     { mutate: item => { item.equipmentOptions = [['stable_chair', 'stable_chair']]; }, path: '.equipmentOptions[0]' },
+    { mutate: item => { item.equipmentOptions = [['stable_chair'], ['stable_chair']]; }, path: '.equipmentOptions[1]' },
     { mutate: item => { item.equipmentOptions = [['stable_chair'], ['exercise_mat']]; }, path: '.equipment' }
   ];
   for (const { mutate, path } of cases) {
@@ -228,6 +233,52 @@ test('验证器覆盖全部dose键、范围与业务边界', () => {
     const invalid = exerciseCatalog.map(exercise => ({ ...exercise, dose: { ...exercise.dose } }));
     mutate(invalid[0].dose);
     const errors = validateExerciseCatalog(invalid);
+    assert.ok(errors.some(error => error.path.endsWith(path)), `未定位${path}: ${JSON.stringify(errors)}`);
+  }
+});
+
+test('动作目录、动作记录、嵌套数据和导出枚举均深度不可变', () => {
+  const api = loadCatalogAndPlan();
+  const { exerciseCatalog, getApprovedExercises } = api;
+  const first = exerciseCatalog[0];
+  for (const value of [exerciseCatalog, first, first.settings, first.equipment, first.equipmentOptions,
+    first.equipmentOptions[0], first.dose, first.dose.sets, first.contraindications,
+    first.regressionIds, first.progressionIds, first.cues, first.groups,
+    api.EQUIPMENT_IDS, api.DOSE_KEYS, api.PATTERNS, api.SETTINGS, api.REVIEW_STATUSES]) {
+    assert.equal(Object.isFrozen(value), true);
+  }
+  for (const mutate of [
+    () => { first.reviewStatus = 'draft'; },
+    () => { first.start = '被改写'; },
+    () => { first.cues.setup = '被改写'; },
+    () => { first.dose.sets[0] = 99; },
+    () => { first.equipmentOptions.push(['wall']); },
+    () => { exerciseCatalog.push(first); }
+  ]) assert.throws(mutate, TypeError);
+  assert.equal(first.reviewStatus, 'approved');
+  assert.equal(first.cues.setup, first.start);
+  assert.equal(first.dose.sets[0], 1);
+  const approved = getApprovedExercises();
+  assert.equal(Object.isFrozen(approved[0]), true);
+  assert.strictEqual(approved[0], first);
+});
+
+test('验证器拒绝稀疏目录、重复场景和损坏的关系ID且不会抛异常', () => {
+  const { exerciseCatalog, validateExerciseCatalog } = loadCatalogAndPlan();
+  const sparseErrors = validateExerciseCatalog(new Array(1));
+  assert.ok(sparseErrors.some(error => error.path === 'catalog[0]'));
+  const cases = [
+    { mutate: item => { item.settings = ['gym', 'gym']; }, path: '.settings' },
+    { mutate: item => { item.regressionIds = ['ankle-circle', 'ankle-circle']; }, path: '.regressionIds' },
+    { mutate: item => { item.progressionIds = [null]; }, path: '.progressionIds[0]' },
+    { mutate: item => { item.regressionIds = [42]; }, path: '.regressionIds[0]' },
+    { mutate: item => { item.progressionIds = new Array(1); }, path: '.progressionIds[0]' }
+  ];
+  for (const { mutate, path } of cases) {
+    const invalid = exerciseCatalog.map(exercise => ({ ...exercise }));
+    mutate(invalid[0]);
+    let errors;
+    assert.doesNotThrow(() => { errors = validateExerciseCatalog(invalid); });
     assert.ok(errors.some(error => error.path.endsWith(path)), `未定位${path}: ${JSON.stringify(errors)}`);
   }
 });

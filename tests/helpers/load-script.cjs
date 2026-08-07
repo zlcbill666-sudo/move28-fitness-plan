@@ -13,7 +13,16 @@ const modules = Object.freeze({
 });
 
 function clearMove28ModuleCache() {
-  for (const modulePath of Object.values(modules)) {
+  const dependencySafeOrder = [
+    modules.app,
+    modules.workoutGuide,
+    modules.dashboard,
+    modules.trackerFields,
+    modules.legacyPlan,
+    modules.exerciseCatalog,
+    modules.namespace,
+  ];
+  for (const modulePath of dependencySafeOrder) {
     try {
       delete require.cache[require.resolve(modulePath)];
     } catch (error) {
@@ -24,7 +33,6 @@ function clearMove28ModuleCache() {
 
 function loadScript(name) {
   const modulePath = modules[name] || path.resolve(projectRoot, name);
-  delete require.cache[require.resolve(modulePath)];
   return require(modulePath);
 }
 
