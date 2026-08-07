@@ -40,6 +40,20 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(api.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
   });
 
+  await t.test('local store exports versioned browser-independent APIs', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.localStore);
+    assert.equal(typeof api.createLocalStore, 'function');
+    assert.equal(typeof api.loadState, 'function');
+    assert.equal(typeof api.saveIntake, 'function');
+    assert.equal(typeof api.savePlan, 'function');
+    assert.equal(typeof api.clearAll, 'function');
+    assert.equal(typeof api.exportReviewSummary, 'function');
+    assert.equal(api.STORAGE_KEY, 'move28-pilot-v1');
+    assert.equal(api.SCHEMA_VERSION, 1);
+    assert.equal(api.CONSENT_VERSION, 'pilot-v1');
+  });
+
   await t.test('tracker fields export all 25 fields', () => {
     clearMove28ModuleCache();
     const { trackerFields } = require(modules.trackerFields);

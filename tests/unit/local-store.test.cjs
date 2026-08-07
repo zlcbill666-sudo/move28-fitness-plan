@@ -1,0 +1,293 @@
+'use strict';
+
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const vm = require('node:vm');
+const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/load-script.cjs');
+
+function memoryStorage(seed = {}) {
+  const data = new Map(Object.entries(seed));
+  const calls = [];
+  return {
+    calls,
+    get length() { return data.size; },
+    key(index) { return [...data.keys()][index] ?? null; },
+    getItem(key) { calls.push(['getItem', key]); return data.has(key) ? data.get(key) : null; },
+    setItem(key, value) { calls.push(['setItem', key]); data.set(key, String(value)); },
+    removeItem(key) { calls.push(['removeItem', key]); data.delete(key); },
+    raw(key) { return data.get(key); },
+    keys() { return [...data.keys()]; }
+  };
+}
+
+function api() {
+  clearMove28ModuleCache();
+  return loadScript('localStore');
+}
+
+const DEFAULT_STATE = {
+  schemaVersion: 1,
+  participantId: 'pilot-local',
+  intake: null,
+  intakeRevision: 0,
+  risk: null,
+  plan: null,
+  logs: {},
+  weeklyReviews: [],
+  consent: { acceptedAt: null, version: 'pilot-v1' }
+};
+
+test('空存储返回完整默认状态、独立副本且只使用唯一自有 key', () => {
+  const storage = memoryStorage();
+  const moduleApi = api();
+  const store = moduleApi.createLocalStore({ storage });
+  const first = store.loadState();
+  assert.deepEqual(first, DEFAULT_STATE);
+  first.logs.changed = true;
+  first.consent.version = 'changed';
+  assert.deepEqual(store.loadState(), DEFAULT_STATE);
+  assert.deepEqual(moduleApi.OWNED_KEYS, ['move28-pilot-v1']);
+  assert.ok(storage.calls.every(([, key]) => key === moduleApi.STORAGE_KEY));
+  assert.equal(storage.length, 0);
+});
+
+test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失效', () => {
+  const storage = memoryStorage();
+  const store = api().createLocalStore({ storage, participantId: 'pilot-a', now: () => '2030-01-02T03:04:05.000Z' });
+  const intake = { age: 30, goals: ['mobility'] };
+  const risk = {
+    level: 'conservative',
+    reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '公开理由', rawPain: 'secret' }],
+    ruleVersion: 'pilot-v1',
+    rawHeight: 188
+  };
+  const first = store.saveIntake(intake, risk);
+  intake.age = 99;
+  risk.reasons[0].code = 'changed';
+  first.intake.goals.push('mutated-return');
+  assert.equal(store.loadState().intake.age, 30);
+  assert.deepEqual(store.loadState().risk, {
+    level: 'conservative',
+    reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '公开理由' }],
+    ruleVersion: 'pilot-v1'
+  });
+  assert.equal(store.loadState().intakeRevision, 1);
+
+  const planInput = { planVersion: 'plan-v1', title: '第一版', days: [{ id: 1 }] };
+  const planned = store.savePlan(planInput);
+  planInput.days[0].id = 999;
+  planned.plan.title = 'changed-return';
+  assert.equal(store.loadState().plan.days[0].id, 1);
+  assert.equal(store.loadState().plan.status, 'active');
+  assert.equal(store.loadState().plan.intakeRevision, 1);
+
+  const revised = store.saveIntake({ age: 31 }, { level: 'normal', reasons: [], ruleVersion: 'pilot-v1' });
+  assert.equal(revised.intakeRevision, 2);
+  assert.equal(revised.plan.status, 'stale');
+  assert.equal(revised.plan.staleReason, 'intake_changed');
+  assert.equal(revised.plan.staleAt, '2030-01-02T03:04:05.000Z');
+  assert.equal(revised.plan.intakeRevision, 1);
+  const replacement = store.savePlan({ planVersion: 'plan-v2' });
+  assert.equal(replacement.plan.status, 'active');
+  assert.equal(replacement.plan.intakeRevision, 2);
+  assert.equal('staleReason' in replacement.plan, false);
+});
+
+test('load/migrate 对非法、未来和污染状态 fail closed，并只重建白名单字段', () => {
+  const moduleApi = api();
+  const invalidValues = ['{bad', 'null', '[]', '42', '"text"', JSON.stringify({ schemaVersion: 2, intake: { secret: 'future' } })];
+  for (const raw of invalidValues) {
+    const store = moduleApi.createLocalStore({ storage: memoryStorage({ [moduleApi.STORAGE_KEY]: raw }), participantId: 'pilot-b' });
+    assert.deepEqual(store.loadState(), { ...DEFAULT_STATE, participantId: 'pilot-b' });
+  }
+
+  const polluted = JSON.parse('{"schemaVersion":1,"participantId":"phone-13800138000","intake":{"height":188,"__proto__":{"polluted":true}},"intakeRevision":3,"risk":{"level":"stop","reasons":[{"code":"x","field":"pain","message":"safe","secret":"drop"}],"ruleVersion":"r","height":188},"plan":{"planVersion":"v1"},"logs":{"day1":{"note":"SECRET_LOG"}},"weeklyReviews":[{"score":1}],"consent":{"acceptedAt":"2029-01-01","version":"pilot-v1","secret":"drop"},"unknown":{"secret":"drop"},"height":188}');
+  const migrated = moduleApi.migrateState(polluted, 'pilot-a');
+  assert.equal(Object.prototype.polluted, undefined);
+  assert.equal(migrated.participantId, 'pilot-a');
+  assert.equal(migrated.unknown, undefined);
+  assert.equal(migrated.height, undefined);
+  assert.equal(migrated.logs.height, undefined);
+  assert.deepEqual(migrated.risk, { level: 'stop', reasons: [{ code: 'x', field: 'pain', message: 'safe' }], ruleVersion: 'r' });
+  assert.equal(migrated.risk.height, undefined);
+});
+
+test('损坏字段逐字段恢复，不让继承属性或 getter 进入状态', () => {
+  let getterCalls = 0;
+  const raw = Object.create({ intake: { inherited: true }, logs: { inherited: true } });
+  Object.defineProperties(raw, {
+    schemaVersion: { value: 1, enumerable: true },
+    intakeRevision: { value: -5, enumerable: true },
+    risk: { get() { getterCalls += 1; return { level: 'normal' }; }, enumerable: true },
+    plan: { value: 'bad', enumerable: true },
+    weeklyReviews: { value: {}, enumerable: true }
+  });
+  const migrated = api().migrateState(raw, 'pilot-a');
+  assert.equal(getterCalls, 0);
+  assert.deepEqual(migrated, { ...DEFAULT_STATE, participantId: 'pilot-a' });
+});
+
+test('审核摘要严格最小化，不含问卷、理由文本、日志、自由文本或同意时间', () => {
+  const moduleApi = api();
+  const secret = 'SECRET_MARKER_9283';
+  const storage = memoryStorage({
+    [moduleApi.STORAGE_KEY]: JSON.stringify({
+      schemaVersion: 1,
+      participantId: 'pilot-a',
+      intake: { height: 188, weight: 90, pain: secret, freeText: secret },
+      intakeRevision: 4,
+      risk: { level: 'manual_review', reasons: [{ code: 'review', field: 'pain', message: secret }], ruleVersion: 'pilot-v1' },
+      plan: { status: 'stale', planVersion: 'plan-v2', intakeRevision: 3, notes: secret },
+      logs: { d1: { exercises: secret }, d2: { pain: secret } },
+      weeklyReviews: [{ note: secret }],
+      consent: { acceptedAt: '2029-02-03T00:00:00.000Z', version: 'pilot-v1' }
+    })
+  });
+  const summary = moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).exportReviewSummary();
+  assert.deepEqual(summary, {
+    schemaVersion: 1,
+    participantId: 'pilot-a',
+    intakeRevision: 4,
+    risk: { level: 'manual_review', reasonCodes: ['review'], ruleVersion: 'pilot-v1' },
+    plan: { status: 'stale', planVersion: 'plan-v2', intakeRevision: 3 },
+    logCount: 2,
+    weeklyReviewCount: 1,
+    consent: { accepted: true, version: 'pilot-v1' }
+  });
+  const serialized = JSON.stringify(summary);
+  for (const forbidden of [secret, 'height', 'weight', 'pain', 'freeText', 'message', 'field', 'acceptedAt', 'exercises']) {
+    assert.equal(serialized.includes(forbidden), false, forbidden);
+  }
+  summary.risk.reasonCodes.push('changed');
+  assert.deepEqual(moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).exportReviewSummary().risk.reasonCodes, ['review']);
+});
+
+test('clearAll 只删除 OWNED_KEYS，失败不报告成功', () => {
+  const moduleApi = api();
+  const storage = memoryStorage({
+    [moduleApi.STORAGE_KEY]: JSON.stringify({ ...DEFAULT_STATE, participantId: 'pilot-a' }),
+    'move28-tracker-v1': '{"keep":true}',
+    'move28-music-enabled': '0',
+    'move28-music-volume': '20'
+  });
+  const store = moduleApi.createLocalStore({ storage, participantId: 'pilot-a' });
+  assert.equal(store.clearAll(), true);
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY), undefined);
+  assert.equal(storage.raw('move28-tracker-v1'), '{"keep":true}');
+  assert.equal(storage.raw('move28-music-enabled'), '0');
+  assert.equal(storage.raw('move28-music-volume'), '20');
+  assert.deepEqual(store.loadState(), { ...DEFAULT_STATE, participantId: 'pilot-a' });
+
+  const failing = moduleApi.createLocalStore({ storage: { getItem: () => null, setItem: () => {}, removeItem: () => { throw new Error(secretText()); } } });
+  assert.equal(failing.clearAll(), false);
+  function secretText() { return 'private storage failure'; }
+});
+
+test('恶意保存值零 getter 执行且 Proxy/BigInt/function/cycle 均拒绝，存储不变', () => {
+  const moduleApi = api();
+  const storage = memoryStorage();
+  const store = moduleApi.createLocalStore({ storage });
+  store.saveIntake({ age: 20 });
+  const before = storage.raw(moduleApi.STORAGE_KEY);
+  let getterCalls = 0;
+  const accessor = {};
+  Object.defineProperty(accessor, 'secret', { enumerable: true, get() { getterCalls += 1; return 'health secret'; } });
+  const cyclic = {}; cyclic.self = cyclic;
+  const values = [accessor, new Proxy({ age: 20 }, {}), { n: 1n }, { fn() {} }, cyclic];
+  for (const value of values) {
+    assert.throws(() => store.saveIntake(value), error => error instanceof TypeError && error.message === 'Invalid plain data');
+    assert.equal(storage.raw(moduleApi.STORAGE_KEY), before);
+  }
+  assert.equal(getterCalls, 0);
+});
+
+test('setItem 失败抛固定 StorageError 且不伪称成功', () => {
+  const store = api().createLocalStore({
+    storage: { getItem: () => null, setItem: () => { throw new Error('secret health data'); }, removeItem: () => {} }
+  });
+  assert.throws(() => store.saveIntake({ age: 20 }), error => error.name === 'StorageError' && error.message === 'Unable to save local participant state');
+});
+
+test('participantId 仅接受短 pilot 编号，非法值回退 pilot-local', () => {
+  const moduleApi = api();
+  for (const valid of ['pilot-a', 'pilot-b', 'pilot-local', 'pilot-ab12']) {
+    assert.equal(moduleApi.createDefaultState(valid).participantId, valid);
+  }
+  for (const invalid of ['Alice', '13800138000', 'pilot_a', 'pilot-', 'pilot-a-very-long-identifier', '', null, {}, 'pilot-中文']) {
+    assert.equal(moduleApi.createDefaultState(invalid).participantId, 'pilot-local');
+  }
+});
+
+test('默认实例在 localStorage getter/方法被禁止时加载不崩并使用私有内存', () => {
+  clearMove28ModuleCache();
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  try {
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('denied'); } });
+    let moduleApi;
+    assert.doesNotThrow(() => { moduleApi = loadScript('localStore'); });
+    moduleApi.saveIntake({ age: 21 });
+    assert.equal(moduleApi.loadState().intake.age, 21);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    else delete globalThis.localStorage;
+    clearMove28ModuleCache();
+  }
+});
+
+test('默认实例在 localStorage 方法调用抛错时切换到私有内存', () => {
+  clearMove28ModuleCache();
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  try {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem() { throw new Error('denied'); },
+        setItem() { throw new Error('denied'); },
+        removeItem() { throw new Error('denied'); }
+      }
+    });
+    const moduleApi = loadScript('localStore');
+    assert.equal(moduleApi.saveIntake({ age: 23 }).intakeRevision, 1);
+    assert.equal(moduleApi.loadState().intake.age, 23);
+    assert.equal(moduleApi.clearAll(), true);
+    assert.equal(moduleApi.loadState().intake, null);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    else delete globalThis.localStorage;
+    clearMove28ModuleCache();
+  }
+});
+
+test('默认实例在可读存储的 removeItem 失败时不伪称清除成功', () => {
+  clearMove28ModuleCache();
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  try {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem() { return null; },
+        setItem() {},
+        removeItem() { throw new Error('denied'); }
+      }
+    });
+    const moduleApi = loadScript('localStore');
+    assert.equal(moduleApi.clearAll(), false);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    else delete globalThis.localStorage;
+    clearMove28ModuleCache();
+  }
+});
+
+test('classic-script UMD 在无 DOM/localStorage 的 VM 中安全加载并挂载 Move28.storage', () => {
+  const source = fs.readFileSync(path.join(projectRoot, 'src', 'storage', 'local-store.js'), 'utf8');
+  const context = { structuredClone };
+  vm.createContext(context);
+  assert.doesNotThrow(() => vm.runInContext(source, context));
+  assert.equal(typeof context.Move28.storage.createLocalStore, 'function');
+  const state = vm.runInContext('Move28.storage.saveIntake({age: 22}); Move28.storage.loadState()', context);
+  assert.equal(state.intake.age, 22);
+  assert.equal(context.document, undefined);
+});
