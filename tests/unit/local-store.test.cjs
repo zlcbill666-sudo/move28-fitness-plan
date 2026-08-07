@@ -337,11 +337,30 @@ test('跨 realm 普通对象和数组可保存，跨 realm class/Date/Map 仍拒
 
   const before = storage.raw(moduleApi.STORAGE_KEY);
   const rejected = vm.runInNewContext('(() => { class Intake { constructor() { this.age = 20; } } return [new Intake(), new Date(), new Map([["age", 20]])]; })()');
+  const disguisedClass = vm.runInNewContext('(() => { class Intake { constructor() { this.age = 20; } } Object.setPrototypeOf(Intake.prototype, null); return new Intake(); })()');
+  rejected.push(disguisedClass);
   for (const value of rejected) {
     assert.throws(() => store.saveIntake(value), error => error instanceof TypeError
       && error.message === 'Invalid plain data');
     assert.equal(storage.raw(moduleApi.STORAGE_KEY), before);
   }
+});
+
+test('完整状态超预算时在setItem前失败，原存储保持不变', () => {
+  const moduleApi = api();
+  const storage = memoryStorage();
+  const store = moduleApi.createLocalStore({ storage });
+  const largeIntake = Object.fromEntries(Array.from({ length: 6000 }, (_, index) => [`field${index}`, index]));
+  store.saveIntake(largeIntake);
+  const before = storage.raw(moduleApi.STORAGE_KEY);
+  const writesBefore = storage.calls.filter(([method]) => method === 'setItem').length;
+  const largePlan = Object.fromEntries(Array.from({ length: 6000 }, (_, index) => [`item${index}`, index]));
+
+  assert.throws(() => store.savePlan(largePlan), error => error.name === 'StorageError'
+    && error.message === 'Unable to save local participant state');
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY), before);
+  assert.equal(storage.calls.filter(([method]) => method === 'setItem').length, writesBefore);
+  assert.equal(store.loadState().plan, null);
 });
 
 test('迭代克隆保留共享 DAG，超预算深层输入固定拒绝且不修改存储', () => {

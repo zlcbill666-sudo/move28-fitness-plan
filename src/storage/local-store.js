@@ -23,6 +23,8 @@
   const MACHINE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
   const FIELD_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
   const MAX_LOCAL_REASON_MESSAGE_LENGTH = 512;
+  const functionToString = Function.prototype.toString;
+  const nativeObjectSource = functionToString.call(Object);
   let nativeStructuredClone = null;
 
   try {
@@ -66,10 +68,16 @@
     const prototype = Object.getPrototypeOf(value);
     if (!isArray && prototype !== null) {
       const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+      const constructorPrototype = constructorDescriptor
+        && Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
+        && typeof constructorDescriptor.value === 'function'
+        ? Object.getOwnPropertyDescriptor(constructorDescriptor.value, 'prototype')
+        : null;
       if (Object.getPrototypeOf(prototype) !== null
-        || !constructorDescriptor
-        || !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
-        || typeof constructorDescriptor.value !== 'function') {
+        || !constructorPrototype
+        || !Object.prototype.hasOwnProperty.call(constructorPrototype, 'value')
+        || constructorPrototype.value !== prototype
+        || functionToString.call(constructorDescriptor.value) !== nativeObjectSource) {
         throw invalidPlainData();
       }
     }
@@ -358,14 +366,20 @@
     }
 
     function persist(state) {
+      let snapshot;
       let serialized;
       try {
-        serialized = JSON.stringify(state);
+        snapshot = clonePlainData(state);
+        serialized = JSON.stringify(snapshot);
+      } catch (_error) {
+        throw createStorageError();
+      }
+      try {
         storage.setItem(STORAGE_KEY, serialized);
       } catch (_error) {
         throw createStorageError();
       }
-      return clonePlainData(state);
+      return snapshot;
     }
 
     function saveIntake(intake, risk) {
