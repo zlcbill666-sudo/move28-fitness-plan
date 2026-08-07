@@ -15,7 +15,9 @@
   const CONSENT_VERSION = 'pilot-v1';
   const OWNED_KEYS = Object.freeze([STORAGE_KEY]);
   const INVALID_DATA_MESSAGE = 'Invalid plain data';
+  const READ_ERROR_MESSAGE = 'Unable to read local participant state';
   const SAVE_ERROR_MESSAGE = 'Unable to save local participant state';
+  const MAX_PLAIN_NODES = 10000;
   const RISK_LEVELS = new Set(['normal', 'conservative', 'manual_review', 'stop']);
   const PARTICIPANT_ID_PATTERN = /^pilot-[a-z0-9]{1,12}$/;
   const MACHINE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
@@ -62,10 +64,14 @@
   function inspectPlainObject(value) {
     const isArray = Array.isArray(value);
     const prototype = Object.getPrototypeOf(value);
-    if (isArray) {
-      if (prototype !== Array.prototype) throw invalidPlainData();
-    } else if (prototype !== Object.prototype && prototype !== null) {
-      throw invalidPlainData();
+    if (!isArray && prototype !== null) {
+      const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+      if (Object.getPrototypeOf(prototype) !== null
+        || !constructorDescriptor
+        || !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
+        || typeof constructorDescriptor.value !== 'function') {
+        throw invalidPlainData();
+      }
     }
 
     const keys = Reflect.ownKeys(value);
@@ -113,10 +119,15 @@
     const active = new WeakSet();
     const validated = new WeakSet();
     const stack = [{ value, leaving: false }];
+    let nodeCount = 0;
 
     while (stack.length > 0) {
       const frame = stack.pop();
       const current = frame.value;
+      if (!frame.leaving) {
+        nodeCount += 1;
+        if (nodeCount > MAX_PLAIN_NODES) throw invalidPlainData();
+      }
       if (current === null || typeof current !== 'object') {
         validatePrimitive(current);
         continue;
@@ -146,18 +157,35 @@
         throw invalidPlainData();
       }
 
-      function cloneNode(current) {
-        if (current === null || typeof current !== 'object') return current;
-        const inspected = inspectPlainObject(current);
-        const output = inspected.isArray ? [] : {};
-        for (const [key, child] of inspected.entries) {
-          Object.defineProperty(output, key, {
-            value: cloneNode(child), enumerable: true, configurable: true, writable: true
-          });
+      if (value === null || typeof value !== 'object') return value;
+
+      const rootInspection = inspectPlainObject(value);
+      const output = rootInspection.isArray ? [] : {};
+      const clones = new WeakMap([[value, output]]);
+      const stack = [{ output, entries: rootInspection.entries, index: 0 }];
+      while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        if (frame.index >= frame.entries.length) {
+          stack.pop();
+          continue;
         }
-        return output;
+        const [key, child] = frame.entries[frame.index];
+        frame.index += 1;
+        let childClone = child;
+        if (child !== null && typeof child === 'object') {
+          childClone = clones.get(child);
+          if (childClone === undefined) {
+            const childInspection = inspectPlainObject(child);
+            childClone = childInspection.isArray ? [] : {};
+            clones.set(child, childClone);
+            stack.push({ output: childClone, entries: childInspection.entries, index: 0 });
+          }
+        }
+        Object.defineProperty(frame.output, key, {
+          value: childClone, enumerable: true, configurable: true, writable: true
+        });
       }
-      return cloneNode(value);
+      return output;
     } catch (_error) {
       throw invalidPlainData();
     }
@@ -277,8 +305,8 @@
     return memory;
   }
 
-  function createStorageError() {
-    const error = new Error(SAVE_ERROR_MESSAGE);
+  function createStorageError(message) {
+    const error = new Error(message || SAVE_ERROR_MESSAGE);
     error.name = 'StorageError';
     return error;
   }
@@ -289,21 +317,36 @@
     const storage = settings.storage === undefined ? createDefaultStorage() : settings.storage;
     const now = typeof settings.now === 'function' ? settings.now : () => new Date().toISOString();
 
-    function loadState() {
+    function readState(options) {
+      const strict = Boolean(options && options.strict);
       let serialized;
       try {
         serialized = storage.getItem(STORAGE_KEY);
       } catch (_error) {
+        if (strict) throw createStorageError(READ_ERROR_MESSAGE);
         return createDefaultState(participantId);
       }
-      if (typeof serialized !== 'string') return createDefaultState(participantId);
+      if (serialized === null) return createDefaultState(participantId);
+      if (typeof serialized !== 'string') {
+        if (strict) throw createStorageError(READ_ERROR_MESSAGE);
+        return createDefaultState(participantId);
+      }
       let raw;
       try {
         raw = JSON.parse(serialized);
       } catch (_error) {
+        if (strict) throw createStorageError(READ_ERROR_MESSAGE);
         return createDefaultState(participantId);
       }
       return migrateState(raw, participantId);
+    }
+
+    function loadState() {
+      return readState({ strict: false });
+    }
+
+    function loadStateForWrite() {
+      return readState({ strict: true });
     }
 
     function persist(state) {
@@ -324,11 +367,10 @@
       }
       let cleanRisk = null;
       if (risk !== undefined && risk !== null) {
-        clonePlainData(risk);
         cleanRisk = sanitizeRisk(risk);
         if (!cleanRisk) throw invalidPlainData();
       }
-      const state = loadState();
+      const state = loadStateForWrite();
       state.intake = cleanIntake;
       state.risk = cleanRisk;
       state.intakeRevision += 1;
@@ -345,7 +387,7 @@
       if (cleanPlan === null || typeof cleanPlan !== 'object' || Array.isArray(cleanPlan)) {
         throw invalidPlainData();
       }
-      const state = loadState();
+      const state = loadStateForWrite();
       cleanPlan.status = cleanPlan.status === 'stale' ? 'stale' : 'active';
       cleanPlan.intakeRevision = state.intakeRevision;
       if (cleanPlan.status === 'active') {

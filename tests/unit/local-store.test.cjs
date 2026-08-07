@@ -262,6 +262,102 @@ test('恶意保存值零 getter 执行且 Proxy/BigInt/function/cycle 均拒绝�
   assert.equal(getterCalls, 0);
 });
 
+test('严格写路径读取失败时保持原状态且绝不调用 setItem', () => {
+  const moduleApi = api();
+  const original = JSON.stringify({
+    ...DEFAULT_STATE,
+    intakeRevision: 7,
+    plan: { planVersion: 'plan-v1', status: 'active', intakeRevision: 7 }
+  });
+  for (const [label, failOnlyOnce, save] of [
+    ['saveIntake-first', true, store => store.saveIntake({ age: 21 })],
+    ['saveIntake-always', false, store => store.saveIntake({ age: 21 })],
+    ['savePlan-first', true, store => store.savePlan({ planVersion: 'plan-v2' })],
+    ['savePlan-always', false, store => store.savePlan({ planVersion: 'plan-v2' })]
+  ]) {
+    let getCalls = 0;
+    let setCalls = 0;
+    let raw = original;
+    const storage = {
+      getItem() {
+        getCalls += 1;
+        if (!failOnlyOnce || getCalls === 1) throw new Error(`private-${label}`);
+        return raw;
+      },
+      setItem(_key, value) { setCalls += 1; raw = String(value); },
+      removeItem() {}
+    };
+    const store = moduleApi.createLocalStore({ storage });
+    assert.throws(save.bind(null, store), error => error.name === 'StorageError'
+      && error.message === 'Unable to read local participant state');
+    assert.equal(setCalls, 0, label);
+    assert.equal(raw, original, label);
+  }
+});
+
+test('严格写路径不覆盖非法 JSON 或非字符串读取结果，宽松 load 仍返回默认状态', () => {
+  const moduleApi = api();
+  for (const rawValue of ['{damaged', undefined, 42, {}]) {
+    let setCalls = 0;
+    let raw = rawValue;
+    const storage = {
+      getItem: () => raw,
+      setItem(_key, value) { setCalls += 1; raw = String(value); },
+      removeItem() {}
+    };
+    const store = moduleApi.createLocalStore({ storage });
+    assert.deepEqual(store.loadState(), DEFAULT_STATE);
+    for (const save of [
+      () => store.saveIntake({ age: 22 }),
+      () => store.savePlan({ planVersion: 'plan-v1' })
+    ]) {
+      assert.throws(save, error => error.name === 'StorageError'
+        && error.message === 'Unable to read local participant state');
+    }
+    assert.equal(setCalls, 0);
+    assert.equal(raw, rawValue);
+  }
+});
+
+test('跨 realm 普通对象和数组可保存，跨 realm class/Date/Map 仍拒绝', () => {
+  const moduleApi = api();
+  const storage = memoryStorage();
+  const store = moduleApi.createLocalStore({ storage });
+  const intake = vm.runInNewContext('({ age: 28, profile: { goals: ["mobility", { code: "strength" }] } })');
+  const savedIntake = store.saveIntake(intake);
+  assert.deepEqual(savedIntake.intake, {
+    age: 28,
+    profile: { goals: ['mobility', { code: 'strength' }] }
+  });
+  const plan = vm.runInNewContext('({ planVersion: "plan-v1", weeks: [{ days: [1, 2, 3] }] })');
+  const savedPlan = store.savePlan(plan);
+  assert.deepEqual(savedPlan.plan.weeks, [{ days: [1, 2, 3] }]);
+
+  const before = storage.raw(moduleApi.STORAGE_KEY);
+  const rejected = vm.runInNewContext('(() => { class Intake { constructor() { this.age = 20; } } return [new Intake(), new Date(), new Map([["age", 20]])]; })()');
+  for (const value of rejected) {
+    assert.throws(() => store.saveIntake(value), error => error instanceof TypeError
+      && error.message === 'Invalid plain data');
+    assert.equal(storage.raw(moduleApi.STORAGE_KEY), before);
+  }
+});
+
+test('迭代克隆保留共享 DAG，超预算深层输入固定拒绝且不修改存储', () => {
+  const moduleApi = api();
+  const storage = memoryStorage();
+  const store = moduleApi.createLocalStore({ storage });
+  const shared = { exercises: ['squat'] };
+  const saved = store.saveIntake({ monday: shared, friday: shared });
+  assert.equal(saved.intake.monday, saved.intake.friday);
+  const before = storage.raw(moduleApi.STORAGE_KEY);
+
+  let deep = { value: 1 };
+  for (let index = 0; index < 20000; index += 1) deep = { child: deep };
+  assert.throws(() => store.saveIntake(deep), error => error instanceof TypeError
+    && error.message === 'Invalid plain data' && !(error instanceof RangeError));
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY), before);
+});
+
 test('setItem 失败抛固定 StorageError 且不伪称成功', () => {
   const store = api().createLocalStore({
     storage: { getItem: () => null, setItem: () => { throw new Error('secret health data'); }, removeItem: () => {} }
