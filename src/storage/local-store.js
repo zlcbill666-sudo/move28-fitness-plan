@@ -24,6 +24,9 @@
   const PARTICIPANT_ID_PATTERN = /^pilot-[a-z0-9]{1,12}$/;
   const MACHINE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
   const FIELD_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+  const UTC_ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+  const RUNTIME_STOP_REASON_CODES = Object.freeze(['chest_pain_or_pressure','near_faint_or_faint','abnormal_shortness_of_breath','sudden_severe_pain','unable_to_bear_weight','neurologic_or_consciousness_change','joint_pain_persisted_or_worsened']);
+  const RUNTIME_STOP_REASON_SET = new Set(RUNTIME_STOP_REASON_CODES);
   const MAX_LOCAL_REASON_MESSAGE_LENGTH = 512;
   const functionToString = Function.prototype.toString;
   const nativeObjectSource = functionToString.call(Object);
@@ -244,7 +247,7 @@
     return { level: risk.level, reasons, ruleVersion };
   }
 
-  function sanitizeCompletionLogs(value) {
+  function sanitizeWorkoutLogs(value) {
     const logs = cloneObjectOr(value, null, false);
     if (!logs) return {};
     const entries = Object.entries(logs);
@@ -254,9 +257,17 @@
       if (!record || typeof record !== 'object' || Array.isArray(record)) continue;
       const planId = sanitizeMachineId(record.planId);
       const sessionId = sanitizeMachineId(record.sessionId);
-      const completedAt = typeof record.completedAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(record.completedAt) ? record.completedAt : null;
-      if (!planId || !sessionId || record.status !== 'completed' || !completedAt) continue;
-      clean[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+      if (!planId || !sessionId) continue;
+      if (record.status === 'completed') {
+        const completedAt = typeof record.completedAt === 'string' && UTC_ISO_PATTERN.test(record.completedAt) ? record.completedAt : null;
+        if (completedAt) clean[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+        continue;
+      }
+      const reasonCode = sanitizeMachineId(record.reasonCode);
+      const occurredAt = typeof record.occurredAt === 'string' && UTC_ISO_PATTERN.test(record.occurredAt) ? record.occurredAt : null;
+      if (record.status !== 'safety_stopped' || !RUNTIME_STOP_REASON_SET.has(reasonCode)
+        || !Number.isSafeInteger(record.actionIndex) || record.actionIndex < 0 || record.actionIndex > 255 || !occurredAt) continue;
+      clean[`safety.${planId}.${sessionId}`] = { planId, sessionId, status: 'safety_stopped', reasonCode, actionIndex: record.actionIndex, occurredAt };
     }
     return clean;
   }
@@ -292,7 +303,22 @@
     if (plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
 
     const logs = ownDataValue(raw, 'logs');
-    if (logs.present) defaults.logs = sanitizeCompletionLogs(logs.value);
+    if (logs.present) defaults.logs = sanitizeWorkoutLogs(logs.value);
+    const currentStops = defaults.plan ? Object.values(defaults.logs).filter(record => record.status === 'safety_stopped' && record.planId === defaults.plan.id) : [];
+    if (currentStops.length) {
+      const event = currentStops[0];
+      const sessions = Array.isArray(defaults.plan.weeks)
+        ? defaults.plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions : [])
+        : [];
+      const session = sessions.find(item => item && item.id === event.sessionId);
+      const bound = currentStops.length === 1 && session && Array.isArray(session.actions) && event.actionIndex < session.actions.length;
+      if (defaults.plan.status !== 'stale' || defaults.plan.staleReason !== 'runtime-safety-event'
+        || defaults.plan.staleAt !== event.occurredAt || !bound) {
+        defaults.plan.status = 'stale';
+        defaults.plan.staleReason = bound ? 'runtime-safety-event' : 'runtime-safety-state-inconsistent';
+        defaults.plan.staleAt = event.occurredAt;
+      }
+    }
     // Weekly review writes remain reserved for Task 12.
     defaults.weeklyReviews = [];
 
@@ -493,8 +519,36 @@
         || !passesTrustedPlanGate(plan, state)
         || !sessions.some(session => session && session.id === sessionId)) throw createStorageError();
       const completedAt = String(now());
-      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(completedAt)) throw createStorageError();
+      if (!UTC_ISO_PATTERN.test(completedAt)) throw createStorageError();
       state.logs[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+      return persist(state);
+    }
+
+    function recordWorkoutStop(stop) {
+      const clean = clonePlainData(stop);
+      const allowed = ['sessionId', 'reasonCode', 'actionIndex', 'occurredAt'];
+      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
+        || Object.keys(clean).length !== allowed.length
+        || Object.keys(clean).some(key => !allowed.includes(key))) throw invalidPlainData();
+      const sessionId = sanitizeMachineId(clean.sessionId);
+      const reasonCode = sanitizeMachineId(clean.reasonCode);
+      if (!sessionId || !RUNTIME_STOP_REASON_SET.has(reasonCode)
+        || !Number.isSafeInteger(clean.actionIndex) || clean.actionIndex < 0
+        || typeof clean.occurredAt !== 'string' || !UTC_ISO_PATTERN.test(clean.occurredAt)) throw invalidPlainData();
+      const state = loadStateForWrite();
+      const plan = state.plan;
+      const sessions = plan && Array.isArray(plan.weeks)
+        ? plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions : [])
+        : [];
+      const session = sessions.find(item => item && item.id === sessionId);
+      if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
+        || !hasReviewApproval(plan, state) || !passesTrustedPlanGate(plan, state)
+        || !session || !Array.isArray(session.actions) || clean.actionIndex >= session.actions.length) throw createStorageError();
+      const event = { planId: plan.id, sessionId, status: 'safety_stopped', reasonCode, actionIndex: clean.actionIndex, occurredAt: clean.occurredAt };
+      state.logs[`safety.${plan.id}.${sessionId}`] = event;
+      plan.status = 'stale';
+      plan.staleReason = 'runtime-safety-event';
+      plan.staleAt = clean.occurredAt;
       return persist(state);
     }
 
@@ -535,7 +589,7 @@
       };
     }
 
-    return Object.freeze({ loadState, saveIntake, savePlan, recordWorkoutCompletion, clearAll, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, savePlan, recordWorkoutCompletion, recordWorkoutStop, clearAll, exportReviewSummary });
   }
 
   const defaultStore = createLocalStore();
@@ -544,6 +598,7 @@
     SCHEMA_VERSION,
     CONSENT_VERSION,
     OWNED_KEYS,
+    RUNTIME_STOP_REASON_CODES,
     createLocalStore,
     migrateState,
     createDefaultState,
@@ -551,6 +606,7 @@
     saveIntake: defaultStore.saveIntake,
     savePlan: defaultStore.savePlan,
     recordWorkoutCompletion: defaultStore.recordWorkoutCompletion,
+    recordWorkoutStop: defaultStore.recordWorkoutStop,
     clearAll: defaultStore.clearAll,
     exportReviewSummary: defaultStore.exportReviewSummary
   });

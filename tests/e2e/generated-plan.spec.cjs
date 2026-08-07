@@ -85,6 +85,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   });
   await page.getByRole('button',{name:'开始本节训练'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
   for(let index=0;index<expected.actions.length;index+=1){
     const item=expected.actions[index];
     await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);

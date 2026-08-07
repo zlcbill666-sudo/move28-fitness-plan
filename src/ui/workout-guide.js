@@ -15,6 +15,8 @@ const state=Move28.state;
 const {$,esc,storage}=Move28.utils;
 const MUSIC={warmup:{src:'assets/audio/warmup-rising-forest.mp3',title:'Rising Forest',author:'Diego Nava · 热身'},strength:{src:'assets/audio/strength-deep-urban.mp3',title:'Deep Urban',author:'Eugenio Mininni · 力量'},cardio:{src:'assets/audio/cardio-techno-fest-vibes.mp3',title:'Techno Fest Vibes',author:'Alejandro Magaña (A. M.) · 有氧'},recovery:{src:'assets/audio/recovery-summer-dream.mp3',title:'Summer Dream',author:'Eugenio Mininni · 放松'}};
 const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
+const STOP_REASONS=Object.freeze([['chest_pain_or_pressure','胸部不适或压迫感'],['near_faint_or_faint','明显晕厥感或已经晕厥'],['abnormal_shortness_of_breath','异常气短'],['sudden_severe_pain','突发剧痛'],['unable_to_bear_weight','无法承重'],['neurologic_or_consciousness_change','意识或神经异常']].map(Object.freeze));
+const SAFETY_RULE='胸部不适、晕厥感、异常气短、突发剧痛、无法承重、意识或神经异常时应立即停止，并按情况联系急救或合适的专业人员。';
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
 const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
 const functionToString=Function.prototype.toString,nativeObjectSource=functionToString.call(Object);
@@ -100,17 +102,54 @@ Move28.toggleWorkoutMusic=()=>{
   updateMusicUI();
 };
 Move28.setWorkoutVolume=value=>{const workoutAudio=getWorkoutAudio();state.musicVolume=Math.max(0,Math.min(1,Number(value)/100));workoutAudio.volume=state.musicVolume;storage.setItem('move28-music-volume',String(Math.round(state.musicVolume*100)))};
-function renderGuide(){
+function setGuideFoot(back,next){
+  const backButton=$('#guideBack'),nextButton=$('#guideNext');
+  backButton.textContent=back.label;backButton.style.visibility=back.hidden?'hidden':'visible';backButton.disabled=Boolean(back.disabled);
+  nextButton.textContent=next.label;nextButton.disabled=Boolean(next.disabled);nextButton.style.visibility=next.hidden?'hidden':'visible';
+}
+function renderReady(){
+  getWorkoutAudio().pause();updateMusicUI();
+  $('#guideEyebrow').textContent='BEFORE YOU START';$('#guideTitle').textContent='开始前安全确认';$('#guideBar').style.width='0%';
+  $('#guideBody').innerHTML=`<section class="guide-state guide-ready"><span class="guide-state-mark">!</span><h3>先确认身体状态，再开始本节</h3><p>${esc(SAFETY_RULE)}</p><div class="guide-safe-note">如果已经出现上述任一信号，请不要开始训练，直接使用下方停止入口。</div><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></section>`;
+  setGuideFoot({label:'退出',hidden:false},{label:'开始本节',hidden:false});
+}
+function renderAction(){
   const step=state.guideSteps[state.guideStep],total=state.guideSteps.length,exercise=step.exercise,action=step.action;
   syncGuideMusic(step.music,true);
   $('#guideEyebrow').textContent=`ACTION ${state.guideStep+1} / ${total}`;
   $('#guideTitle').textContent=`${WEEKDAY_LABELS[state.guideSession.weekday]||state.guideSession.weekday} · ${state.guideSession.intent==='full_body_strength'?'全身力量':'低冲击有氧'}`;
   $('#guideBar').style.width=`${(state.guideStep+1)/total*100}%`;
-  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}"><figure class="guide-demo"><img src="${esc(exercise.gif)}" alt="${esc(exercise.name)}动作示范GIF"></figure><div class="guide-instruction"><span class="guide-phase">${action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div><div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-one-note">完成当前动作后，点击下方按钮直接进入下一项。</div></div></div>`;
-  $('#guideBack').disabled=state.guideStep===0;
-  $('#guideBack').style.visibility=state.guideStep===0?'hidden':'visible';
-  $('#guideNext').disabled=false;
-  $('#guideNext').textContent=state.guideStep===total-1?'完成本节并记录 ✓':'完成此项，下一项 →';
+  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}"><figure class="guide-demo"><img src="${esc(exercise.gif)}" alt="${esc(exercise.name)}动作示范GIF"></figure><div class="guide-instruction"><span class="guide-phase">${action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div><div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)}</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></div></div></div>`;
+  setGuideFoot({label:'← 上一步',hidden:state.guideStep===0},{label:state.guideStep===total-1?'完成本节并记录 ✓':'完成此项，下一项 →'});
+}
+function renderExitConfirm(){
+  getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='ORDINARY EXIT';$('#guideTitle').textContent='普通退出';
+  $('#guideBody').innerHTML='<section class="guide-state"><h3>普通退出训练？</h3><p>普通退出不会记录安全事件，也不会使计划失效。你之后仍可重新开始本节。</p></section>';
+  setGuideFoot({label:'继续训练'},{label:'确认普通退出'});
+}
+function renderSafetySelect(){
+  getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='SAFETY FIRST';$('#guideTitle').textContent='因不适暂停';
+  $('#guideBody').innerHTML=`<section class="guide-state"><h3>选择最符合当前情况的一项</h3><p>不记录自由文本。严重信号会终止当前训练并使旧计划失效。</p><div class="guide-reasons">${STOP_REASONS.map(([code,label])=>`<button type="button" onclick="selectSafetyReason('${code}')">${esc(label)}</button>`).join('')}<button type="button" onclick="selectSafetyReason('joint_pain')">新发关节不适</button></div></section>`;
+  setGuideFoot({label:'返回训练'},{label:'',hidden:true});
+}
+function renderPainPause(){
+  $('#guideEyebrow').textContent='PAIN PAUSE';$('#guideTitle').textContent='关节不适处理';
+  $('#guideBody').innerHTML='<section class="guide-state"><h3>先暂停并降低幅度或阻力</h3><p>停止当前动作，降低动作幅度或阻力。只有明确缓解后才可以返回；持续或加重必须停止训练。</p><div class="guide-state-actions"><button class="btn" type="button" onclick="resolveGuidePain(true)">调整后已缓解</button><button class="btn danger" type="button" onclick="resolveGuidePain(false)">仍持续或加重</button></div></section>';
+  setGuideFoot({label:'',hidden:true},{label:'',hidden:true});
+}
+function renderSafetyConfirm(){
+  $('#guideEyebrow').textContent='STOP CONFIRMATION';$('#guideTitle').textContent='安全停止';
+  $('#guideBody').innerHTML=`<section class="guide-state guide-danger"><h3>确认因不适停止</h3><p>确认后会保存固定理由码、当前动作进度和时间，并立即使旧计划失效。不会保存自由文本症状描述。</p><b>${esc(STOP_REASONS.find(([code])=>code===state.guideStopReason)?.[1]||'关节不适仍持续或加重')}</b></section>`;
+  setGuideFoot({label:'',hidden:true},{label:'确认停止并保存'});
+}
+function renderSafetyResult(){
+  const failed=state.guideMode==='safety_save_failed';
+  $('#guideEyebrow').textContent=failed?'SAVE FAILED':'SAFETY STOPPED';$('#guideTitle').textContent='训练已停止';
+  $('#guideBody').innerHTML=`<section class="guide-state ${failed?'guide-warning':'guide-danger'}"><h3>${failed?'停止记录尚未保存':'训练已安全停止'}</h3><p>${failed?'训练保持停止。请检查浏览器存储权限后重试；当前不会恢复训练。':'旧计划已失效，当前训练不会记为整节完成。请重新完成安全筛查后再决定下一步。'}</p>${failed?'':'<div class="guide-state-actions"><button class="btn primary" type="button" onclick="guideRescreen()">重新完成安全筛查</button><button class="btn" type="button" onclick="guideReturnHome()">返回首页</button></div>'}</section>`;
+  setGuideFoot({label:'',hidden:true},{label:failed?'重试保存':'',hidden:!failed});
+}
+function renderGuide(){
+  if(state.guideMode==='ready')renderReady();else if(state.guideMode==='action')renderAction();else if(state.guideMode==='exit_confirm')renderExitConfirm();else if(state.guideMode==='safety_select')renderSafetySelect();else if(state.guideMode==='pain_pause')renderPainPause();else if(state.guideMode==='safety_confirm')renderSafetyConfirm();else renderSafetyResult();
   root.requestAnimationFrame(()=>$('.guide-shell').scrollTo({top:0,behavior:'smooth'}));
 }
 function sameData(left,right){
@@ -132,7 +171,8 @@ function prepareReviewedSession(requestedSession,catalog){
   return stored&&sameData(stored,safeRequested)?stored:null;
 }
 function openWorkout(options){
-  const settings=options&&typeof options==='object'?options:null;
+  if(state.guideMode&&state.guideMode!=='closed')return false;
+  const settings=options&&typeof options==='object'?options:{};
   const requestedSession=settings&&ownData(settings,'session'),catalog=settings&&ownData(settings,'catalog');
   const session=prepareReviewedSession(requestedSession,catalog);
   const steps=session&&buildWorkoutSteps(session,trustedCatalog);
@@ -141,29 +181,71 @@ function openWorkout(options){
   const onComplete=ownData(settings,'onComplete'),onStop=ownData(settings,'onStop');
   state.guideOnComplete=typeof onComplete==='function'?onComplete:()=>{};
   state.guideOnStop=typeof onStop==='function'?onStop:()=>{};
-  state.guideFinishing=false;
+  state.guideFinishing=false;state.guideMode='ready';state.guideResumeMode='ready';state.guideStopReason='';
   $('#guideModal').classList.add('open');$('#guideModal').setAttribute('aria-hidden','false');root.document.body.classList.add('body-guide-open');
   renderGuide();setTimeout(()=>$('.guide-close').focus(),0);return true;
 }
-Move28.closeGuide=()=>{
+function hardCloseGuide(){
   $('#guideModal').classList.remove('open');$('#guideModal').setAttribute('aria-hidden','true');root.document.body.classList.remove('body-guide-open');
-  getWorkoutAudio().pause();updateMusicUI();state.guideFinishing=false;
+  getWorkoutAudio().pause();updateMusicUI();state.guideFinishing=false;state.guideMode='closed';
+}
+Move28.requestGuideExit=()=>{
+  if(['pain_pause','safety_confirm','safety_persisting','safety_stopped','safety_save_failed','closed'].includes(state.guideMode))return false;
+  if(state.guideMode!=='exit_confirm')state.guideResumeMode=state.guideMode;
+  state.guideMode='exit_confirm';renderGuide();return true;
 };
-Move28.guideBack=()=>{if(state.guideStep>0&&!state.guideFinishing){state.guideStep--;renderGuide()}};
+Move28.closeGuide=Move28.requestGuideExit;
+Move28.requestSafetyStop=()=>{
+  if(!['ready','action'].includes(state.guideMode))return false;
+  state.guideResumeMode=state.guideMode;state.guideMode='safety_select';renderGuide();return true;
+};
+Move28.selectSafetyReason=reason=>{
+  if(state.guideMode!=='safety_select')return false;
+  if(reason==='joint_pain'){state.guideMode='pain_pause';renderGuide();return true}
+  if(!STOP_REASONS.some(([code])=>code===reason))return false;
+  state.guideStopReason=reason;state.guideMode='safety_confirm';renderGuide();return true;
+};
+Move28.resolveGuidePain=relieved=>{
+  if(state.guideMode!=='pain_pause')return false;
+  if(relieved===true){state.guideMode=state.guideResumeMode;renderGuide();return true}
+  state.guideStopReason='joint_pain_persisted_or_worsened';state.guideMode='safety_confirm';renderGuide();return true;
+};
+function persistGuideStop(){
+  if(!['safety_confirm','safety_save_failed'].includes(state.guideMode))return false;
+  state.guideMode='safety_persisting';getWorkoutAudio().pause();updateMusicUI();$('#guideNext').disabled=true;
+  try{
+    state.guideOnStop({type:'safety_stop',sessionId:state.guideSession.id,reasonCode:state.guideStopReason,actionIndex:state.guideStep,occurredAt:new Date().toISOString()});
+    state.guideMode='safety_stopped';renderGuide();return true;
+  }catch(_error){state.guideMode='safety_save_failed';renderGuide();return false}
+}
+Move28.guideRescreen=()=>{
+  if(state.guideMode!=='safety_stopped')return false;const reasonCode=state.guideStopReason,callback=state.guideOnStop;hardCloseGuide();callback({type:'rescreen',reasonCode});return true;
+};
+Move28.guideReturnHome=()=>{if(state.guideMode!=='safety_stopped')return false;hardCloseGuide();return true};
+Move28.guideBack=()=>{
+  if(state.guideMode==='exit_confirm'){state.guideMode=state.guideResumeMode;renderGuide();return}
+  if(state.guideMode==='safety_select'){state.guideMode=state.guideResumeMode;renderGuide();return}
+  if(state.guideMode==='safety_confirm'||state.guideMode==='pain_pause')return;
+  if(state.guideMode==='ready'){Move28.requestGuideExit();return}
+  if(state.guideMode==='action'&&state.guideStep>0&&!state.guideFinishing){state.guideStep--;renderGuide()}
+};
 Move28.guideNext=()=>{
-  if(state.guideFinishing)return;
+  if(state.guideMode==='ready'){state.guideMode='action';renderGuide();return}
+  if(state.guideMode==='exit_confirm'){state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,actionIndex:state.guideStep});hardCloseGuide();return}
+  if(['safety_confirm','safety_save_failed'].includes(state.guideMode)){persistGuideStop();return}
+  if(state.guideMode!=='action'||state.guideFinishing)return;
   if(state.guideStep<state.guideSteps.length-1){state.guideStep++;renderGuide();return}
   state.guideFinishing=true;$('#guideNext').disabled=true;
   try{
     state.guideOnComplete({sessionId:state.guideSession.id});
-    Move28.closeGuide();
+    hardCloseGuide();
     Move28.ui.showToast('本节训练已完成并保存到本机');
   }catch(_error){state.guideFinishing=false;$('#guideNext').disabled=false;Move28.ui.showToast('完成记录保存失败，请检查本机存储后重试')}
 };
-const guide={openWorkout,doseText,renderGuide,updateMusicUI,syncGuideMusic,getWorkoutAudio,MUSIC};
+const guide={openWorkout,doseText,renderGuide,updateMusicUI,syncGuideMusic,getWorkoutAudio,MUSIC,SAFETY_RULE,STOP_REASONS};
 Object.assign(Move28.guide||{},guide);
 Object.defineProperty(Move28.guide,'workoutAudio',{configurable:true,get:getWorkoutAudio});
-const actions={closeGuide:Move28.closeGuide,guideBack:Move28.guideBack,guideNext:Move28.guideNext,toggleWorkoutMusic:Move28.toggleWorkoutMusic,setWorkoutVolume:Move28.setWorkoutVolume};
+const actions={closeGuide:Move28.closeGuide,requestGuideExit:Move28.requestGuideExit,requestSafetyStop:Move28.requestSafetyStop,selectSafetyReason:Move28.selectSafetyReason,resolveGuidePain:Move28.resolveGuidePain,guideRescreen:Move28.guideRescreen,guideReturnHome:Move28.guideReturnHome,guideBack:Move28.guideBack,guideNext:Move28.guideNext,toggleWorkoutMusic:Move28.toggleWorkoutMusic,setWorkoutVolume:Move28.setWorkoutVolume};
 if(root.window===root)for(const name of Object.keys(actions))root[name]=actions[name];
 return Object.assign({buildWorkoutSteps},guide,actions);
 });

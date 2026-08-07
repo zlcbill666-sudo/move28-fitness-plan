@@ -20,6 +20,9 @@ const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
 const functionToString=Function.prototype.toString,nativeObjectSource=functionToString.call(Object);
 const trustedValidatePlan=typeof Move28.domain.validatePlan==='function'?Move28.domain.validatePlan:null;
 const trustedCatalog=Array.isArray(Move28.data.exerciseCatalog)?Move28.data.exerciseCatalog:null;
+const trustedRecordWorkoutStop=typeof Move28.storage.recordWorkoutStop==='function'?Move28.storage.recordWorkoutStop:null;
+const RESCREEN_STEP_BY_REASON=Object.freeze({sudden_severe_pain:6,unable_to_bear_weight:6,joint_pain_persisted_or_worsened:6,chest_pain_or_pressure:7,near_faint_or_faint:7,abnormal_shortness_of_breath:7,neurologic_or_consciousness_change:7});
+function rescreenStepForReason(reasonCode){return RESCREEN_STEP_BY_REASON[reasonCode]??7}
 function plainRecord(value){
   if(!value||typeof value!=='object')return false;
   const proto=Object.getPrototypeOf(value);if(proto===null)return true;if(Object.getPrototypeOf(proto)!==null)return false;
@@ -46,6 +49,8 @@ function contextFromState(inputState){
   if(!state.intake)return{mode:'demo',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
   if(!state.risk||['stop','manual_review'].includes(state.risk.level))return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
   if(!state.plan)return{mode:'review',plan:null,logs:state.logs||{},message:'档案已保存，但没有通过安全硬门槛的完整计划。'};
+  const hasCurrentSafetyEvent=state.logs&&Object.values(state.logs).some(record=>record&&record.status==='safety_stopped'&&record.planId===state.plan.id);
+  if(hasCurrentSafetyEvent)return{mode:'stale',plan:null,logs:state.logs||{},message:'训练中已记录安全停止事件，旧计划已失效，请重新完成安全筛查。'};
   if(state.plan.status==='stale'||state.plan.intakeRevision!==state.intakeRevision)return{mode:'stale',plan:null,logs:state.logs||{},message:'档案已经变化，旧计划已失效，请重新确认问卷并生成。'};
   if(state.plan.status==='pending_review')return{mode:'review',plan:null,logs:state.logs||{},message:'4周计划已生成，人工一致性复核完成前不会开放训练入口。'};
   if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或人工复核凭据无效，请等待重新复核。'};
@@ -67,6 +72,17 @@ function handleOnboardingComplete({intake,risk,canGenerate}){
   activatePlanView(persisted);
   return{message:'问卷与4周计划已保存到本机；人工一致性复核完成前不会开放训练入口。'};
 }
+function handleGuideStop(event){
+  if(!event||typeof event!=='object')return false;
+  if(event.type==='ordinary_exit')return true;
+  if(event.type==='rescreen'){
+    const controller=Move28.onboardingController;if(!controller)return false;
+    controller.setField('finalConfirmed',false);controller.open();controller.goTo(rescreenStepForReason(event.reasonCode));return true;
+  }
+  if(event.type!=='safety_stop'||!trustedRecordWorkoutStop)throw new Error('Safety stop unavailable');
+  const updated=trustedRecordWorkoutStop({sessionId:event.sessionId,reasonCode:event.reasonCode,actionIndex:event.actionIndex,occurredAt:event.occurredAt});
+  activatePlanView(updated);return true;
+}
 function openGeneratedWorkout(sessionId){
   const state=Move28.storage.loadState(),context=contextFromState(state);
   if(context.mode!=='generated'){activatePlanView(state);Move28.ui.showToast('当前没有可执行的有效计划');return false}
@@ -75,7 +91,7 @@ function openGeneratedWorkout(sessionId){
   return Move28.guide.openWorkout({
     session,catalog:trustedCatalog,
     onComplete:()=>{const updated=Move28.storage.recordWorkoutCompletion({planId:context.plan.id,sessionId:session.id});activatePlanView(updated)},
-    onStop:()=>{}
+    onStop:handleGuideStop
   });
 }
 function init(){
@@ -99,5 +115,5 @@ function init(){
   ui.renderExercises();ui.renderDayList();ui.renderForm();ui.renderOverview();ui.renderSafety();ui.reveal();
   return Move28;
 }
-return{init,contextFromState,handleOnboardingComplete,openGeneratedWorkout};
+return{init,contextFromState,handleOnboardingComplete,openGeneratedWorkout,rescreenStepForReason};
 });
