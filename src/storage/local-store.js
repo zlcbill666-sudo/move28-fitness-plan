@@ -18,6 +18,9 @@
   const SAVE_ERROR_MESSAGE = 'Unable to save local participant state';
   const RISK_LEVELS = new Set(['normal', 'conservative', 'manual_review', 'stop']);
   const PARTICIPANT_ID_PATTERN = /^pilot-[a-z0-9]{1,12}$/;
+  const MACHINE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
+  const FIELD_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+  const MAX_LOCAL_REASON_MESSAGE_LENGTH = 512;
   let nativeStructuredClone = null;
 
   try {
@@ -32,6 +35,10 @@
     return typeof value === 'string' && PARTICIPANT_ID_PATTERN.test(value)
       ? value
       : 'pilot-local';
+  }
+
+  function sanitizeMachineId(value) {
+    return typeof value === 'string' && MACHINE_ID_PATTERN.test(value) ? value : null;
   }
 
   function createDefaultState(participantId) {
@@ -180,16 +187,21 @@
 
   function sanitizeRisk(value) {
     const risk = cloneObjectOr(value, null, false);
-    if (!risk || !RISK_LEVELS.has(risk.level) || typeof risk.ruleVersion !== 'string' || !Array.isArray(risk.reasons)) {
+    const ruleVersion = risk && sanitizeMachineId(risk.ruleVersion);
+    if (!risk || !RISK_LEVELS.has(risk.level) || !ruleVersion || !Array.isArray(risk.reasons)) {
       return null;
     }
     const reasons = [];
     for (const reason of risk.reasons) {
       if (!reason || typeof reason !== 'object' || Array.isArray(reason)) continue;
-      if (typeof reason.code !== 'string' || typeof reason.field !== 'string' || typeof reason.message !== 'string') continue;
+      if (!sanitizeMachineId(reason.code)
+        || typeof reason.field !== 'string'
+        || !FIELD_ID_PATTERN.test(reason.field)
+        || typeof reason.message !== 'string'
+        || reason.message.length > MAX_LOCAL_REASON_MESSAGE_LENGTH) continue;
       reasons.push({ code: reason.code, field: reason.field, message: reason.message });
     }
-    return { level: risk.level, reasons, ruleVersion: risk.ruleVersion };
+    return { level: risk.level, reasons, ruleVersion };
   }
 
   function migrateState(raw, participantId) {
@@ -202,7 +214,9 @@
     }
 
     const schema = ownDataValue(raw, 'schemaVersion');
-    if (schema.present && Number.isInteger(schema.value) && schema.value > SCHEMA_VERSION) return defaults;
+    // Version 1 is the first schema: unknown, missing, legacy-looking and future
+    // values have no trustworthy migration path and must fail closed.
+    if (!schema.present || schema.value !== SCHEMA_VERSION) return defaults;
 
     const intake = ownDataValue(raw, 'intake');
     if (intake.present && intake.value !== null) {
@@ -220,11 +234,10 @@
     const plan = ownDataValue(raw, 'plan');
     if (plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
 
-    const logs = ownDataValue(raw, 'logs');
-    if (logs.present) defaults.logs = cloneObjectOr(logs.value, {}, false);
-
-    const reviews = ownDataValue(raw, 'weeklyReviews');
-    if (reviews.present) defaults.weeklyReviews = cloneObjectOr(reviews.value, [], true);
+    // Reserved state shape only. Task 11/12 will add explicit write APIs and
+    // whitelist sanitizers before persisted logs or reviews may be accepted.
+    defaults.logs = {};
+    defaults.weeklyReviews = [];
 
     const consent = ownDataValue(raw, 'consent');
     const cleanConsent = cloneObjectOr(consent.value, null, false);
@@ -354,14 +367,17 @@
 
     function exportReviewSummary() {
       const state = loadState();
-      const risk = state.risk ? {
+      const cleanRuleVersion = state.risk && sanitizeMachineId(state.risk.ruleVersion);
+      const risk = state.risk && RISK_LEVELS.has(state.risk.level) && cleanRuleVersion ? {
         level: state.risk.level,
-        reasonCodes: state.risk.reasons.map(reason => reason.code),
-        ruleVersion: state.risk.ruleVersion
+        reasonCodes: Array.isArray(state.risk.reasons)
+          ? state.risk.reasons.map(reason => sanitizeMachineId(reason && reason.code)).filter(Boolean)
+          : [],
+        ruleVersion: cleanRuleVersion
       } : null;
       const plan = state.plan ? {
-        status: typeof state.plan.status === 'string' ? state.plan.status : null,
-        planVersion: typeof state.plan.planVersion === 'string' ? state.plan.planVersion : null,
+        status: state.plan.status === 'active' || state.plan.status === 'stale' ? state.plan.status : null,
+        planVersion: sanitizeMachineId(state.plan.planVersion),
         intakeRevision: Number.isSafeInteger(state.plan.intakeRevision) ? state.plan.intakeRevision : null
       } : null;
       return {

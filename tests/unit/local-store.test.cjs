@@ -97,7 +97,16 @@ test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失�
 
 test('load/migrate 对非法、未来和污染状态 fail closed，并只重建白名单字段', () => {
   const moduleApi = api();
-  const invalidValues = ['{bad', 'null', '[]', '42', '"text"', JSON.stringify({ schemaVersion: 2, intake: { secret: 'future' } })];
+  const invalidValues = [
+    '{bad', 'null', '[]', '42', '"text"',
+    ...[undefined, null, '1', -1, 0, 0.5, 2].map(schemaVersion => JSON.stringify({
+      ...(schemaVersion === undefined ? {} : { schemaVersion }),
+      intake: { secret: 'must-drop' },
+      intakeRevision: 9,
+      risk: { level: 'stop', reasons: [], ruleVersion: 'pilot-v1' },
+      plan: { planVersion: 'plan-v1' }
+    }))
+  ];
   for (const raw of invalidValues) {
     const store = moduleApi.createLocalStore({ storage: memoryStorage({ [moduleApi.STORAGE_KEY]: raw }), participantId: 'pilot-b' });
     assert.deepEqual(store.loadState(), { ...DEFAULT_STATE, participantId: 'pilot-b' });
@@ -109,7 +118,8 @@ test('load/migrate 对非法、未来和污染状态 fail closed，并只重建�
   assert.equal(migrated.participantId, 'pilot-a');
   assert.equal(migrated.unknown, undefined);
   assert.equal(migrated.height, undefined);
-  assert.equal(migrated.logs.height, undefined);
+  assert.deepEqual(migrated.logs, {});
+  assert.deepEqual(migrated.weeklyReviews, []);
   assert.deepEqual(migrated.risk, { level: 'stop', reasons: [{ code: 'x', field: 'pain', message: 'safe' }], ruleVersion: 'r' });
   assert.equal(migrated.risk.height, undefined);
 });
@@ -140,8 +150,8 @@ test('审核摘要严格最小化，不含问卷、理由文本、日志、自�
       intakeRevision: 4,
       risk: { level: 'manual_review', reasons: [{ code: 'review', field: 'pain', message: secret }], ruleVersion: 'pilot-v1' },
       plan: { status: 'stale', planVersion: 'plan-v2', intakeRevision: 3, notes: secret },
-      logs: { d1: { exercises: secret }, d2: { pain: secret } },
-      weeklyReviews: [{ note: secret }],
+      logs: { d1: { exercises: secret }, healthAnswer: 'SECRET_LOG' },
+      weeklyReviews: [{ note: secret, healthAnswer: 'SECRET_LOG' }],
       consent: { acceptedAt: '2029-02-03T00:00:00.000Z', version: 'pilot-v1' }
     })
   });
@@ -152,16 +162,65 @@ test('审核摘要严格最小化，不含问卷、理由文本、日志、自�
     intakeRevision: 4,
     risk: { level: 'manual_review', reasonCodes: ['review'], ruleVersion: 'pilot-v1' },
     plan: { status: 'stale', planVersion: 'plan-v2', intakeRevision: 3 },
-    logCount: 2,
-    weeklyReviewCount: 1,
+    logCount: 0,
+    weeklyReviewCount: 0,
     consent: { accepted: true, version: 'pilot-v1' }
   });
   const serialized = JSON.stringify(summary);
   for (const forbidden of [secret, 'height', 'weight', 'pain', 'freeText', 'message', 'field', 'acceptedAt', 'exercises']) {
     assert.equal(serialized.includes(forbidden), false, forbidden);
   }
+  const loaded = moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).loadState();
+  assert.equal(JSON.stringify(loaded).includes('healthAnswer'), false);
+  assert.equal(JSON.stringify(loaded).includes('SECRET_LOG'), false);
   summary.risk.reasonCodes.push('changed');
   assert.deepEqual(moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).exportReviewSummary().risk.reasonCodes, ['review']);
+});
+
+test('审核摘要只导出严格机器标识符，恶意持久化元数据无法夹带自由文本', () => {
+  const moduleApi = api();
+  const marker = 'RAW_HEALTH_FREE_TEXT_9283';
+  const maliciousStorage = memoryStorage({
+    [moduleApi.STORAGE_KEY]: JSON.stringify({
+      schemaVersion: 1,
+      intakeRevision: 2,
+      risk: {
+        level: 'manual_review',
+        reasons: [{ code: marker, field: 'stablePain', message: 'local only' }],
+        ruleVersion: marker
+      },
+      plan: { status: marker, planVersion: marker, intakeRevision: 2 },
+      logs: { [marker]: marker },
+      weeklyReviews: [{ note: marker }]
+    })
+  });
+  const maliciousStore = moduleApi.createLocalStore({ storage: maliciousStorage });
+  assert.equal(JSON.stringify(maliciousStore.exportReviewSummary()).includes(marker), false);
+  const maliciousLoaded = maliciousStore.loadState();
+  assert.equal(JSON.stringify(maliciousLoaded.logs).includes(marker), false);
+  assert.equal(JSON.stringify(maliciousLoaded.weeklyReviews).includes(marker), false);
+
+  const validStorage = memoryStorage({
+    [moduleApi.STORAGE_KEY]: JSON.stringify({
+      schemaVersion: 1,
+      risk: {
+        level: 'conservative',
+        reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '仅本地' }],
+        ruleVersion: 'pilot-v1'
+      },
+      plan: { status: 'active', planVersion: 'plan-v1', intakeRevision: 0 }
+    })
+  });
+  assert.deepEqual(moduleApi.createLocalStore({ storage: validStorage }).exportReviewSummary(), {
+    schemaVersion: 1,
+    participantId: 'pilot-local',
+    intakeRevision: 0,
+    risk: { level: 'conservative', reasonCodes: ['stable_pain_mild'], ruleVersion: 'pilot-v1' },
+    plan: { status: 'active', planVersion: 'plan-v1', intakeRevision: 0 },
+    logCount: 0,
+    weeklyReviewCount: 0,
+    consent: { accepted: false, version: 'pilot-v1' }
+  });
 });
 
 test('clearAll 只删除 OWNED_KEYS，失败不报告成功', () => {
