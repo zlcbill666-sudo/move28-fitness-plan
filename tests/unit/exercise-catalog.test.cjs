@@ -282,3 +282,15 @@ test('验证器拒绝稀疏目录、重复场景和损坏的关系ID且不会抛
     assert.ok(errors.some(error => error.path.endsWith(path)), `未定位${path}: ${JSON.stringify(errors)}`);
   }
 });
+
+test('验证器面对不可序列化的非法器械ID也只返回结构化错误', () => {
+  const { exerciseCatalog, validateExerciseCatalog } = loadCatalogAndPlan();
+  for (const invalidId of [1n, Symbol('bad')]) {
+    const invalid = exerciseCatalog.map(exercise => ({ ...exercise }));
+    invalid[0].equipment = [invalidId];
+    invalid[0].equipmentOptions = [[invalidId]];
+    let errors;
+    assert.doesNotThrow(() => { errors = validateExerciseCatalog(invalid); });
+    assert.ok(errors.some(error => error.path.endsWith('.equipmentOptions[0]')));
+  }
+});

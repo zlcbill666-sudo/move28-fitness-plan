@@ -95,10 +95,13 @@ function validateExerciseCatalog(catalog){
       const option=item.equipmentOptions[optionIndex];
       if(!Array.isArray(option)||!option.length){add(optionPath,'器械方案不能为空');continue}
       if(new Set(option).size!==option.length)add(optionPath,'方案内器械ID不得重复');
-      if(option.some(id=>typeof id!=='string'||!EQUIPMENT_IDS.includes(id)))add(optionPath,'包含未知器械ID');
-      option.forEach(id=>optionUnion.add(id));
-      const signature=JSON.stringify([...option].sort());
-      if(optionSignatures.has(signature))add(optionPath,'器械方案不得重复');else optionSignatures.add(signature);
+      const optionIdsValid=option.every(id=>typeof id==='string'&&EQUIPMENT_IDS.includes(id));
+      if(!optionIdsValid)add(optionPath,'包含未知器械ID');
+      else{
+        option.forEach(id=>optionUnion.add(id));
+        const signature=JSON.stringify([...option].sort());
+        if(optionSignatures.has(signature))add(optionPath,'器械方案不得重复');else optionSignatures.add(signature);
+      }
     }
     if(equipmentValid&&optionsValid){
       const equipmentSet=new Set(item.equipment);
