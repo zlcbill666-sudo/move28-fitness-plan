@@ -31,6 +31,15 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(api.DOSE_KEYS, ['sets', 'reps', 'rpe', 'restSec', 'durationMin', 'holdSec']);
   });
 
+  await t.test('risk engine exports deterministic browser-independent APIs', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.riskEngine);
+    assert.equal(typeof api.evaluateRisk, 'function');
+    assert.equal(api.RULE_VERSION, 'pilot-v1');
+    assert.deepEqual(api.RISK_LEVELS, ['normal', 'conservative', 'manual_review', 'stop']);
+    assert.equal(api.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
+  });
+
   await t.test('tracker fields export all 25 fields', () => {
     clearMove28ModuleCache();
     const { trackerFields } = require(modules.trackerFields);
@@ -67,4 +76,11 @@ test('先加载legacy计划再加载目录仍共享同一个缓存实例', () =>
   const namespace = loadScript('namespace');
   assert.strictEqual(legacyDemoPlan.exercises, exerciseCatalog);
   assert.strictEqual(namespace.data.exerciseCatalog, exerciseCatalog);
+});
+
+test('risk engine 通过 helper 重复加载时共享 CommonJS 缓存实例', () => {
+  clearMove28ModuleCache();
+  const first = loadScript('riskEngine');
+  const second = loadScript('riskEngine');
+  assert.strictEqual(first, second);
 });

@@ -1,0 +1,33 @@
+[
+  {
+    "name": "完整安全筛查全部否为 normal",
+    "intake": {"age": 30, "chestSymptoms": "no", "exertionalDizziness": "no", "unexplainedFainting": "no", "restingShortnessOfBreath": "no", "acuteInjury": "no", "unableToBearWeight": "no", "unresolvedConcussion": "no", "doctorRestriction": "none", "pregnancyPostpartum": "no", "recentSurgery": "no", "complexCondition": "no", "uncontrolledBloodPressure": "no", "activityStatus": "active", "stablePain": "none"},
+    "expectedLevel": "normal", "expectedReasonCodes": []
+  },
+  {"name": "17岁且明确无红旗为 normal", "intake": {"age": 17, "redFlags": false}, "expectedLevel": "normal", "expectedReasonCodes": []},
+  {"name": "15岁需人工复核", "intake": {"age": 15, "redFlags": false}, "expectedLevel": "manual_review", "expectedReasonCodes": ["age_below_16"]},
+  {"name": "长期不活动保守开始", "intake": {"age": 30, "redFlags": false, "activityStatus": "inactive_long_term"}, "expectedLevel": "conservative", "expectedReasonCodes": ["activity_inactive_long_term"]},
+  {"name": "恢复训练保守开始", "intake": {"age": 30, "redFlags": false, "activityStatus": "returning"}, "expectedLevel": "conservative", "expectedReasonCodes": ["activity_returning"]},
+  {"name": "轻度稳定疼痛保守开始", "intake": {"age": 30, "redFlags": false, "stablePain": "mild_stable"}, "expectedLevel": "conservative", "expectedReasonCodes": ["stable_pain_mild"]},
+  {"name": "急性或加重疼痛停止", "intake": {"age": 30, "redFlags": false, "stablePain": "acute_or_worsening"}, "expectedLevel": "stop", "expectedReasonCodes": ["stable_pain_acute_or_worsening"]},
+  {"name": "胸部症状 yes 停止", "intake": {"age": 30, "redFlags": false, "chestSymptoms": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["chest_symptoms_reported"]},
+  {"name": "胸部症状 unsure 停止", "intake": {"age": 30, "redFlags": false, "chestSymptoms": "unsure"}, "expectedLevel": "stop", "expectedReasonCodes": ["chest_symptoms_uncertain"]},
+  {"name": "活动时头晕停止", "intake": {"age": 30, "redFlags": false, "exertionalDizziness": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["exertional_dizziness_reported"]},
+  {"name": "不明原因晕厥停止", "intake": {"age": 30, "redFlags": false, "unexplainedFainting": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["unexplained_fainting_reported"]},
+  {"name": "静息气短停止", "intake": {"age": 30, "redFlags": false, "restingShortnessOfBreath": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["resting_shortness_of_breath_reported"]},
+  {"name": "急性损伤停止", "intake": {"age": 30, "redFlags": false, "acuteInjury": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["acute_injury_reported"]},
+  {"name": "无法承重停止", "intake": {"age": 30, "redFlags": false, "unableToBearWeight": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["unable_to_bear_weight_reported"]},
+  {"name": "未恢复脑震荡停止", "intake": {"age": 30, "redFlags": false, "unresolvedConcussion": "yes"}, "expectedLevel": "stop", "expectedReasonCodes": ["unresolved_concussion_reported"]},
+  {"name": "医生要求明确调整需人工复核", "intake": {"age": 30, "redFlags": false, "doctorRestriction": "clear_modification"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["doctor_restriction_clear_modification"]},
+  {"name": "医生明确禁止停止", "intake": {"age": 30, "redFlags": false, "doctorRestriction": "prohibited"}, "expectedLevel": "stop", "expectedReasonCodes": ["doctor_restriction_prohibited"]},
+  {"name": "医生限制边界不明停止", "intake": {"age": 30, "redFlags": false, "doctorRestriction": "unclear"}, "expectedLevel": "stop", "expectedReasonCodes": ["doctor_restriction_unclear"]},
+  {"name": "孕产期需人工复核", "intake": {"age": 30, "redFlags": false, "pregnancyPostpartum": "yes"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["pregnancy_postpartum_reported"]},
+  {"name": "近期手术需人工复核", "intake": {"age": 30, "redFlags": false, "recentSurgery": "yes"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["recent_surgery_reported"]},
+  {"name": "复杂疾病需人工复核而非停止", "intake": {"age": 30, "redFlags": false, "complexCondition": "yes"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["complex_condition_reported"]},
+  {"name": "血压未控制需人工复核", "intake": {"age": 30, "redFlags": false, "uncontrolledBloodPressure": "yes"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["uncontrolled_blood_pressure_reported"]},
+  {"name": "关键人工复核字段 unsure", "intake": {"age": 30, "redFlags": false, "pregnancyPostpartum": "unsure"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["pregnancy_postpartum_uncertain"]},
+  {"name": "多项停止理由全部保留", "intake": {"age": 30, "redFlags": false, "chestSymptoms": "yes", "acuteInjury": "yes", "stablePain": "acute_or_worsening"}, "expectedLevel": "stop", "expectedReasonCodes": ["chest_symptoms_reported", "acute_injury_reported", "stable_pain_acute_or_worsening"]},
+  {"name": "缺失安全筛查不能默认为安全", "intake": {"age": 30}, "expectedLevel": "manual_review", "expectedReasonCodes": ["incomplete_safety_screen"]},
+  {"name": "长期不活动与人工复核组合以人工复核为准", "intake": {"age": 30, "redFlags": false, "complexCondition": "yes", "activityStatus": "inactive_long_term"}, "expectedLevel": "manual_review", "expectedReasonCodes": ["complex_condition_reported", "activity_inactive_long_term"]},
+  {"name": "聚合红旗为 true 直接停止", "intake": {"age": 30, "redFlags": true}, "expectedLevel": "stop", "expectedReasonCodes": ["red_flags_reported", "incomplete_safety_screen"]}
+]
