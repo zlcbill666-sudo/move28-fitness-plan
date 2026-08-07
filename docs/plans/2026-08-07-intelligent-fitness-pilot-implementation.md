@@ -307,7 +307,7 @@ git commit -m "feat: add validated exercise catalog"
 evaluateRisk(intake) => {
   level: 'normal' | 'conservative' | 'manual_review' | 'stop',
   reasons: [{ code, field, message }],
-  ruleVersion: 'pilot-v1'
+  ruleVersion: 'pilot-v2'
 }
 ```
 
@@ -521,7 +521,7 @@ git commit -m "feat: add approved movement substitutions"
 {
   id: 'plan-...',
   schemaVersion: 1,
-  ruleVersion: 'pilot-v1',
+  ruleVersion: 'pilot-v2',
   intakeRevision: 1,
   riskLevel: 'normal',
   status: 'generated',

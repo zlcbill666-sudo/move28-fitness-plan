@@ -54,6 +54,9 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/data/tracker-fields.js',
     'src/ui/dashboard.js',
     'src/ui/workout-guide.js',
+    'src/domain/risk-engine.js',
+    'src/storage/local-store.js',
+    'src/ui/onboarding.js',
     'src/app.js'
   ]);
 
@@ -94,4 +97,9 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#guideEyebrow')).toHaveText('STEP 1 / 15');
   await expect(page.locator('#guideBody h3')).toHaveText('先确认今天适合训练');
+
+  await page.locator('#guideModal .guide-close').click();
+  await page.getByRole('button', { name: /生成我的4周计划/ }).click();
+  await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.getByRole('heading', { name: '先确认这项服务适合你' })).toBeVisible();
 });

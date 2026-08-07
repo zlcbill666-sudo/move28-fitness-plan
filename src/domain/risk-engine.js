@@ -10,7 +10,7 @@
   const nativeStructuredClone = typeof root.structuredClone === 'function'
     ? root.structuredClone.bind(root)
     : null;
-  const RULE_VERSION = 'pilot-v1';
+  const RULE_VERSION = 'pilot-v2';
   const MIN_AGE = 0;
   const MAX_AGE = 120;
   const RISK_LEVELS = Object.freeze(['normal', 'conservative', 'manual_review', 'stop']);
@@ -37,6 +37,13 @@
     Object.freeze({ field: 'complexCondition', stem: 'complex_condition', label: '复杂健康情况' }),
     Object.freeze({ field: 'uncontrolledBloodPressure', stem: 'uncontrolled_blood_pressure', label: '未控制血压' })
   ]);
+  const FUNCTIONAL_REVIEW_DEFINITIONS = Object.freeze([
+    Object.freeze({ field:'visibleSwelling', label:'明显肿胀', safeValue:'no', triggerValue:'yes', triggerCode:'reported', triggerMessage:'已报告明显肿胀，需要人工复核。' }),
+    Object.freeze({ field:'dailyActivityLimited', label:'日常活动受限', safeValue:'no', triggerValue:'yes', triggerCode:'reported', triggerMessage:'已报告日常活动受限，需要人工复核。' }),
+    Object.freeze({ field:'chairStand', label:'独立坐站能力', safeValue:'yes', triggerValue:'no', triggerCode:'limited', triggerMessage:'独立坐站能力受限，需要人工复核。' }),
+    Object.freeze({ field:'walkTenMinutes', label:'连续步行10分钟能力', safeValue:'yes', triggerValue:'no', triggerCode:'limited', triggerMessage:'连续步行10分钟能力受限，需要人工复核。' })
+  ]);
+  const FUNCTIONAL_REVIEW_FIELDS = Object.freeze(FUNCTIONAL_REVIEW_DEFINITIONS.map(item => item.field));
   const STOP_FIELDS = Object.freeze(STOP_FIELD_DEFINITIONS.map(item => item.field));
   const MANUAL_REVIEW_FIELDS = Object.freeze(MANUAL_FIELD_DEFINITIONS.map(item => item.field));
   const SAFETY_SCREEN_FIELDS = Object.freeze([
@@ -52,7 +59,8 @@
     'doctorRestriction',
     ...MANUAL_REVIEW_FIELDS,
     'stablePain',
-    'activityStatus'
+    'activityStatus',
+    ...FUNCTIONAL_REVIEW_FIELDS
   ]);
 
   function deepFreeze(value) {
@@ -242,6 +250,18 @@
       }
     }
 
+    for (const definition of FUNCTIONAL_REVIEW_DEFINITIONS) {
+      if (!presentFields.has(definition.field)) continue;
+      const value = source[definition.field];
+      if (value === definition.triggerValue) {
+        add('manual_review', `${definition.field}_${definition.triggerCode}`, definition.field, definition.triggerMessage);
+      } else if (value === 'unsure') {
+        add('manual_review', `${definition.field}_uncertain`, definition.field, `${definition.label}不确定，需要人工复核。`);
+      } else if (value !== definition.safeValue) {
+        add('manual_review', `${definition.field}_invalid`, definition.field, `${definition.label}答案无效，需要人工复核。`);
+      }
+    }
+
     if (presentFields.has('stablePain')) {
       const pain = source.stablePain;
       if (pain === 'mild_stable') {
@@ -282,6 +302,7 @@
     STABLE_PAIN_VALUES,
     STOP_FIELDS,
     MANUAL_REVIEW_FIELDS,
+    FUNCTIONAL_REVIEW_FIELDS,
     SAFETY_SCREEN_FIELDS
   });
 });

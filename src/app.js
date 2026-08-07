@@ -1,7 +1,7 @@
 (function(root,factory){
 const isCommonJS=typeof module==='object'&&module.exports;
 const Move28=isCommonJS?require('./namespace.js'):(root.Move28=root.Move28||{});
-if(isCommonJS){require('./data/legacy-demo-plan.js');require('./data/tracker-fields.js');require('./ui/dashboard.js');require('./ui/workout-guide.js')}
+if(isCommonJS){require('./data/legacy-demo-plan.js');require('./data/tracker-fields.js');require('./ui/dashboard.js');require('./ui/workout-guide.js');require('./domain/risk-engine.js');require('./storage/local-store.js');require('./ui/onboarding.js')}
 const api=factory(root,Move28);
 Move28.init=api.init;
 if(isCommonJS)module.exports=api;
@@ -26,6 +26,15 @@ function init(){
   workoutAudio.addEventListener('error',()=>{guide.updateMusicUI();ui.showToast('音乐加载失败，请检查网络或离线资源')});
   $('#guideModal').addEventListener('click',event=>{if(event.target===$('#guideModal'))Move28.closeGuide()});
   root.document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#guideModal').classList.contains('open'))Move28.closeGuide()});
+
+  const onboardingRoot=$('#onboardingView');
+  if(onboardingRoot&&Move28.onboarding&&Move28.storage){
+    Move28.onboardingController=Move28.onboarding.createOnboarding({
+      rootElement:onboardingRoot,
+      onComplete:({intake,risk})=>Move28.storage.saveIntake(intake,risk)
+    });
+    $('#onboardingStart').addEventListener('click',()=>Move28.onboardingController.open());
+  }
 
   ui.renderToday();
   ui.renderWeeks();

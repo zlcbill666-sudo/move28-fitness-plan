@@ -35,7 +35,7 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     clearMove28ModuleCache();
     const api = require(modules.riskEngine);
     assert.equal(typeof api.evaluateRisk, 'function');
-    assert.equal(api.RULE_VERSION, 'pilot-v1');
+    assert.equal(api.RULE_VERSION, 'pilot-v2');
     assert.deepEqual(api.RISK_LEVELS, ['normal', 'conservative', 'manual_review', 'stop']);
     assert.equal(api.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
   });
@@ -74,6 +74,16 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.guideStepsFor, 'function');
     assert.equal(typeof api.renderGuide, 'function');
     assert.equal(typeof api.openGuide, 'function');
+  });
+
+  await t.test('onboarding exports pure guided-intake APIs without a DOM', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.onboarding);
+    assert.equal(typeof api.createOnboarding, 'function');
+    assert.equal(typeof api.validateStep, 'function');
+    assert.equal(typeof api.deriveRiskIntake, 'function');
+    assert.equal(api.STEPS.length, 10);
+    assert.equal(api.DRAFT_KEY, 'move28-onboarding-draft-v1');
   });
 
   await t.test('app exports init without initializing the DOM', () => {

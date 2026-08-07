@@ -11,6 +11,7 @@ const modules = Object.freeze({
   trackerFields: path.join(projectRoot, 'src', 'data', 'tracker-fields.js'),
   dashboard: path.join(projectRoot, 'src', 'ui', 'dashboard.js'),
   workoutGuide: path.join(projectRoot, 'src', 'ui', 'workout-guide.js'),
+  onboarding: path.join(projectRoot, 'src', 'ui', 'onboarding.js'),
   app: path.join(projectRoot, 'src', 'app.js'),
 });
 
@@ -18,6 +19,7 @@ function clearMove28ModuleCache() {
   const dependencySafeOrder = [
     modules.app,
     modules.workoutGuide,
+    modules.onboarding,
     modules.dashboard,
     modules.trackerFields,
     modules.legacyPlan,

@@ -19,7 +19,7 @@ test('风险边界 fixtures 逐项得到精确等级、版本和有序理由', a
     await t.test(fixture.name, () => {
       const result = evaluate(fixture.intake);
       assert.equal(result.level, fixture.expectedLevel);
-      assert.equal(result.ruleVersion, 'pilot-v1');
+      assert.equal(result.ruleVersion, 'pilot-v2');
       assert.deepEqual(result.reasons.map(reason => reason.code), fixture.expectedReasonCodes);
       for (const reason of result.reasons) {
         assert.equal(typeof reason.code, 'string');
@@ -31,6 +31,20 @@ test('风险边界 fixtures 逐项得到精确等级、版本和有序理由', a
       }
       assert.equal(new Set(result.reasons.map(reason => `${reason.code}:${reason.field}`)).size, result.reasons.length);
     });
+  }
+});
+
+test('明显肿胀与基础活动能力限制进入正式人工复核理由', () => {
+  const cases = [
+    ['visibleSwelling', 'yes', 'visibleSwelling_reported'],
+    ['dailyActivityLimited', 'yes', 'dailyActivityLimited_reported'],
+    ['chairStand', 'no', 'chairStand_limited'],
+    ['walkTenMinutes', 'unsure', 'walkTenMinutes_uncertain']
+  ];
+  for (const [field, value, code] of cases) {
+    const result = evaluate({ age: 30, redFlags: false, [field]: value });
+    assert.equal(result.level, 'manual_review');
+    assert.ok(result.reasons.some(reason => reason.code === code && reason.field === field));
   }
 });
 
