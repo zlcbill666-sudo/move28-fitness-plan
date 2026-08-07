@@ -226,6 +226,22 @@ test('嵌套对象与更深层数组中的 getter 在 structuredClone 前被拒�
   assert.equal(JSON.stringify(arrayResult).includes(arraySecret), false);
 });
 
+test('20,000 层无环 plain 对象不会耗尽遍历调用栈，克隆深度受限时 fail closed', () => {
+  const metadata = {};
+  let cursor = metadata;
+  for (let depth = 0; depth < 20_000; depth += 1) {
+    cursor.next = {};
+    cursor = cursor.next;
+  }
+
+  let result;
+  assert.doesNotThrow(() => {
+    result = evaluate({ age: 30, redFlags: false, metadata });
+  });
+  assert.equal(result.level, 'manual_review');
+  assert.equal(result.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+});
+
 test('嵌套 Proxy 与非 plain 对象均 fail closed', () => {
   const nestedProxy = { age: 30, redFlags: false, metadata: new Proxy({ source: 'self' }, {}) };
   const proxyResult = evaluate(nestedProxy);

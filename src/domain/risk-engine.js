@@ -61,46 +61,43 @@
     return Object.freeze(value);
   }
 
-  function isCanonicalCloneGraph(value, seen = new WeakSet()) {
-    if (value === null || typeof value !== 'object') return typeof value !== 'function';
-    if (seen.has(value)) return true;
-
-    let isArray;
-    let prototype;
-    let ownKeys;
+  function isCanonicalCloneGraph(rootValue) {
     try {
-      isArray = Array.isArray(value);
-      prototype = Object.getPrototypeOf(value);
-      ownKeys = Reflect.ownKeys(value);
+      const pending = [rootValue];
+      const seen = new WeakSet();
+
+      while (pending.length > 0) {
+        const value = pending.pop();
+        if (value === null || typeof value !== 'object') {
+          if (typeof value === 'function') return false;
+          continue;
+        }
+        if (seen.has(value)) continue;
+
+        const isArray = Array.isArray(value);
+        const prototype = Object.getPrototypeOf(value);
+        const ownKeys = Reflect.ownKeys(value);
+
+        if (!isArray && prototype !== null) {
+          if (Object.getPrototypeOf(prototype) !== null) return false;
+          const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+          if (constructorDescriptor === undefined
+            || !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
+            || typeof constructorDescriptor.value !== 'function') return false;
+        }
+
+        seen.add(value);
+        for (const key of ownKeys) {
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          if (descriptor === undefined
+            || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) return false;
+          pending.push(descriptor.value);
+        }
+      }
+      return true;
     } catch (_error) {
       return false;
     }
-
-    if (!isArray && prototype !== null) {
-      try {
-        if (Object.getPrototypeOf(prototype) !== null) return false;
-        const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
-        if (constructorDescriptor === undefined
-          || !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
-          || typeof constructorDescriptor.value !== 'function') return false;
-      } catch (_error) {
-        return false;
-      }
-    }
-
-    seen.add(value);
-    for (const key of ownKeys) {
-      let descriptor;
-      try {
-        descriptor = Object.getOwnPropertyDescriptor(value, key);
-      } catch (_error) {
-        return false;
-      }
-      if (descriptor === undefined
-        || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
-        || !isCanonicalCloneGraph(descriptor.value, seen)) return false;
-    }
-    return true;
   }
 
   function evaluateRisk(intake) {
@@ -117,7 +114,7 @@
       if (PRIORITY[nextLevel] > PRIORITY[level]) level = nextLevel;
     }
 
-    // 先递归检查整个可达图均由 plain data descriptor 组成，再调用初始化时捕获的
+    // 先迭代检查整个可达图均由 plain data descriptor 组成，再调用初始化时捕获的
     // structuredClone 拒绝 Proxy 和不可克隆值。规则只读取顶层白名单描述符快照。
     const source = Object.create(null);
     const presentFields = new Set();
