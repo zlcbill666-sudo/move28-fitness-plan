@@ -6,7 +6,7 @@
 
 **Architecture:** 保持静态、零构建运行方式，避免破坏GitHub Pages和“双击 `index.html` 离线打开”。将当前单文件中的数据、纯规则和UI逐步拆为经典脚本；所有模块挂载到唯一的 `window.Move28` 命名空间，并同时提供 `module.exports` 供Node测试。核心生成链路为确定性问卷→风险分流→动作匹配→4周生成→校验→跟练；首试不连接外部AI。
 
-**Tech Stack:** HTML5、CSS、原生JavaScript、Node 24内置 `node:test`、`@playwright/test@1.62.1`、浏览器 `localStorage`、GitHub Pages、离线ZIP。
+**Tech Stack:** HTML5、CSS、原生JavaScript、Node >=20内置 `node:test`、`@playwright/test@1.62.1`、系统版Google Chrome、浏览器 `localStorage`、GitHub Pages、离线ZIP。
 
 **Design source:** `docs/plans/2026-08-07-intelligent-fitness-pilot-design.md`
 
@@ -112,6 +112,9 @@
 {
   "name": "move28-fitness-plan",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test",
     "test:unit": "node --test",
@@ -132,11 +135,16 @@
 const { defineConfig, devices } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  use: { baseURL: 'http://127.0.0.1:8765', trace: 'retain-on-failure' },
+  use: {
+    baseURL: 'http://127.0.0.1:8765',
+    browserName: 'chromium',
+    channel: 'chrome',
+    trace: 'retain-on-failure'
+  },
   webServer: {
     command: 'python -m http.server 8765 --bind 127.0.0.1',
     url: 'http://127.0.0.1:8765/index.html',
-    reuseExistingServer: true
+    reuseExistingServer: !process.env.CI
   },
   projects: [
     { name: 'desktop', use: { viewport: { width: 1280, height: 800 } } },
@@ -145,9 +153,11 @@ module.exports = defineConfig({
 });
 ```
 
+> `browserName: 'chromium'` 与 `channel: 'chrome'` 必须同时保留：测试固定启动机器上预先安装的系统Chrome，而不是Playwright随包下载的Chromium。开发机可复用已启动的本地服务器；CI设置环境变量后会创建独立服务器，避免连接到残留进程。
+
 **Step 2: 写当前行为特征测试**
 
-断言：页面无控制台错误；17个动作GIF存在；第1天跟练每屏只有1个动作；主按钮可推进；关闭弹窗停止音乐；390×844无横向溢出；本地记录写入并可清除。
+断言：全流程无console error、pageerror、同源HTTP错误或非预期资源失败；17个动作GIF存在；第1天跟练固定15步、13个动作步骤及精确标题顺序，首尾为说明页且完成后自动记录；四周各7天并可切换到第8～14天；安全区8张卡标题固定；关键CSS样式生效；关闭弹窗停止音乐；390×844无横向溢出；本地记录写入并可清除。仅允许忽略可解释的客户端媒体取消（例如切换音频产生的 `net::ERR_ABORTED`）。
 
 **Step 3: 安装并运行**
 

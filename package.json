@@ -1,6 +1,9 @@
 {
   "name": "move28-fitness-plan",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test",
     "test:unit": "node --test",

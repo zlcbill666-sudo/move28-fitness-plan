@@ -18,3 +18,14 @@
 - 放松：Summer Dream — Eugenio Mininni
 
 运动时请保持较低音量；户外步行时优先注意车辆、行人和环境提示音。
+
+## 开发测试
+
+测试环境要求 Node.js 20 或更高版本，并预先安装系统版 Google Chrome。Playwright 明确使用 `chromium` 的 `chrome` channel，不会自动改用随包下载的 Chromium。
+
+```bash
+npm install
+npm run test:all
+```
+
+`npm run test:all` 会先运行 Node 测试，再在桌面和 390×844 移动视口中运行 Playwright 端到端回归测试。
