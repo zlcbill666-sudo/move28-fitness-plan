@@ -40,6 +40,14 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(api.MOVEMENT_INTENTS, ['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability','low_impact_cardio']);
   });
 
+  await t.test('plan generator exports deterministic four-week planning APIs', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.planGenerator);
+    assert.equal(typeof api.generatePlan, 'function');
+    assert.equal(api.RULE_VERSION, 'pilot-v2');
+    assert.deepEqual(api.STRENGTH_PATTERNS, ['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability']);
+  });
+
   await t.test('risk engine exports deterministic browser-independent APIs', () => {
     clearMove28ModuleCache();
     const api = require(modules.riskEngine);

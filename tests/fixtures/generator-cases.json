@@ -1,0 +1,8 @@
+[
+  {"name":"1天20分钟normal健身房","daysPerWeek":"1","sessionMinutes":"20","weekdays":["mon"],"riskLevel":"normal","expectedIntents":["full_body_strength"]},
+  {"name":"2天30分钟normal健身房","daysPerWeek":"2","sessionMinutes":"30","weekdays":["mon","thu"],"riskLevel":"normal","expectedIntents":["full_body_strength","full_body_strength"]},
+  {"name":"3天45分钟normal健身房","daysPerWeek":"3","sessionMinutes":"45","weekdays":["mon","wed","fri"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength"]},
+  {"name":"4天60分钟normal健身房","daysPerWeek":"4","sessionMinutes":"60","weekdays":["mon","tue","thu","sat"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength","recovery"]},
+  {"name":"5天75分钟仍限制四个安排","daysPerWeek":"5plus","sessionMinutes":"75","weekdays":["mon","tue","wed","fri","sun"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength","recovery"]},
+  {"name":"conservative恢复训练","daysPerWeek":"3","sessionMinutes":"30","weekdays":["mon","wed","fri"],"riskLevel":"conservative","trainingBreak":"yes","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength"]}
+]
