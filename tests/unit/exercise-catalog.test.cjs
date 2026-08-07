@@ -129,6 +129,22 @@ test('关系图精确锁定，不允许目录隐式新增关系', () => {
   ]);
 });
 
+test('排除标签来自固定审核枚举并精确标注当前动作', () => {
+  const { exerciseCatalog, EXCLUSION_TAGS, validateExerciseCatalog } = loadCatalogAndPlan();
+  assert.deepEqual(EXCLUSION_TAGS, ['deep_knee_bend','overhead','floor','single_leg','hinge']);
+  const tagged = Object.fromEntries(exerciseCatalog.filter(item => item.contraindications.length).map(item => [item.id,item.contraindications]));
+  assert.deepEqual(tagged, {
+    'seated-leg-press':['deep_knee_bend'],
+    'glute-bridge':['floor'],
+    'dead-bug':['floor']
+  });
+  for (const contraindications of [['unknown'],['floor','floor']]) {
+    const invalid = exerciseCatalog.map(item => ({...item,contraindications:[...item.contraindications]}));
+    invalid[0].contraindications = contraindications;
+    assert.ok(validateExerciseCatalog(invalid).some(item => item.path.endsWith('.contraindications')));
+  }
+});
+
 test('cues逐项严格映射legacy原文', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
   for (const exercise of exerciseCatalog) {

@@ -28,7 +28,16 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(api.validateExerciseCatalog(api.exerciseCatalog), []);
     assert.deepEqual(api.getApprovedExercises(), api.exerciseCatalog);
     assert.ok(Array.isArray(api.EQUIPMENT_IDS) && api.EQUIPMENT_IDS.includes('stable_chair'));
+    assert.deepEqual(api.EXCLUSION_TAGS, ['deep_knee_bend','overhead','floor','single_leg','hinge']);
     assert.deepEqual(api.DOSE_KEYS, ['sets', 'reps', 'rpe', 'restSec', 'durationMin', 'holdSec']);
+  });
+
+  await t.test('movement matcher exports deterministic finite mapping APIs', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.movementMatcher);
+    assert.equal(typeof api.matchExercise, 'function');
+    assert.equal(typeof api.swapSessionSetting, 'function');
+    assert.deepEqual(api.MOVEMENT_INTENTS, ['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability','low_impact_cardio']);
   });
 
   await t.test('risk engine exports deterministic browser-independent APIs', () => {

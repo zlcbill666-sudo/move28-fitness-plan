@@ -5,6 +5,7 @@ const projectRoot = path.resolve(__dirname, '..', '..');
 const modules = Object.freeze({
   namespace: path.join(projectRoot, 'src', 'namespace.js'),
   riskEngine: path.join(projectRoot, 'src', 'domain', 'risk-engine.js'),
+  movementMatcher: path.join(projectRoot, 'src', 'domain', 'movement-matcher.js'),
   localStore: path.join(projectRoot, 'src', 'storage', 'local-store.js'),
   exerciseCatalog: path.join(projectRoot, 'src', 'data', 'exercise-catalog.js'),
   legacyPlan: path.join(projectRoot, 'src', 'data', 'legacy-demo-plan.js'),
@@ -20,6 +21,7 @@ function clearMove28ModuleCache() {
     modules.app,
     modules.workoutGuide,
     modules.onboarding,
+    modules.movementMatcher,
     modules.dashboard,
     modules.trackerFields,
     modules.legacyPlan,
