@@ -66,14 +66,21 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     namespace: typeof window.Move28,
     sharedState: typeof window.Move28?.state,
     openGuide: typeof window.openGuide,
+    uiRenderToday: typeof window.Move28?.ui?.renderToday,
     renderToday: typeof window.renderToday,
-    moveDay: typeof window.moveDay
+    dashboardProxies: ['moveDay', 'pickWeek', 'pickExercise', 'setStatus', 'selectTrackDay', 'openTrack']
+      .map(name => typeof window[name]),
+    legacyTrackerHeaders: typeof window.Move28?.data?.legacyDemoPlan?.trackerHeaders,
+    trackerFieldCount: window.Move28?.data?.trackerFields?.length
   }))).toEqual({
     namespace: 'object',
     sharedState: 'object',
     openGuide: 'function',
-    renderToday: 'function',
-    moveDay: 'function'
+    uiRenderToday: 'function',
+    renderToday: 'undefined',
+    dashboardProxies: Array(6).fill('function'),
+    legacyTrackerHeaders: 'undefined',
+    trackerFieldCount: 25
   });
 
   await page.getByRole('button', { name: '一步一步带我练' }).click();
