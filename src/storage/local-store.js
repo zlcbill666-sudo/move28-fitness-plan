@@ -1,13 +1,15 @@
 (function(root, factory) {
-  const api = factory(root);
   const isCommonJS = typeof module === 'object' && module.exports;
+  const validatorApi = isCommonJS ? require('../domain/plan-validator.js') : root.Move28 && root.Move28.domain;
+  const catalogApi = isCommonJS ? require('../data/exercise-catalog.js') : root.Move28 && root.Move28.data;
+  const api = factory(root, validatorApi || {}, catalogApi || {});
   if (isCommonJS) {
     module.exports = api;
   } else {
     const Move28 = root.Move28 = root.Move28 || {};
     Move28.storage = api;
   }
-})(globalThis, function(root) {
+})(globalThis, function(root, validatorApi, catalogApi) {
   'use strict';
 
   const STORAGE_KEY = 'move28-pilot-v1';
@@ -25,6 +27,8 @@
   const MAX_LOCAL_REASON_MESSAGE_LENGTH = 512;
   const functionToString = Function.prototype.toString;
   const nativeObjectSource = functionToString.call(Object);
+  const trustedValidatePlan = typeof validatorApi.validatePlan === 'function' ? validatorApi.validatePlan : null;
+  const trustedExerciseCatalog = Array.isArray(catalogApi.exerciseCatalog) ? catalogApi.exerciseCatalog : null;
   let nativeStructuredClone = null;
 
   try {
@@ -240,6 +244,23 @@
     return { level: risk.level, reasons, ruleVersion };
   }
 
+  function sanitizeCompletionLogs(value) {
+    const logs = cloneObjectOr(value, null, false);
+    if (!logs) return {};
+    const entries = Object.entries(logs);
+    if (entries.length > 256) return {};
+    const clean = {};
+    for (const record of Object.values(logs)) {
+      if (!record || typeof record !== 'object' || Array.isArray(record)) continue;
+      const planId = sanitizeMachineId(record.planId);
+      const sessionId = sanitizeMachineId(record.sessionId);
+      const completedAt = typeof record.completedAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(record.completedAt) ? record.completedAt : null;
+      if (!planId || !sessionId || record.status !== 'completed' || !completedAt) continue;
+      clean[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+    }
+    return clean;
+  }
+
   function migrateState(raw, participantId) {
     const defaults = createDefaultState(participantId);
     if (raw === null || typeof raw !== 'object') return defaults;
@@ -270,9 +291,9 @@
     const plan = ownDataValue(raw, 'plan');
     if (plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
 
-    // Reserved state shape only. Task 11/12 will add explicit write APIs and
-    // whitelist sanitizers before persisted logs or reviews may be accepted.
-    defaults.logs = {};
+    const logs = ownDataValue(raw, 'logs');
+    if (logs.present) defaults.logs = sanitizeCompletionLogs(logs.value);
+    // Weekly review writes remain reserved for Task 12.
     defaults.weeklyReviews = [];
 
     const consent = ownDataValue(raw, 'consent');
@@ -305,12 +326,12 @@
         && typeof candidate.removeItem === 'function') {
         // A read-only probe detects privacy/security blocks without writing any key.
         candidate.getItem(STORAGE_KEY);
-        return candidate;
+        return { adapter: candidate, durable: true };
       }
     } catch (_error) {
-      // No usable browser storage: the private in-memory adapter is the safe default.
+      // Reads may still return the empty state, but writes must report that persistence is unavailable.
     }
-    return memory;
+    return { adapter: memory, durable: false };
   }
 
   function createStorageError(message) {
@@ -322,7 +343,9 @@
   function createLocalStore(options) {
     const settings = options && typeof options === 'object' ? options : {};
     const participantId = normalizeParticipantId(settings.participantId);
-    const storage = settings.storage === undefined ? createDefaultStorage() : settings.storage;
+    const defaultStorage = settings.storage === undefined ? createDefaultStorage() : null;
+    const storage = defaultStorage ? defaultStorage.adapter : settings.storage;
+    const durable = defaultStorage ? defaultStorage.durable : true;
     const now = typeof settings.now === 'function' ? settings.now : () => new Date().toISOString();
 
     function readState(options) {
@@ -366,6 +389,7 @@
     }
 
     function persist(state) {
+      if (!durable) throw createStorageError();
       let snapshot;
       let serialized;
       try {
@@ -404,23 +428,78 @@
       return persist(state);
     }
 
+    function candidateForValidation(plan) {
+      const candidate = clonePlainData(plan);
+      if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+      delete candidate.review;
+      delete candidate.staleReason;
+      delete candidate.staleAt;
+      candidate.status = 'generated';
+      return candidate;
+    }
+
+    function passesTrustedPlanGate(plan, state) {
+      const candidate = candidateForValidation(plan);
+      if (!candidate || !trustedValidatePlan || !trustedExerciseCatalog) return false;
+      try {
+        const result = trustedValidatePlan({ plan: candidate, intake: state.intake, risk: state.risk, catalog: trustedExerciseCatalog });
+        return Boolean(result && result.ok === true && Array.isArray(result.errors) && result.errors.length === 0);
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    function hasReviewApproval(plan, state) {
+      const review = plan && plan.review;
+      return Boolean(review && review.status === 'approved'
+        && sanitizeMachineId(review.reviewerId)
+        && review.planId === plan.id
+        && review.intakeRevision === state.intakeRevision
+        && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review.reviewedAt));
+    }
+
     function savePlan(plan) {
       const cleanPlan = clonePlainData(plan);
       if (cleanPlan === null || typeof cleanPlan !== 'object' || Array.isArray(cleanPlan)) {
         throw invalidPlainData();
       }
       const state = loadStateForWrite();
-      cleanPlan.status = cleanPlan.status === 'stale' ? 'stale' : 'active';
+      if (cleanPlan.status !== 'generated' || cleanPlan.intakeRevision !== state.intakeRevision
+        || !passesTrustedPlanGate(cleanPlan, state)) throw createStorageError();
+      cleanPlan.status = 'pending_review';
       cleanPlan.intakeRevision = state.intakeRevision;
-      if (cleanPlan.status === 'active') {
-        delete cleanPlan.staleReason;
-        delete cleanPlan.staleAt;
-      }
+      cleanPlan.review = null;
+      delete cleanPlan.staleReason;
+      delete cleanPlan.staleAt;
       state.plan = cleanPlan;
       return persist(state);
     }
 
+    function recordWorkoutCompletion(completion) {
+      const clean = clonePlainData(completion);
+      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
+        || Object.keys(clean).some(key => !['planId', 'sessionId'].includes(key))) throw invalidPlainData();
+      const planId = sanitizeMachineId(clean.planId);
+      const sessionId = sanitizeMachineId(clean.sessionId);
+      if (!planId || !sessionId) throw invalidPlainData();
+      const state = loadStateForWrite();
+      const plan = state.plan;
+      const sessions = plan && Array.isArray(plan.weeks)
+        ? plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions : [])
+        : [];
+      if (!plan || plan.status !== 'active' || plan.id !== planId
+        || plan.intakeRevision !== state.intakeRevision
+        || !hasReviewApproval(plan, state)
+        || !passesTrustedPlanGate(plan, state)
+        || !sessions.some(session => session && session.id === sessionId)) throw createStorageError();
+      const completedAt = String(now());
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(completedAt)) throw createStorageError();
+      state.logs[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+      return persist(state);
+    }
+
     function clearAll() {
+      if (!durable) return false;
       try {
         for (const key of OWNED_KEYS) storage.removeItem(key);
         return true;
@@ -440,7 +519,7 @@
         ruleVersion: cleanRuleVersion
       } : null;
       const plan = state.plan ? {
-        status: state.plan.status === 'active' || state.plan.status === 'stale' ? state.plan.status : null,
+        status: ['pending_review', 'active', 'stale'].includes(state.plan.status) ? state.plan.status : null,
         planVersion: sanitizeMachineId(state.plan.planVersion),
         intakeRevision: Number.isSafeInteger(state.plan.intakeRevision) ? state.plan.intakeRevision : null
       } : null;
@@ -456,7 +535,7 @@
       };
     }
 
-    return Object.freeze({ loadState, saveIntake, savePlan, clearAll, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, savePlan, recordWorkoutCompletion, clearAll, exportReviewSummary });
   }
 
   const defaultStore = createLocalStore();
@@ -471,6 +550,7 @@
     loadState: defaultStore.loadState,
     saveIntake: defaultStore.saveIntake,
     savePlan: defaultStore.savePlan,
+    recordWorkoutCompletion: defaultStore.recordWorkoutCompletion,
     clearAll: defaultStore.clearAll,
     exportReviewSummary: defaultStore.exportReviewSummary
   });

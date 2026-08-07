@@ -6,12 +6,15 @@ if(isCommonJS)module.exports=Move28;
 })(globalThis,function(root,Move28){
 'use strict';
 const emptyStorage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
-const storage=root.localStorage&&typeof root.localStorage.getItem==='function'?root.localStorage:emptyStorage;
+let storage=emptyStorage;
+try{const candidate=root.localStorage;if(candidate&&typeof candidate.getItem==='function'&&typeof candidate.setItem==='function'&&typeof candidate.removeItem==='function')storage=candidate}catch(_error){storage=emptyStorage}
+function stored(key,fallback=null){try{const value=storage.getItem(key);return value===null?fallback:value}catch(_error){return fallback}}
+function storedJson(key,fallback){try{return JSON.parse(stored(key,JSON.stringify(fallback)))}catch(_error){return fallback}}
 Move28.data=Move28.data||{};
 Move28.ui=Move28.ui||{};
 Move28.guide=Move28.guide||{};
 Move28.state=Move28.state||{
-  currentDay:Number(storage.getItem('move28-current-day')||1),
+  currentDay:Number(stored('move28-current-day',1)),
   currentWeek:1,
   exerciseFilter:'全部',
   trackDay:1,
@@ -21,11 +24,11 @@ Move28.state=Move28.state||{
   toastTimer:null,
   clearArmTimer:null,
   clearArmed:false,
-  musicEnabled:storage.getItem('move28-music-enabled')!=='0',
+  musicEnabled:stored('move28-music-enabled','1')!=='0',
   musicKey:'',
-  musicVolume:Number(storage.getItem('move28-music-volume')||32)/100,
+  musicVolume:Number(stored('move28-music-volume',32))/100,
   storeKey:'move28-tracker-v1',
-  tracker:JSON.parse(storage.getItem('move28-tracker-v1')||'{}')
+  tracker:storedJson('move28-tracker-v1',{})
 };
 Move28.utils=Move28.utils||{
   $:s=>root.document?root.document.querySelector(s):null,

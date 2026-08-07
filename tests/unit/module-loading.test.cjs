@@ -95,9 +95,9 @@ test('all static modules load through CommonJS with useful exports', async (t) =
   await t.test('workout guide exports callable guide APIs without a DOM', () => {
     clearMove28ModuleCache();
     const api = require(modules.workoutGuide);
-    assert.equal(typeof api.guideStepsFor, 'function');
+    assert.equal(typeof api.buildWorkoutSteps, 'function');
     assert.equal(typeof api.renderGuide, 'function');
-    assert.equal(typeof api.openGuide, 'function');
+    assert.equal(typeof api.openWorkout, 'function');
   });
 
   await t.test('onboarding exports pure guided-intake APIs without a DOM', () => {

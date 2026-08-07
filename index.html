@@ -6,14 +6,15 @@
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzI0JyBmaWxsPScjZDhmZjNlJy8+PHRleHQgeD0nNTAnIHk9JzY2JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LXNpemU9JzUyJyBmb250LWZhbWlseT0nQXJpYWwnIGZvbnQtd2VpZ2h0PSc5MDAnIGZpbGw9JyMwOTBjMTInPjI4PC90ZXh0Pjwvc3ZnPg==">
 <title>MOVE 28｜4周减重入门训练计划</title>
 <link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="assets/css/generated-plan.css">
 </head>
 <body>
 <header class="topbar"><div class="shell"><a class="brand" href="#top"><span class="brand-mark">28</span><span>MOVE 28 <small>BEGINNER PROTOCOL</small></span></a><nav><a href="#today">今天</a><a href="#weeks">四周计划</a><a href="#library">动作库</a><a href="#tracker">每日追踪</a><a href="#safety">安全</a></nav></div></header>
 <main id="top">
-<section class="hero"><div class="shell hero-layout"><div><div class="kicker">Four-week training system</div><h1>先稳定行动<em>再改变体重</em></h1><p class="hero-copy">面向大体重、低运动基础人群的减重起步计划。每周3次力量训练，以椭圆机和0坡度平地慢走完成低冲击有氧，不跑步、不跳跃。</p><div class="hero-actions"><button id="onboardingStart" class="cta primary plan-cta" type="button">生成我的4周计划 →</button><a class="cta" href="#today" onclick="event.preventDefault();openGuide(Move28.state.currentDay)">开始今天训练</a><a class="cta" href="#library">查看动作GIF</a></div><div class="equipment-note"><span>✓</span><div><b>器械适配已更新</b><br>低冲击有氧统一使用椭圆机／交叉训练机和跑步机0坡度平地慢走，训练时只走路、不跑步。</div></div></div><div class="motion-stage" aria-label="动作演示拼贴"><div class="motion-card one"><img src="assets/gifs/15_%E6%A4%AD%E5%9C%86%E6%9C%BA.gif" alt="椭圆机动作演示"><span class="motion-label">LOW IMPACT</span></div><div class="motion-card two"><img src="assets/gifs/04_%E5%9D%90%E5%A7%BF%E8%85%BF%E4%B8%BE.gif" alt="坐姿腿举动作演示"><span class="motion-label">STRENGTH A</span></div><div class="motion-card three"><img src="assets/gifs/16_%E5%B9%B3%E5%9C%B0%E6%85%A2%E8%B5%B0.gif" alt="平地慢走动作演示"><span class="motion-label">WALK · 0°</span></div></div></div></section>
+<section class="hero"><div class="shell hero-layout"><div><div class="kicker">Four-week training system</div><h1>先稳定行动<em>再改变体重</em></h1><p class="hero-copy">面向大体重、低运动基础人群的减重起步计划。先完成约3分钟问卷，再由确定性安全规则生成固定4周计划；未问卷时仅展示只读示例。</p><div class="hero-actions"><button id="onboardingStart" class="cta primary plan-cta" type="button">生成我的4周计划 →</button><a class="cta" href="#today">查看示例计划</a><a class="cta" href="#library">查看动作GIF</a></div><div class="equipment-note"><span>✓</span><div><b>器械适配已更新</b><br>低冲击有氧统一使用椭圆机／交叉训练机和跑步机0坡度平地慢走，训练时只走路、不跑步。</div></div></div><div class="motion-stage" aria-label="动作演示拼贴"><div class="motion-card one"><img src="assets/gifs/15_%E6%A4%AD%E5%9C%86%E6%9C%BA.gif" alt="椭圆机动作演示"><span class="motion-label">LOW IMPACT</span></div><div class="motion-card two"><img src="assets/gifs/04_%E5%9D%90%E5%A7%BF%E8%85%BF%E4%B8%BE.gif" alt="坐姿腿举动作演示"><span class="motion-label">STRENGTH A</span></div><div class="motion-card three"><img src="assets/gifs/16_%E5%B9%B3%E5%9C%B0%E6%85%A2%E8%B5%B0.gif" alt="平地慢走动作演示"><span class="motion-label">WALK · 0°</span></div></div></div></section>
 <div class="metric-rail"><div class="shell metrics"><div class="metric"><strong>04</strong><small>周渐进计划</small></div><div class="metric"><strong>03</strong><small>每周力量训练</small></div><div class="metric"><strong>5–6</strong><small>力量训练RPE</small></div><div class="metric"><strong>00</strong><small>跑步与跳跃</small></div></div></div>
 <div class="beginner-strip"><div class="shell beginner-flow"><div class="beginner-title"><strong>只要3步</strong><small>不用研究，跟着页面做</small></div><div class="beginner-step"><b>1</b><span><strong>看今天</strong>页面已经排好当天任务</span></div><div class="beginner-step"><b>2</b><span><strong>点开始训练</strong>一页只显示一个步骤</span></div><div class="beginner-step"><b>3</b><span><strong>完成并记录</strong>最后一步自动打卡</span></div></div></div>
-<section id="today" class="section"><div class="shell"><div class="section-head reveal"><div><div class="overline">Daily command</div><h2>今天练什么</h2></div><p>用上一天／下一天查看完整28天安排。进度与当前天数会保存在此浏览器。</p></div><div id="todayCard" class="today-card reveal"></div></div></section>
+<section id="today" class="section"><div class="shell"><div class="section-head reveal"><div><div class="overline">Daily command</div><h2>今天练什么</h2></div><p>完成问卷后显示你的4周计划；未完成问卷时只提供不可打卡的结构示例。</p></div><div id="todayCard" class="today-card reveal"></div></div></section>
 <section id="weeks" class="section light"><div class="shell"><div class="section-head reveal"><div><div class="overline">Four-week map</div><h2>四周完整计划</h2></div><p>力量日、恢复日和低冲击有氧采用不同颜色。手机端左右滑动即可浏览每天安排。</p></div><div id="weekTabs" class="week-tabs"></div><div id="weekView"></div></div></section>
 <section id="library" class="section"><div class="shell"><div class="section-head reveal"><div><div class="overline">Movement library</div><h2>动作详解与GIF</h2></div><p>GIF只演示轨迹。实际训练以低重量、无痛范围、持续呼吸和文字安全说明为准。</p></div><div id="exerciseTabs" class="exercise-tabs"></div><div id="exerciseGrid" class="exercise-grid"></div></div></section>
 <section id="tracker" class="section light"><div class="shell"><div class="section-head reveal"><div><div class="overline">Private local tracker</div><h2>每日追踪</h2></div><p>先填最常用的6项就能保存；体重、血压和疼痛等内容放在“高级记录”里，需要时再展开。</p></div><div class="tracker-wrap"><div id="dayList" class="day-list"></div><div class="form-panel"><div class="form-title"><h3 id="trackTitle">第1天</h3><span class="chip">只存本机</span></div><div class="quick-hint"><b>最简单的记录方式</b><span>选择完成状态，填实际训练分钟，点“保存”即可。其余内容都可以不填。</span></div><div id="trackForm" class="track-form"></div><div class="form-actions"><button id="saveBtn" class="btn primary">保存今天 ✓</button><button id="exportBtn" class="btn">备份CSV</button><button id="clearBtn" class="btn">清空这天</button></div></div></div><div class="overview"><table><thead><tr><th>天数</th><th>日期</th><th>计划</th><th>状态</th><th>体重</th><th>血压</th><th>步数</th><th>睡眠</th><th>肩/膝/腰痛</th></tr></thead><tbody id="overviewBody"></tbody></table></div></div></section>
@@ -29,10 +30,13 @@
 <script src="src/data/exercise-catalog.js"></script>
 <script src="src/data/legacy-demo-plan.js"></script>
 <script src="src/data/tracker-fields.js"></script>
-<script src="src/ui/dashboard.js"></script>
-<script src="src/ui/workout-guide.js"></script>
 <script src="src/domain/risk-engine.js"></script>
+<script src="src/domain/movement-matcher.js"></script>
+<script src="src/domain/plan-validator.js"></script>
+<script src="src/domain/plan-generator.js"></script>
 <script src="src/storage/local-store.js"></script>
 <script src="src/ui/onboarding.js"></script>
+<script src="src/ui/dashboard.js"></script>
+<script src="src/ui/workout-guide.js"></script>
 <script src="src/app.js"></script>
 </body></html>

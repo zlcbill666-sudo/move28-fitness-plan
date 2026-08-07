@@ -415,9 +415,11 @@
       const evaluation = evaluateOnboarding(intake);
       const payload = { intake:sanitizeIntake(intake), risk:evaluation.risk, pilotEligible:evaluation.pilotEligible, canGenerate:evaluation.canGenerate };
       try {
-        onComplete(payload);
+        const completionResult = onComplete(payload);
         clearDraft(); finished = true;
-        resultMessage = evaluation.canGenerate ? '问卷与安全结果已保存到本机。当前版本不会自动生成计划。' : '筛查结果已保存到本机；未进入计划生成。';
+        resultMessage = completionResult && typeof completionResult.message === 'string'
+          ? completionResult.message
+          : evaluation.canGenerate ? '问卷与安全结果已保存到本机。' : '筛查结果已保存到本机；未进入计划生成。';
         render(); releaseHistoryEntry();
       } catch (exception) {
         resultMessage = exception && exception.name === 'StorageError' ? '本机保存失败。请检查浏览器存储权限后重试；你的答案未通过网络发送。' : '暂时无法保存，请稍后重试。';

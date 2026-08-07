@@ -131,59 +131,12 @@ test('动作库中的17个GIF资料均存在并成功加载', async ({ page }) =
   )).toBe(17);
 });
 
-test('第1天跟练固定为15步13个动作并在结束后自动记录', async ({ page }) => {
+test('未问卷的28天示例保持只读，不开放旧跟练或写入记录', async ({ page }) => {
   await openCurrentPage(page);
-  await page.getByRole('button', { name: '一步一步带我练' }).click();
-
-  const modal = page.locator('#guideModal');
-  const eyebrow = page.locator('#guideEyebrow');
-  const body = page.locator('#guideBody');
-  const actions = body.locator('.guide-action');
-  const demoGifs = body.locator('.guide-demo img');
-  const nextButton = page.locator('#guideNext');
-  await expect(modal).toHaveAttribute('aria-hidden', 'false');
-  await expect(modal).toHaveCSS('display', 'flex');
-  await expect(eyebrow).toHaveText('STEP 1 / 15');
-
-  const titles = [];
-  let actionSteps = 0;
-  for (let step = 1; step <= 15; step += 1) {
-    await expect(eyebrow).toHaveText(`STEP ${step} / 15`);
-    titles.push((await body.locator('h3').textContent()).trim());
-
-    const expectedActionCount = step > 1 && step < 15 ? 1 : 0;
-    await expect(actions).toHaveCount(expectedActionCount);
-    await expect(demoGifs).toHaveCount(expectedActionCount);
-    actionSteps += expectedActionCount;
-
-    if (step < 15) await nextButton.click();
-  }
-
-  expect(titles).toEqual(DAY_ONE_TITLES);
-  expect(actionSteps).toBe(13);
-  await expect(nextButton).toHaveText('完成训练并自动记录 ✓');
-  await nextButton.click();
-
-  await expect(modal).toHaveAttribute('aria-hidden', 'true');
-  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), TRACKER_KEY);
-  expect(saved['1']['完成状态']).toBe('已完成');
-  await expect(page.getByRole('button', { name: '已完成', exact: true })).toHaveClass(/active/);
-});
-
-test('关闭跟练弹窗后音频停止', async ({ page }) => {
-  await openCurrentPage(page);
-  await page.getByRole('button', { name: '一步一步带我练' }).click();
-  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden', 'false');
-
-  const audio = page.locator('#workoutAudio');
-  if (await audio.evaluate(element => element.paused)) {
-    await page.locator('#musicToggle').click();
-  }
-  await expect.poll(() => audio.evaluate(element => element.paused)).toBe(false);
-
-  await page.getByRole('button', { name: '退出跟练' }).click();
-  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden', 'true');
-  await expect.poll(() => audio.evaluate(element => element.paused)).toBe(true);
+  await expect(page.locator('#todayCard')).toContainText('示例计划');
+  await expect(page.getByRole('button', { name: /一步一步带我练|开始本节训练/ })).toHaveCount(0);
+  await expect(page.locator('#tracker')).toBeHidden();
+  expect(await page.evaluate(key => localStorage.getItem(key), TRACKER_KEY)).toBeNull();
 });
 
 test('390×844视口没有横向溢出', async ({ page }, testInfo) => {
@@ -200,25 +153,4 @@ test('390×844视口没有横向溢出', async ({ page }, testInfo) => {
   expect(dimensions.viewportWidth).toBe(390);
   expect(dimensions.viewportHeight).toBe(844);
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
-});
-
-test('本地记录能够保存并通过二次确认清除', async ({ page }) => {
-  await openCurrentPage(page);
-  await page.getByRole('button', { name: '已完成', exact: true }).click();
-  await page.locator('[data-label="有氧(分钟)"]').fill('20');
-  await page.locator('#saveBtn').click();
-
-  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), TRACKER_KEY))
-    .not.toBeNull();
-  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), TRACKER_KEY);
-  expect(saved['1']['完成状态']).toBe('已完成');
-  expect(saved['1']['有氧(分钟)']).toBe('20');
-
-  await page.locator('#clearBtn').click();
-  await expect(page.locator('#clearBtn')).toHaveText('再点一次确认');
-  await page.locator('#clearBtn').click();
-
-  await expect.poll(() => page.evaluate(key => JSON.parse(localStorage.getItem(key)), TRACKER_KEY))
-    .toEqual({});
-  await expect(page.getByRole('button', { name: '未填写', exact: true })).toHaveClass(/active/);
 });

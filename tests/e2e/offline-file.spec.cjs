@@ -52,11 +52,14 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/data/exercise-catalog.js',
     'src/data/legacy-demo-plan.js',
     'src/data/tracker-fields.js',
-    'src/ui/dashboard.js',
-    'src/ui/workout-guide.js',
     'src/domain/risk-engine.js',
+    'src/domain/movement-matcher.js',
+    'src/domain/plan-validator.js',
+    'src/domain/plan-generator.js',
     'src/storage/local-store.js',
     'src/ui/onboarding.js',
+    'src/ui/dashboard.js',
+    'src/ui/workout-guide.js',
     'src/app.js'
   ]);
 
@@ -69,8 +72,10 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   expect(await page.evaluate(() => ({
     namespace: typeof window.Move28,
     sharedState: typeof window.Move28?.state,
-    openGuide: typeof window.openGuide,
+    openGeneratedWorkout: typeof window.openGeneratedWorkout,
+    openWorkout: typeof window.Move28?.guide?.openWorkout,
     uiRenderToday: typeof window.Move28?.ui?.renderToday,
+    setPlanContext: typeof window.Move28?.ui?.setPlanContext,
     renderToday: typeof window.renderToday,
     dashboardProxies: ['moveDay', 'pickWeek', 'pickExercise', 'setStatus', 'selectTrackDay', 'openTrack']
       .map(name => typeof window[name]),
@@ -82,8 +87,10 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   }))).toEqual({
     namespace: 'object',
     sharedState: 'object',
-    openGuide: 'function',
+    openGeneratedWorkout: 'function',
+    openWorkout: 'function',
     uiRenderToday: 'function',
+    setPlanContext: 'function',
     renderToday: 'undefined',
     dashboardProxies: Array(6).fill('function'),
     exerciseCatalogCount: 17,
@@ -93,12 +100,9 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     trackerFieldCount: 25
   });
 
-  await page.getByRole('button', { name: '一步一步带我练' }).click();
-  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden', 'false');
-  await expect(page.locator('#guideEyebrow')).toHaveText('STEP 1 / 15');
-  await expect(page.locator('#guideBody h3')).toHaveText('先确认今天适合训练');
-
-  await page.locator('#guideModal .guide-close').click();
+  await expect(page.locator('#todayCard')).toContainText('示例计划');
+  await expect(page.getByRole('button', { name: /一步一步带我练|开始本节训练/ })).toHaveCount(0);
+  await expect(page.locator('#tracker')).toBeHidden();
   await page.getByRole('button', { name: /生成我的4周计划/ }).click();
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.getByRole('heading', { name: '先确认这项服务适合你' })).toBeVisible();

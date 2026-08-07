@@ -2,20 +2,85 @@
 const isCommonJS=typeof module==='object'&&module.exports;
 const Move28=isCommonJS?require('../namespace.js'):(root.Move28=root.Move28||{});
 if(isCommonJS){require('../data/legacy-demo-plan.js');require('../data/tracker-fields.js')}
-const api=factory(root,Move28);
+const validatorApi=isCommonJS?require('../domain/plan-validator.js'):Move28.domain;
+const catalogApi=isCommonJS?require('../data/exercise-catalog.js'):Move28.data;
+const storageApi=isCommonJS?require('../storage/local-store.js'):Move28.storage;
+const trustedValidatePlan=validatorApi&&typeof validatorApi.validatePlan==='function'?validatorApi.validatePlan:null;
+const trustedCatalog=catalogApi&&Array.isArray(catalogApi.exerciseCatalog)?catalogApi.exerciseCatalog:null;
+const trustedLoadState=storageApi&&typeof storageApi.loadState==='function'?storageApi.loadState:null;
+const api=factory(root,Move28,trustedValidatePlan,trustedCatalog,trustedLoadState);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28){
+})(globalThis,function(root,Move28,trustedValidatePlan,trustedCatalog,trustedLoadState){
 'use strict';
 const DATA=Move28.data.legacyDemoPlan;
 const TRACKER_FIELDS=Move28.data.trackerFields;
 const state=Move28.state;
 const {$,$$,esc,localDate,storage}=Move28.utils;
+const planContext={mode:'demo',plan:null,logs:{},message:''};
+const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
+const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
 function dayClass(t){return /力量/.test(t)?'strength':/有氧/.test(t)?'cardio':'recovery'}
-function progress(){const done=Object.values(state.tracker).filter(r=>['已完成','部分完成'].includes(r['完成状态'])).length;return{done,pct:Math.round(done/28*100)}}
-function renderToday(){const d=DATA.days[state.currentDay-1],p=progress();$('#todayCard').innerHTML=`<div class="today-day"><span>DAY / 第${d.week}周</span><strong>${String(d.day).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(d.weekday)} · ${esc(d.place)}</span><span class="chip">${esc(d.duration)}</span></div><h3>${esc(d.type)}</h3><div class="today-grid"><div class="today-block"><div class="label">热身与力量</div><div class="today-value">${esc(d.strength)}</div></div><div class="today-block"><div class="label">有氧 / 步行</div><div class="today-value">${esc(d.cardio)}</div></div><div class="today-block"><div class="label">强度</div><div class="today-value">力量RPE 5–6<br>有氧RPE 4–5</div></div></div><div class="progress-wrap"><div class="progress-line"><i style="width:${p.pct}%"></i></div><div class="progress-text">已记录完成 ${p.done}/28 天 · ${p.pct}%</div></div><div class="day-controls"><button class="btn" onclick="moveDay(-1)">← 前一天</button><button class="btn primary today-start" onclick="openGuide(${d.day})">▶ 一步一步带我练</button><button class="btn" onclick="openTrack(${d.day})">快速记录</button><button class="btn" onclick="moveDay(1)">后一天 →</button></div><span class="tiny-help">第一次训练直接点绿色按钮；页面会逐步告诉你做什么。</span></div>`}
-Move28.moveDay=n=>{state.currentDay=Math.min(28,Math.max(1,state.currentDay+n));storage.setItem('move28-current-day',state.currentDay);renderToday()};
-function renderWeeks(){$('#weekTabs').innerHTML=DATA.weeks.map(w=>`<button class="tab ${w.week===state.currentWeek?'active':''}" onclick="pickWeek(${w.week})">第${w.week}周</button>`).join('');const w=DATA.weeks[state.currentWeek-1];$('#weekView').innerHTML=`<div class="week-focus"><span>本周重点</span>${esc(w.focus)}</div><div class="days-grid">${w.days.map(d=>`<article class="day-card ${dayClass(d.type)}"><div class="num">${d.day}</div><h3>${esc(d.weekday)}</h3><div class="type">${esc(d.type)}</div><dl><dt>热身与力量</dt><dd>${esc(d.strength)}</dd><dt>有氧／步行</dt><dd>${esc(d.cardio)}</dd><dt>地点与时长</dt><dd>${esc(d.place)} · ${esc(d.duration)}</dd></dl></article>`).join('')}</div>`}
+function legacyProgress(){const done=Object.values(state.tracker).filter(r=>['已完成','部分完成'].includes(r['完成状态'])).length;return{done,pct:Math.round(done/28*100)}}
+function generatedSessions(){return planContext.plan?planContext.plan.weeks.flatMap(week=>week.sessions):[]}
+function completedSessionIds(){return new Set(Object.values(planContext.logs||{}).filter(record=>record&&record.planId===planContext.plan?.id&&record.status==='completed').map(record=>record.sessionId))}
+function selectedGeneratedSession(){
+  const sessions=generatedSessions(),completed=completedSessionIds();
+  return sessions.find(session=>session.id===state.currentSessionId)||sessions.find(session=>!completed.has(session.id))||sessions[0]||null;
+}
+function renderGeneratedToday(){
+  const session=selectedGeneratedSession();
+  if(!session){$('#todayCard').innerHTML='<div class="today-content"><span class="chip">计划受限</span><h3>暂未生成可执行计划</h3><p>请修改问卷或等待人工复核；系统不会用示例动作替代你的计划。</p></div>';return}
+  state.currentSessionId=session.id;
+  const sessions=generatedSessions(),completed=completedSessionIds(),done=sessions.filter(item=>completed.has(item.id)).length,pct=Math.round(done/sessions.length*100);
+  const week=planContext.plan.weeks.find(item=>item.sessions.some(candidate=>candidate.id===session.id));
+  const actionNames=session.actions.map(action=>trustedCatalog.find(item=>item.id===action.exerciseId)?.name||action.exerciseId);
+  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${week.number}周</span><strong>${String(week.number).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)} · ${session.setting==='gym'?'健身房':'居家'}</span><span class="chip">${session.estimatedMinutes}分钟</span></div><h3>${session.intent==='full_body_strength'?'全身力量':'低冲击有氧'}</h3><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div><div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><div class="day-controls"><button class="btn primary today-start" onclick="openGeneratedWorkout('${esc(session.id)}')">▶ 开始本节训练</button></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
+}
+function renderDemoToday(){const d=DATA.days[state.currentDay-1],p=legacyProgress();$('#todayCard').innerHTML=`<div class="today-day"><span>只读示例 / 第${d.week}周</span><strong>${String(d.day).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">示例计划</span><span class="chip">${esc(d.weekday)} · ${esc(d.place)}</span><span class="chip">${esc(d.duration)}</span></div><h3>${esc(d.type)}</h3><div class="today-grid"><div class="today-block"><div class="label">热身与力量</div><div class="today-value">${esc(d.strength)}</div></div><div class="today-block"><div class="label">有氧 / 步行</div><div class="today-value">${esc(d.cardio)}</div></div></div><div class="progress-text">示例只用于了解结构，不会写入训练记录。旧示例记录：${p.done}/28。</div><div class="day-controls"><button class="btn" onclick="moveDay(-1)">← 前一天</button><button class="btn" onclick="moveDay(1)">后一天 →</button></div></div>`}
+function renderToday(){if(planContext.mode==='generated')renderGeneratedToday();else if(planContext.mode==='demo')renderDemoToday();else $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要复核'}</span><h3>暂未生成可执行计划</h3><p>${esc(planContext.message||'请修改问卷或等待人工复核；当前不会开放训练入口。')}</p></div>`}
+Move28.moveDay=n=>{if(planContext.mode!=='demo')return;state.currentDay=Math.min(28,Math.max(1,state.currentDay+n));storage.setItem('move28-current-day',state.currentDay);renderToday()};
+function renderWeeks(){
+  if(planContext.mode==='generated'){
+    const completed=completedSessionIds();
+    $('#weekTabs').innerHTML=planContext.plan.weeks.map(week=>`<button class="tab ${week.number===state.currentWeek?'active':''}" onclick="pickWeek(${week.number})">第${week.number}周</button>`).join('');
+    const week=planContext.plan.weeks[state.currentWeek-1];
+    $('#weekView').innerHTML=`<div class="week-focus"><span>本周重点</span>${esc(week.focus)}</div><div class="days-grid generated-days">${week.sessions.map(session=>`<article class="day-card ${session.intent==='full_body_strength'?'strength':'cardio'} ${completed.has(session.id)?'completed':''}"><div class="num">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)}</div><h3>${session.intent==='full_body_strength'?'全身力量':'低冲击有氧'}</h3><div class="type">${session.estimatedMinutes}分钟 · ${completed.has(session.id)?'已完成':'待完成'}</div><button class="btn" type="button" onclick="selectGeneratedSession('${esc(session.id)}')">查看此节</button></article>`).join('')}</div>`;
+    return;
+  }
+  if(planContext.mode!=='demo'){$('#weekTabs').innerHTML='';$('#weekView').innerHTML=`<div class="week-focus"><span>计划受限</span>${esc(planContext.message||'没有可执行计划')}</div>`;return}
+  $('#weekTabs').innerHTML=DATA.weeks.map(w=>`<button class="tab ${w.week===state.currentWeek?'active':''}" onclick="pickWeek(${w.week})">第${w.week}周</button>`).join('');const w=DATA.weeks[state.currentWeek-1];$('#weekView').innerHTML=`<div class="week-focus"><span>只读示例 · 本周重点</span>${esc(w.focus)}</div><div class="days-grid">${w.days.map(d=>`<article class="day-card ${dayClass(d.type)}"><div class="num">${d.day}</div><h3>${esc(d.weekday)}</h3><div class="type">${esc(d.type)}</div><dl><dt>热身与力量</dt><dd>${esc(d.strength)}</dd><dt>有氧／步行</dt><dd>${esc(d.cardio)}</dd><dt>地点与时长</dt><dd>${esc(d.place)} · ${esc(d.duration)}</dd></dl></article>`).join('')}</div>`
+}
 Move28.pickWeek=n=>{state.currentWeek=n;renderWeeks()};
+Move28.selectGeneratedSession=id=>{if(planContext.mode!=='generated'||!generatedSessions().some(session=>session.id===id))return;state.currentSessionId=id;renderToday();root.location.hash='today'};
+function ownData(object,key){try{const descriptor=object&&Object.getOwnPropertyDescriptor(object,key);return descriptor&&'value'in descriptor?descriptor.value:undefined}catch(_error){return undefined}}
+function storedGeneratedContext(){
+  if(!trustedLoadState||!trustedValidatePlan||!trustedCatalog)return null;let stored;
+  try{stored=trustedLoadState()}catch(_error){return null}
+  const plan=stored&&stored.plan,review=plan&&plan.review;
+  if(!plan||plan.status!=='active'||plan.intakeRevision!==stored.intakeRevision||review?.status!=='approved'||review?.planId!==plan.id||review?.intakeRevision!==stored.intakeRevision||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
+  let candidate;try{if(!nativeStructuredClone)return null;candidate=nativeStructuredClone(plan);delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated'}catch(_error){return null}
+  let validation;try{validation=trustedValidatePlan({plan:candidate,intake:stored.intake,risk:stored.risk,catalog:trustedCatalog})}catch(_error){return null}
+  return validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0?{plan,logs:stored.logs||{}}:null;
+}
+function setPlanContext(context){
+  const requestedMode=ownData(context,'mode');
+  if(requestedMode==='generated'){
+    const trusted=storedGeneratedContext();planContext.mode=trusted?'generated':'invalid';planContext.plan=trusted?.plan||null;planContext.logs=trusted?.logs||{};planContext.message=trusted?'':'计划未通过有效状态、人工复核或安全校验。';
+  }else{
+    planContext.mode=['demo','blocked','review','stale','invalid'].includes(requestedMode)?requestedMode:'invalid';
+    planContext.plan=null;planContext.logs={};
+    const message=ownData(context,'message');planContext.message=typeof message==='string'?message:'';
+  }
+  state.currentWeek=1;
+  if(planContext.mode==='generated'){
+    if(completedSessionIds().has(state.currentSessionId))state.currentSessionId=null;
+    state.currentSessionId=selectedGeneratedSession()?.id||null;
+  }
+  const tracker=$('#tracker');if(tracker)tracker.hidden=true;
+  const trackerLink=root.document&&root.document.querySelector('a[href="#tracker"]');if(trackerLink)trackerLink.hidden=true;
+  renderToday();renderWeeks();
+}
+
 function renderExercises(){const groups=['全部','力量A','力量B','有氧C'];$('#exerciseTabs').innerHTML=groups.map(g=>`<button class="tab ${g===state.exerciseFilter?'active':''}" onclick="pickExercise('${g}')">${g}</button>`).join('');const list=DATA.exercises.filter(e=>state.exerciseFilter==='全部'||e.groups.includes(state.exerciseFilter));$('#exerciseGrid').innerHTML=list.map(e=>`<article class="exercise"><div class="exercise-media"><img src="${esc(e.gif)}" alt="${esc(e.name)}动作GIF"></div><div class="exercise-body"><h3>${esc(e.name)}</h3><div class="tags">${e.groups.map(g=>`<span class="tag">${g}</span>`).join('')}</div><details class="detail" open><summary>起始姿势</summary><p>${esc(e.start)}</p></details><details class="detail"><summary>动作步骤</summary><p>${esc(e.steps)}</p></details><details class="detail"><summary>呼吸与节奏</summary><p>${esc(e.breath)}</p></details><details class="detail"><summary>常见错误</summary><p>${esc(e.errors)}</p></details><details class="detail"><summary>安全保护要点</summary><p class="danger-text">${esc(e.safety)}</p></details></div></article>`).join('')}
 Move28.pickExercise=g=>{state.exerciseFilter=g;renderExercises()};
 const inputSkip=new Set(['天数','周次','星期','计划训练']);
@@ -33,9 +98,9 @@ function exportCSV(){const hs=['天数','周次','星期','计划训练',...TRAC
 function clearTrack(){const b=$('#clearBtn');if(!state.clearArmed){state.clearArmed=true;b.textContent='再点一次确认';showToast(`再次点击即可清空第${state.trackDay}天`);clearTimeout(state.clearArmTimer);state.clearArmTimer=setTimeout(()=>{state.clearArmed=false;b.textContent='清空这天'},3000);return}state.clearArmed=false;clearTimeout(state.clearArmTimer);delete state.tracker[state.trackDay];storage.setItem(state.storeKey,JSON.stringify(state.tracker));renderForm();renderOverview();renderToday();b.textContent='清空这天';showToast(`第${state.trackDay}天记录已清空`)}
 function renderSafety(){$('#safetyGrid').innerHTML=DATA.safety.map(x=>`<article class="safety-card"><h3>${esc(x.title)}</h3><div>${esc(x.text)}</div></article>`).join('')}
 function reveal(){const io=new root.IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.08});$$('.reveal').forEach(x=>io.observe(x))}
-const ui={renderToday,renderWeeks,renderExercises,renderDayList,renderForm,renderOverview,renderSafety,reveal,saveTrack,exportCSV,clearTrack,showToast};
+const ui={setPlanContext,renderToday,renderWeeks,renderExercises,renderDayList,renderForm,renderOverview,renderSafety,reveal,saveTrack,exportCSV,clearTrack,showToast};
 Object.assign(Move28.ui||{},ui);
-const actions={moveDay:Move28.moveDay,pickWeek:Move28.pickWeek,pickExercise:Move28.pickExercise,setStatus:Move28.setStatus,selectTrackDay:Move28.selectTrackDay,openTrack:Move28.openTrack};
+const actions={moveDay:Move28.moveDay,pickWeek:Move28.pickWeek,selectGeneratedSession:Move28.selectGeneratedSession,pickExercise:Move28.pickExercise,setStatus:Move28.setStatus,selectTrackDay:Move28.selectTrackDay,openTrack:Move28.openTrack};
 if(root.window===root)for(const name of Object.keys(actions))root[name]=actions[name];
 return Object.assign({},ui,actions);
 });

@@ -39,6 +39,20 @@ const DEFAULT_STATE = {
   consent: { acceptedAt: null, version: 'pilot-v1' }
 };
 
+const VALID_INTAKE = Object.freeze({age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no',allowSettingSwap:'no'});
+const VALID_RISK = Object.freeze({level:'normal',ruleVersion:'pilot-v2',reasons:[]});
+function generateValidPlan(revision){
+  clearMove28ModuleCache();
+  const generator=loadScript('planGenerator'),catalog=loadScript('exerciseCatalog');
+  return generator.generatePlan({intake:structuredClone(VALID_INTAKE),risk:structuredClone(VALID_RISK),intakeRevision:revision,catalog:catalog.exerciseCatalog});
+}
+function approveStoredPlan(storage,moduleApi,reviewedAt='2030-01-02T03:04:05.000Z'){
+  const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));
+  raw.plan.status='active';
+  raw.plan.review={status:'approved',reviewerId:'pilot-reviewer',reviewedAt,planId:raw.plan.id,intakeRevision:raw.intakeRevision};
+  storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));
+}
+
 test('空存储返回完整默认状态、独立副本且只使用唯一自有 key', () => {
   const storage = memoryStorage();
   const moduleApi = api();
@@ -51,6 +65,25 @@ test('空存储返回完整默认状态、独立副本且只使用唯一自有 k
   assert.deepEqual(moduleApi.OWNED_KEYS, ['move28-pilot-v1']);
   assert.ok(storage.calls.every(([, key]) => key === moduleApi.STORAGE_KEY));
   assert.equal(storage.length, 0);
+});
+
+test('完成记录只绑定人工复核后的active计划和已知session，刷新后仍可恢复', () => {
+  const storage = memoryStorage();
+  const moduleApi=api();
+  const store = moduleApi.createLocalStore({ storage, now: () => '2030-01-02T03:04:05.000Z' });
+  store.saveIntake(structuredClone(VALID_INTAKE), structuredClone(VALID_RISK));
+  const plan=generateValidPlan(1);store.savePlan(plan);
+  assert.throws(()=>store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id}),error=>error.name==='StorageError');
+  approveStoredPlan(storage,moduleApi);
+  const sessionId=plan.weeks[0].sessions[0].id;
+  const saved = store.recordWorkoutCompletion({ planId: plan.id, sessionId });
+  assert.deepEqual(saved.logs, {
+    [`${plan.id}.${sessionId}`]: { planId: plan.id, sessionId, status: 'completed', completedAt: '2030-01-02T03:04:05.000Z' }
+  });
+  assert.deepEqual(store.loadState().logs, saved.logs);
+  assert.throws(() => store.recordWorkoutCompletion({ planId: plan.id, sessionId: 'w9-s9' }), error => error.name === 'StorageError');
+  assert.throws(() => store.recordWorkoutCompletion({ planId: 'other-plan', sessionId }), error => error.name === 'StorageError');
+  assert.throws(() => store.recordWorkoutCompletion({ planId: plan.id, sessionId, note: 'secret' }), TypeError);
 });
 
 test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失效', () => {
@@ -75,23 +108,25 @@ test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失�
   });
   assert.equal(store.loadState().intakeRevision, 1);
 
-  const planInput = { planVersion: 'plan-v1', title: '第一版', days: [{ id: 1 }] };
+  const validState=store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  assert.equal(validState.intakeRevision,2);
+  const planInput=generateValidPlan(2);
   const planned = store.savePlan(planInput);
-  planInput.days[0].id = 999;
-  planned.plan.title = 'changed-return';
-  assert.equal(store.loadState().plan.days[0].id, 1);
-  assert.equal(store.loadState().plan.status, 'active');
-  assert.equal(store.loadState().plan.intakeRevision, 1);
+  assert.equal(planned.plan.status, 'pending_review');
+  assert.equal(planned.plan.intakeRevision, 2);
+  assert.equal(planned.plan.review, null);
+  assert.throws(()=>store.savePlan({id:'evil-plan',status:'generated',intakeRevision:2,weeks:[]}),error=>error.name==='StorageError');
 
-  const revised = store.saveIntake({ age: 31 }, { level: 'normal', reasons: [], ruleVersion: 'pilot-v1' });
-  assert.equal(revised.intakeRevision, 2);
+  const revisedIntake=structuredClone(VALID_INTAKE);revisedIntake.age=31;
+  const revised = store.saveIntake(revisedIntake, structuredClone(VALID_RISK));
+  assert.equal(revised.intakeRevision, 3);
   assert.equal(revised.plan.status, 'stale');
   assert.equal(revised.plan.staleReason, 'intake_changed');
   assert.equal(revised.plan.staleAt, '2030-01-02T03:04:05.000Z');
-  assert.equal(revised.plan.intakeRevision, 1);
-  const replacement = store.savePlan({ planVersion: 'plan-v2' });
-  assert.equal(replacement.plan.status, 'active');
-  assert.equal(replacement.plan.intakeRevision, 2);
+  assert.equal(revised.plan.intakeRevision, 2);
+  const replacement = store.savePlan(generateValidPlan(3));
+  assert.equal(replacement.plan.status, 'pending_review');
+  assert.equal(replacement.plan.intakeRevision, 3);
   assert.equal('staleReason' in replacement.plan, false);
 });
 
@@ -331,10 +366,6 @@ test('跨 realm 普通对象和数组可保存，跨 realm class/Date/Map 仍拒
     age: 28,
     profile: { goals: ['mobility', { code: 'strength' }] }
   });
-  const plan = vm.runInNewContext('({ planVersion: "plan-v1", weeks: [{ days: [1, 2, 3] }] })');
-  const savedPlan = store.savePlan(plan);
-  assert.deepEqual(savedPlan.plan.weeks, [{ days: [1, 2, 3] }]);
-
   const before = storage.raw(moduleApi.STORAGE_KEY);
   const rejected = vm.runInNewContext('(() => { class Intake { constructor() { this.age = 20; } } return [new Intake(), new Date(), new Map([["age", 20]])]; })()');
   const disguisedClass = vm.runInNewContext('(() => { class Intake { constructor() { this.age = 20; } } Object.setPrototypeOf(Intake.prototype, null); return new Intake(); })()');
@@ -396,15 +427,16 @@ test('participantId 仅接受短 pilot 编号，非法值回退 pilot-local', ()
   }
 });
 
-test('默认实例在 localStorage getter/方法被禁止时加载不崩并使用私有内存', () => {
+test('默认实例在 localStorage getter 被禁止时加载不崩且写入明确失败', () => {
   clearMove28ModuleCache();
   const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   try {
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('denied'); } });
     let moduleApi;
     assert.doesNotThrow(() => { moduleApi = loadScript('localStore'); });
-    moduleApi.saveIntake({ age: 21 });
-    assert.equal(moduleApi.loadState().intake.age, 21);
+    assert.throws(()=>moduleApi.saveIntake({ age: 21 }),error=>error.name==='StorageError');
+    assert.equal(moduleApi.loadState().intake, null);
+    assert.equal(moduleApi.clearAll(),false);
   } finally {
     if (original) Object.defineProperty(globalThis, 'localStorage', original);
     else delete globalThis.localStorage;
@@ -412,7 +444,7 @@ test('默认实例在 localStorage getter/方法被禁止时加载不崩并使�
   }
 });
 
-test('默认实例在 localStorage 方法调用抛错时切换到私有内存', () => {
+test('默认实例在 localStorage 方法调用抛错时不伪装成持久保存', () => {
   clearMove28ModuleCache();
   const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   try {
@@ -425,10 +457,9 @@ test('默认实例在 localStorage 方法调用抛错时切换到私有内存', 
       }
     });
     const moduleApi = loadScript('localStore');
-    assert.equal(moduleApi.saveIntake({ age: 23 }).intakeRevision, 1);
-    assert.equal(moduleApi.loadState().intake.age, 23);
-    assert.equal(moduleApi.clearAll(), true);
-    assert.equal(moduleApi.loadState().intake, null);
+    assert.throws(()=>moduleApi.saveIntake({ age: 23 }),error=>error.name==='StorageError');
+    assert.equal(moduleApi.loadState().intake,null);
+    assert.equal(moduleApi.clearAll(), false);
   } finally {
     if (original) Object.defineProperty(globalThis, 'localStorage', original);
     else delete globalThis.localStorage;
@@ -463,7 +494,8 @@ test('classic-script UMD 在无 DOM/localStorage 的 VM 中安全加载并挂载
   vm.createContext(context);
   assert.doesNotThrow(() => vm.runInContext(source, context));
   assert.equal(typeof context.Move28.storage.createLocalStore, 'function');
-  const state = vm.runInContext('Move28.storage.saveIntake({age: 22}); Move28.storage.loadState()', context);
-  assert.equal(state.intake.age, 22);
+  assert.throws(() => vm.runInContext('Move28.storage.saveIntake({age: 22})', context), error=>error.name==='StorageError');
+  const state=vm.runInContext('Move28.storage.loadState()',context);
+  assert.equal(state.intake, null);
   assert.equal(context.document, undefined);
 });

@@ -1,0 +1,8 @@
+.generated-days{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:stretch}
+.generated-days .day-card{min-width:0;min-height:0;height:auto;padding:22px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.generated-days .day-card .num{position:static;font-size:13px;line-height:1;color:var(--muted);opacity:1}
+.generated-days .day-card h3{margin:0;font-size:28px}
+.generated-days .day-card .type{margin:0 0 10px}
+.generated-days .day-card .btn{margin-top:auto}
+.generated-days .day-card.completed{border-color:var(--green);background:linear-gradient(180deg,rgba(85,211,154,.12),#fff 40%)}
+@media(max-width:760px){.generated-days{display:grid;grid-template-columns:1fr;overflow:visible}.generated-days .day-card{min-width:0;width:100%}}
