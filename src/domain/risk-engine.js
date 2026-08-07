@@ -39,6 +39,15 @@
     ...MANUAL_REVIEW_FIELDS,
     'stablePain'
   ]);
+  const KNOWN_INTAKE_FIELDS = Object.freeze([
+    'age',
+    'redFlags',
+    ...STOP_FIELDS,
+    'doctorRestriction',
+    ...MANUAL_REVIEW_FIELDS,
+    'stablePain',
+    'activityStatus'
+  ]);
 
   function deepFreeze(value) {
     if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -47,7 +56,6 @@
   }
 
   function evaluateRisk(intake) {
-    const source = intake !== null && typeof intake === 'object' && !Array.isArray(intake) ? intake : {};
     const reasons = [];
     const seenReasons = new Set();
     let level = 'normal';
@@ -61,13 +69,53 @@
       if (PRIORITY[nextLevel] > PRIORITY[level]) level = nextLevel;
     }
 
+    // 只复制风险规则认可的自有数据属性。描述符读取不会触发 getter，且所有
+    // Proxy/撤销 Proxy 异常均在边界内收敛为人工复核，后续规则不再接触 intake。
+    const source = Object.create(null);
+    const presentFields = new Set();
+    let intakeUnreadable = false;
+    let canReadProperties = intake !== null && typeof intake === 'object';
+    if (canReadProperties) {
+      try {
+        if (Array.isArray(intake)) canReadProperties = false;
+      } catch (_error) {
+        canReadProperties = false;
+        intakeUnreadable = true;
+      }
+    }
+
+    if (!canReadProperties) {
+      if (intake !== null && typeof intake === 'object') intakeUnreadable = true;
+    } else {
+      for (const field of KNOWN_INTAKE_FIELDS) {
+        let descriptor;
+        try {
+          descriptor = Object.getOwnPropertyDescriptor(intake, field);
+        } catch (_error) {
+          intakeUnreadable = true;
+          continue;
+        }
+        if (descriptor === undefined) continue;
+        if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+          intakeUnreadable = true;
+          continue;
+        }
+        presentFields.add(field);
+        source[field] = descriptor.value;
+      }
+    }
+
+    if (intakeUnreadable) {
+      add('manual_review', 'intake_unreadable', 'intake', '部分输入无法安全读取，需要人工复核。');
+    }
+
     if (!Number.isFinite(source.age) || !Number.isInteger(source.age)) {
       add('manual_review', 'age_invalid_or_missing', 'age', '年龄缺失或不是有限整数，需要人工复核。');
     } else if (source.age < 16) {
       add('manual_review', 'age_below_16', 'age', '年龄低于16岁，需要人工复核。');
     }
 
-    const hasRedFlags = Object.hasOwn(source, 'redFlags');
+    const hasRedFlags = presentFields.has('redFlags');
     if (hasRedFlags) {
       if (source.redFlags === true) {
         add('stop', 'red_flags_reported', 'redFlags', '已报告健康红旗，应停止自动生成计划。');
@@ -76,13 +124,13 @@
       }
     }
 
-    const detailedScreenComplete = SAFETY_SCREEN_FIELDS.every(field => Object.hasOwn(source, field));
+    const detailedScreenComplete = SAFETY_SCREEN_FIELDS.every(field => presentFields.has(field));
     if (source.redFlags !== false && !detailedScreenComplete) {
       add('manual_review', 'incomplete_safety_screen', 'safetyScreen', '安全筛查不完整，不能默认为安全。');
     }
 
     for (const definition of STOP_FIELD_DEFINITIONS) {
-      if (!Object.hasOwn(source, definition.field)) continue;
+      if (!presentFields.has(definition.field)) continue;
       const value = source[definition.field];
       if (value === 'yes') {
         add('stop', `${definition.stem}_reported`, definition.field, `已报告${definition.label}，应停止自动生成计划。`);
@@ -93,7 +141,7 @@
       }
     }
 
-    if (Object.hasOwn(source, 'doctorRestriction')) {
+    if (presentFields.has('doctorRestriction')) {
       const restriction = source.doctorRestriction;
       if (restriction === 'clear_modification') {
         add('manual_review', 'doctor_restriction_clear_modification', 'doctorRestriction', '医生要求明确调整，需要人工复核。');
@@ -109,7 +157,7 @@
     }
 
     for (const definition of MANUAL_FIELD_DEFINITIONS) {
-      if (!Object.hasOwn(source, definition.field)) continue;
+      if (!presentFields.has(definition.field)) continue;
       const value = source[definition.field];
       if (value === 'yes') {
         add('manual_review', `${definition.stem}_reported`, definition.field, `已报告${definition.label}，需要人工复核。`);
@@ -120,7 +168,7 @@
       }
     }
 
-    if (Object.hasOwn(source, 'stablePain')) {
+    if (presentFields.has('stablePain')) {
       const pain = source.stablePain;
       if (pain === 'mild_stable') {
         add('conservative', 'stable_pain_mild', 'stablePain', '存在轻度稳定疼痛，应采用保守方案。');
@@ -133,7 +181,7 @@
       }
     }
 
-    if (Object.hasOwn(source, 'activityStatus')) {
+    if (presentFields.has('activityStatus')) {
       const activity = source.activityStatus;
       if (activity === 'returning') {
         add('conservative', 'activity_returning', 'activityStatus', '正在恢复训练，应采用保守方案。');

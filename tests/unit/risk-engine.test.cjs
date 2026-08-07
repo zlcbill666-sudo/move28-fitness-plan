@@ -94,6 +94,89 @@ test('恶意结构、非法年龄、非法枚举与缺失关键题不抛异常�
   assert.equal(evaluate({ age: 30, redFlags: false, chestSymptoms: 'invalid' }).level, 'stop');
 });
 
+test('只接受自有数据属性，原型链字段与 Object.prototype 污染不能绕过筛查', () => {
+  const inheritedRedFlags = Object.assign(Object.create({ redFlags: false }), { age: 30 });
+  const inheritedResult = evaluate(inheritedRedFlags);
+  assert.equal(inheritedResult.level, 'manual_review');
+  assert.ok(inheritedResult.reasons.some(reason => reason.code === 'incomplete_safety_screen'));
+
+  const inheritedBoth = Object.create({ age: 30, redFlags: false });
+  const inheritedBothResult = evaluate(inheritedBoth);
+  assert.equal(inheritedBothResult.level, 'manual_review');
+  assert.ok(inheritedBothResult.reasons.some(reason => reason.code === 'age_invalid_or_missing'));
+  assert.ok(inheritedBothResult.reasons.some(reason => reason.code === 'incomplete_safety_screen'));
+
+  Object.prototype.redFlags = false;
+  try {
+    const pollutedResult = evaluate({ age: 30 });
+    assert.notEqual(pollutedResult.level, 'normal');
+    assert.ok(pollutedResult.reasons.some(reason => reason.code === 'incomplete_safety_screen'));
+  } finally {
+    delete Object.prototype.redFlags;
+  }
+});
+
+test('原型上的停止字段不作为自有命中，但缺失筛查仍需人工复核', () => {
+  const result = evaluate(Object.assign(Object.create({ chestSymptoms: 'yes' }), { age: 30 }));
+  assert.equal(result.level, 'manual_review');
+  assert.ok(result.reasons.some(reason => reason.code === 'incomplete_safety_screen'));
+  assert.equal(result.reasons.some(reason => reason.code === 'chest_symptoms_reported'), false);
+});
+
+test('恶意 getter 永不执行，已知字段不可读时固定人工复核且继续安全求值', () => {
+  let ageCalls = 0;
+  const ageGetter = { redFlags: false };
+  Object.defineProperty(ageGetter, 'age', {
+    enumerable: true,
+    get() {
+      ageCalls += 1;
+      throw new Error('AGE_SECRET_THROW');
+    }
+  });
+  let ageResult;
+  assert.doesNotThrow(() => { ageResult = evaluate(ageGetter); });
+  assert.equal(ageCalls, 0);
+  assert.equal(ageResult.level, 'manual_review');
+  assert.ok(ageResult.reasons.some(reason => reason.code === 'intake_unreadable' && reason.field === 'intake'));
+  assert.ok(ageResult.reasons.some(reason => reason.code === 'age_invalid_or_missing'));
+
+  let safetyCalls = 0;
+  const safetyGetter = { age: 30 };
+  Object.defineProperty(safetyGetter, 'chestSymptoms', {
+    enumerable: true,
+    get() {
+      safetyCalls += 1;
+      throw new Error('SAFETY_SECRET_THROW');
+    }
+  });
+  const safetyResult = evaluate(safetyGetter);
+  assert.equal(safetyCalls, 0);
+  assert.equal(safetyResult.level, 'manual_review');
+  assert.equal(safetyResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+  assert.ok(safetyResult.reasons.some(reason => reason.code === 'incomplete_safety_screen'));
+});
+
+test('抛异常的描述符 Proxy 与 revoked Proxy 均不抛、不判 normal 且不泄露异常文本', () => {
+  const trapSecret = 'DESCRIPTOR_TRAP_SECRET_93ac';
+  const throwingProxy = new Proxy({ age: 30, redFlags: false }, {
+    getOwnPropertyDescriptor() {
+      throw new Error(trapSecret);
+    }
+  });
+  let throwingResult;
+  assert.doesNotThrow(() => { throwingResult = evaluate(throwingProxy); });
+  assert.notEqual(throwingResult.level, 'normal');
+  assert.equal(JSON.stringify(throwingResult).includes(trapSecret), false);
+  assert.equal(throwingResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+
+  const revocable = Proxy.revocable({ age: 30, redFlags: false }, {});
+  revocable.revoke();
+  let revokedResult;
+  assert.doesNotThrow(() => { revokedResult = evaluate(revocable.proxy); });
+  assert.notEqual(revokedResult.level, 'normal');
+  assert.ok(revokedResult.reasons.some(reason => reason.code === 'intake_unreadable'));
+});
+
 test('用户修改答案时重新计算，可由低到高及高到低变化且不缓存旧结论', () => {
   const api = loadScript('riskEngine');
   const intake = { age: 30, redFlags: false, activityStatus: 'active' };
