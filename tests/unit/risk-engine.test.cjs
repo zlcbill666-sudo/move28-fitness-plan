@@ -49,6 +49,11 @@ test('年龄仅接受 0～120 的安全整数，并导出产品输入边界', ()
     assert.notEqual(result.level, 'normal');
     assert.ok(result.reasons.some(reason => reason.code === 'age_out_of_range'));
   }
+  const minimum = api.evaluateRisk({ age: 0, redFlags: false });
+  assert.equal(minimum.level, 'manual_review');
+  assert.ok(minimum.reasons.some(reason => reason.code === 'age_below_16'));
+  assert.equal(minimum.reasons.some(reason => reason.code === 'age_out_of_range'), false);
+  assert.equal(api.evaluateRisk({ age: 120, redFlags: false }).level, 'normal');
   assert.equal(api.evaluateRisk({ age: 16, redFlags: false }).level, 'normal');
   assert.equal(api.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
 });
@@ -183,6 +188,57 @@ test('恶意 getter 永不执行，已知字段不可读时固定人工复核且
   assert.equal(unknownResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
 });
 
+test('嵌套对象与更深层数组中的 getter 在 structuredClone 前被拒绝且零调用', () => {
+  const objectSecret = 'NESTED_OBJECT_SECRET_84af';
+  let objectCalls = 0;
+  const nestedObject = {
+    age: 30,
+    redFlags: false,
+    metadata: {
+      get secret() {
+        objectCalls += 1;
+        throw new Error(objectSecret);
+      }
+    }
+  };
+  let objectResult;
+  assert.doesNotThrow(() => { objectResult = evaluate(nestedObject); });
+  assert.equal(objectCalls, 0);
+  assert.equal(objectResult.level, 'manual_review');
+  assert.equal(objectResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+  assert.equal(JSON.stringify(objectResult).includes(objectSecret), false);
+
+  const arraySecret = 'DEEP_ARRAY_SECRET_54d2';
+  let arrayCalls = 0;
+  const nestedArray = { age: 30, redFlags: false, metadata: [{ deeper: [{}] }] };
+  Object.defineProperty(nestedArray.metadata[0].deeper[0], 'secret', {
+    enumerable: true,
+    get() {
+      arrayCalls += 1;
+      throw new Error(arraySecret);
+    }
+  });
+  let arrayResult;
+  assert.doesNotThrow(() => { arrayResult = evaluate(nestedArray); });
+  assert.equal(arrayCalls, 0);
+  assert.equal(arrayResult.level, 'manual_review');
+  assert.equal(arrayResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+  assert.equal(JSON.stringify(arrayResult).includes(arraySecret), false);
+});
+
+test('嵌套 Proxy 与非 plain 对象均 fail closed', () => {
+  const nestedProxy = { age: 30, redFlags: false, metadata: new Proxy({ source: 'self' }, {}) };
+  const proxyResult = evaluate(nestedProxy);
+  assert.equal(proxyResult.level, 'manual_review');
+  assert.equal(proxyResult.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+
+  for (const metadata of [new Date(0), new Map([['source', 'self']]), /health/u, new Uint8Array([1])]) {
+    const result = evaluate({ age: 30, redFlags: false, metadata });
+    assert.equal(result.level, 'manual_review');
+    assert.equal(result.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
+  }
+});
+
 test('抛异常的描述符 Proxy 与 revoked Proxy 均不抛、不判 normal 且不泄露异常文本', () => {
   const trapSecret = 'DESCRIPTOR_TRAP_SECRET_93ac';
   const throwingProxy = new Proxy({ age: 30, redFlags: false }, {
@@ -224,10 +280,15 @@ test('撒谎 Proxy 即使伪造安全描述符并隐藏停止值，也必须 can
   assert.equal(result.reasons.filter(reason => reason.code === 'intake_unreadable').length, 1);
 });
 
-test('普通 plain data 与 null prototype 数据仍正常按规则求值', () => {
+test('普通 plain data、嵌套 data、循环与 null prototype 数据仍正常按规则求值', () => {
   assert.equal(evaluate({ age: 17, redFlags: false }).level, 'normal');
+  assert.equal(evaluate({ age: 30, redFlags: false, metadata: { tags: ['beginner', { source: 'self' }] } }).level, 'normal');
   const nullPrototype = Object.assign(Object.create(null), { age: 30, redFlags: false, chestSymptoms: 'yes' });
   assert.equal(evaluate(nullPrototype).level, 'stop');
+
+  const cyclic = { age: 30, redFlags: false };
+  cyclic.self = cyclic;
+  assert.equal(evaluate(cyclic).level, 'normal');
 });
 
 test('用户修改答案时重新计算，可由低到高及高到低变化且不缓存旧结论', () => {

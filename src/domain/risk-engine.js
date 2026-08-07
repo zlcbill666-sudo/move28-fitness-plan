@@ -61,6 +61,48 @@
     return Object.freeze(value);
   }
 
+  function isCanonicalCloneGraph(value, seen = new WeakSet()) {
+    if (value === null || typeof value !== 'object') return typeof value !== 'function';
+    if (seen.has(value)) return true;
+
+    let isArray;
+    let prototype;
+    let ownKeys;
+    try {
+      isArray = Array.isArray(value);
+      prototype = Object.getPrototypeOf(value);
+      ownKeys = Reflect.ownKeys(value);
+    } catch (_error) {
+      return false;
+    }
+
+    if (!isArray && prototype !== null) {
+      try {
+        if (Object.getPrototypeOf(prototype) !== null) return false;
+        const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+        if (constructorDescriptor === undefined
+          || !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
+          || typeof constructorDescriptor.value !== 'function') return false;
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    seen.add(value);
+    for (const key of ownKeys) {
+      let descriptor;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, key);
+      } catch (_error) {
+        return false;
+      }
+      if (descriptor === undefined
+        || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+        || !isCanonicalCloneGraph(descriptor.value, seen)) return false;
+    }
+    return true;
+  }
+
   function evaluateRisk(intake) {
     const reasons = [];
     const seenReasons = new Set();
@@ -75,8 +117,8 @@
       if (PRIORITY[nextLevel] > PRIORITY[level]) level = nextLevel;
     }
 
-    // 先检查所有自有属性均为数据描述符，再用初始化时捕获的 structuredClone
-    // 拒绝 Proxy 和不可克隆值。规则只读取白名单描述符快照，不读取 clone 结果。
+    // 先递归检查整个可达图均由 plain data descriptor 组成，再调用初始化时捕获的
+    // structuredClone 拒绝 Proxy 和不可克隆值。规则只读取顶层白名单描述符快照。
     const source = Object.create(null);
     const presentFields = new Set();
     const descriptors = new Map();
@@ -112,6 +154,10 @@
         } catch (_error) {
           intakeUnreadable = true;
         }
+      }
+
+      if (!intakeUnreadable && !isCanonicalCloneGraph(intake)) {
+        intakeUnreadable = true;
       }
 
       if (!intakeUnreadable) {
