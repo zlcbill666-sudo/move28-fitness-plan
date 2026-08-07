@@ -41,26 +41,47 @@ test('动作库中的17个GIF资料均存在并成功加载', async ({ page }) =
   expect(failedGifRequests).toEqual([]);
 });
 
-test('第1天跟练每屏至多显示一个动作，主按钮能够推进', async ({ page }) => {
+test('第1天跟练全流程每屏至多一个动作并在结束后自动记录', async ({ page }) => {
   await openCurrentPage(page);
   await page.getByRole('button', { name: '一步一步带我练' }).click();
 
   const modal = page.locator('#guideModal');
+  const eyebrow = page.locator('#guideEyebrow');
+  const actions = page.locator('#guideBody .guide-action');
+  const demoGifs = page.locator('#guideBody .guide-demo img');
+  const nextButton = page.locator('#guideNext');
   await expect(modal).toHaveAttribute('aria-hidden', 'false');
-  await expect(page.locator('#guideEyebrow')).toContainText('STEP 1 /');
-  await expect(page.locator('#guideBody .guide-action')).toHaveCount(0);
 
-  await page.locator('#guideNext').click();
-  await expect(page.locator('#guideEyebrow')).toContainText('STEP 2 /');
-  await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
-  await expect(page.locator('#guideBody .guide-demo img')).toHaveCount(1);
+  const firstStepLabel = await eyebrow.textContent();
+  const match = firstStepLabel.match(/^STEP 1 \/ (\d+)$/);
+  expect(match).not.toBeNull();
+  const totalSteps = Number(match[1]);
+  expect(totalSteps).toBeGreaterThan(1);
 
-  for (let step = 3; step <= 6; step += 1) {
-    await page.locator('#guideNext').click();
-    await expect(page.locator('#guideEyebrow')).toContainText(`STEP ${step} /`);
-    await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
-    await expect(page.locator('#guideBody .guide-demo img')).toHaveCount(1);
+  for (let step = 1; step <= totalSteps; step += 1) {
+    await expect(eyebrow).toHaveText(`STEP ${step} / ${totalSteps}`);
+
+    const actionCount = await actions.count();
+    expect(actionCount).toBeLessThanOrEqual(1);
+    if (actionCount === 1) {
+      await expect(actions).toHaveCount(1);
+      await expect(demoGifs).toHaveCount(1);
+    } else {
+      await expect(demoGifs).toHaveCount(0);
+    }
+
+    if (step < totalSteps) {
+      await nextButton.click();
+    }
   }
+
+  await expect(nextButton).toHaveText('完成训练并自动记录 ✓');
+  await nextButton.click();
+
+  await expect(modal).toHaveAttribute('aria-hidden', 'true');
+  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), TRACKER_KEY);
+  expect(saved['1']['完成状态']).toBe('已完成');
+  await expect(page.getByRole('button', { name: '已完成', exact: true })).toHaveClass(/active/);
 });
 
 test('关闭跟练弹窗后音频停止', async ({ page }) => {

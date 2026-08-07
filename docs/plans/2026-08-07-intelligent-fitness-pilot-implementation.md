@@ -113,7 +113,7 @@
   "name": "move28-fitness-plan",
   "private": true,
   "scripts": {
-    "test": "node --test tests/unit",
+    "test": "node --test",
     "test:unit": "node --test",
     "test:e2e": "playwright test",
     "test:all": "npm test && npm run test:e2e"
@@ -123,6 +123,8 @@
   }
 }
 ```
+
+> Windows Node 24 实测会将 `node --test tests/unit` 的目录参数当作模块路径并报错；这里使用 `node --test` 的默认测试发现，自动运行 `.test.cjs`，且不会运行 Playwright 的 `.spec.cjs`。
 
 `playwright.config.cjs`：
 
