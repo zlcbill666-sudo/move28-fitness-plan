@@ -40,6 +40,13 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(api.MOVEMENT_INTENTS, ['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability','low_impact_cardio']);
   });
 
+  await t.test('plan validator exports the hard-gate API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.planValidator);
+    assert.equal(typeof api.validatePlan, 'function');
+    assert.equal(api.RULE_VERSION, 'pilot-v2');
+  });
+
   await t.test('plan generator exports deterministic four-week planning APIs', () => {
     clearMove28ModuleCache();
     const api = require(modules.planGenerator);

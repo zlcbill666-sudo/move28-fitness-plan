@@ -3,14 +3,15 @@
 const isCommonJS=typeof module==='object'&&module.exports;
 const matcherApi=isCommonJS?require('./movement-matcher.js'):root.Move28&&root.Move28.domain;
 const catalogApi=isCommonJS?require('../data/exercise-catalog.js'):root.Move28&&root.Move28.data;
+const validatorApi=isCommonJS?require('./plan-validator.js'):root.Move28&&root.Move28.domain;
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
-const api=factory(matcherApi||{},catalogApi||{},nativeStructuredClone);
+const api=factory(matcherApi||{},catalogApi||{},validatorApi||{},nativeStructuredClone);
 if(isCommonJS)module.exports=api;
 else{
   root.Move28=root.Move28||{};
   root.Move28.domain=Object.assign(root.Move28.domain||{},api);
 }
-})(globalThis,function(matcherApi,catalogApi,nativeStructuredClone){
+})(globalThis,function(matcherApi,catalogApi,validatorApi,nativeStructuredClone){
 'use strict';
 
 const RULE_VERSION='pilot-v2';
@@ -125,6 +126,22 @@ function isCanonicalCloneGraph(rootValue){
     }
     return true;
   }catch(_error){return false}
+}
+function safeValidationResult(value){
+  if(!nativeStructuredClone||!isCanonicalCloneGraph(value))return null;
+  let cloned;
+  try{cloned=nativeStructuredClone(value)}catch(_error){return null}
+  if(!plainRecord(cloned))return null;
+  const ok=ownValue(cloned,'ok'),errors=arrayValues(ownValue(cloned,'errors'),{max:256});
+  if(typeof ok!=='boolean'||!errors||Object.keys(cloned).some(key=>!['ok','errors'].includes(key))||(ok&&errors.length)||(!ok&&!errors.length))return null;
+  const clean=[];
+  for(const error of errors){
+    if(!plainRecord(error)||Object.keys(error).some(key=>!['code','path','message'].includes(key)))return null;
+    const code=ownValue(error,'code'),path=ownValue(error,'path'),message=ownValue(error,'message');
+    if(typeof code!=='string'||!code||code.length>80||typeof path!=='string'||!path||path.length>300||typeof message!=='string'||!message||message.length>500)return null;
+    clean.push({code,path,message});
+  }
+  return {ok,errors:clean};
 }
 function failure(code,details={}){
   return deepFreeze({status:'manual_review',plan:null,errors:[{code,...details}]});
@@ -259,7 +276,7 @@ function generatePlan(rawInput){
     }
     weeks.push({number:weekNumber,focus:FOCUSES[weekNumber-1],sessions});
   }
-  return deepFreeze({
+  const candidate={
     id:`plan-${RULE_VERSION}-r${input.intakeRevision}-${input.setting}-${input.daysPerWeek}`,
     schemaVersion:SCHEMA_VERSION,
     ruleVersion:RULE_VERSION,
@@ -269,7 +286,20 @@ function generatePlan(rawInput){
     status:'generated',
     assumptions:assumptionsFor(input),
     weeks
-  });
+  };
+  if(typeof validatorApi.validatePlan!=='function')return failure('VALIDATOR_UNAVAILABLE');
+  let validation;
+  try{
+    validation=safeValidationResult(validatorApi.validatePlan({
+      plan:candidate,
+      intake:{sessionMinutes:String(input.sessionMinutes),avoidMovements:[...input.avoidMovements]},
+      risk:{level:input.riskLevel,ruleVersion:RULE_VERSION},
+      catalog:input.catalog
+    }));
+  }catch(_error){return failure('VALIDATOR_UNAVAILABLE')}
+  if(!validation)return failure('VALIDATOR_UNAVAILABLE');
+  if(!validation.ok)return deepFreeze({status:'manual_review',plan:null,errors:validation.errors});
+  return deepFreeze(candidate);
 }
 
 return Object.freeze({RULE_VERSION,SCHEMA_VERSION,STRENGTH_PATTERNS,generatePlan});

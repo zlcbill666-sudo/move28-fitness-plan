@@ -135,18 +135,19 @@ test('居家水平拉仍缺approved动作，不能伪造完整计划或回退dra
   assert.equal(withDraft.errors[0].cause.code,'NO_APPROVED_MATCH');
 });
 
-test('自定义catalog被真实消费，空目录和自定义器械方案都可观察', () => {
+test('自定义catalog被真实消费，空目录和伪造安全字段都被原子拒绝', () => {
   const api=loadGenerator();
   const empty=generate(api,{},'normal',{catalog:[]});
   assert.equal(empty.status,'manual_review');
   assert.equal(empty.errors[0].cause.code,'NO_APPROVED_MATCH');
   const original=api.exerciseCatalog.find(item=>item.id==='seated-leg-press');
   const custom={...original,equipment:['treadmill'],equipmentOptions:[['treadmill']]};
-  const catalog=api.exerciseCatalog.filter(item=>item.pattern!=='knee_dominant'||item.id===original.id).map(item=>item.id===original.id?custom:item);
+  const catalog=api.exerciseCatalog.map(item=>item.id===original.id?custom:item);
   const equipment=gymEquipment.filter(item=>!['leg_press_machine','stable_chair'].includes(item));
   const plan=generate(api,{equipment},'normal',{catalog});
-  assert.equal(plan.status,'generated');
-  assert.equal(plan.weeks[0].sessions[0].actions[0].exerciseId,'seated-leg-press');
+  assert.equal(plan.status,'manual_review');
+  assert.equal(plan.plan,null);
+  assert.ok(plan.errors.some(error=>error.code==='INVALID_PLAN_SCHEMA'));
 });
 
 test('stop、manual_review、未确认、版本不符及非法revision固定阻止生成', () => {
@@ -222,7 +223,7 @@ test('accessor、稀疏数组和revoked Proxy零执行并fail closed', () => {
 
 test('经典script与CommonJS均暴露纯生成API且不依赖DOM/storage/时间/随机数', () => {
   const context={structuredClone}; vm.createContext(context);
-  for(const relative of ['src/data/exercise-catalog.js','src/domain/movement-matcher.js','src/domain/plan-generator.js']){
+  for(const relative of ['src/data/exercise-catalog.js','src/domain/movement-matcher.js','src/domain/plan-validator.js','src/domain/plan-generator.js']){
     vm.runInContext(fs.readFileSync(path.join(projectRoot,...relative.split('/')),'utf8'),context);
   }
   assert.equal(typeof context.Move28.domain.generatePlan,'function');
