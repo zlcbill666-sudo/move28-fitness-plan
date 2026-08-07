@@ -49,6 +49,7 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     scripts.map(script => script.getAttribute('src'))
   )).toEqual([
     'src/namespace.js',
+    'src/data/exercise-catalog.js',
     'src/data/legacy-demo-plan.js',
     'src/data/tracker-fields.js',
     'src/ui/dashboard.js',
@@ -70,6 +71,9 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     renderToday: typeof window.renderToday,
     dashboardProxies: ['moveDay', 'pickWeek', 'pickExercise', 'setStatus', 'selectTrackDay', 'openTrack']
       .map(name => typeof window[name]),
+    exerciseCatalogCount: window.Move28?.data?.exerciseCatalog?.length,
+    validateExerciseCatalog: typeof window.Move28?.data?.validateExerciseCatalog,
+    approvedExerciseCount: window.Move28?.data?.getApprovedExercises?.().length,
     legacyTrackerHeaders: typeof window.Move28?.data?.legacyDemoPlan?.trackerHeaders,
     trackerFieldCount: window.Move28?.data?.trackerFields?.length
   }))).toEqual({
@@ -79,6 +83,9 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     uiRenderToday: 'function',
     renderToday: 'undefined',
     dashboardProxies: Array(6).fill('function'),
+    exerciseCatalogCount: 17,
+    validateExerciseCatalog: 'function',
+    approvedExerciseCount: 17,
     legacyTrackerHeaders: 'undefined',
     trackerFieldCount: 25
   });

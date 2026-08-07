@@ -1,22 +1,6 @@
 const assert = require('node:assert/strict');
-const path = require('node:path');
 const test = require('node:test');
-
-const projectRoot = path.resolve(__dirname, '..', '..');
-const modules = {
-  namespace: path.join(projectRoot, 'src', 'namespace.js'),
-  legacyPlan: path.join(projectRoot, 'src', 'data', 'legacy-demo-plan.js'),
-  trackerFields: path.join(projectRoot, 'src', 'data', 'tracker-fields.js'),
-  dashboard: path.join(projectRoot, 'src', 'ui', 'dashboard.js'),
-  workoutGuide: path.join(projectRoot, 'src', 'ui', 'workout-guide.js'),
-  app: path.join(projectRoot, 'src', 'app.js'),
-};
-
-function clearMove28ModuleCache() {
-  for (const modulePath of Object.values(modules)) {
-    delete require.cache[require.resolve(modulePath)];
-  }
-}
+const { modules, clearMove28ModuleCache } = require('../helpers/load-script.cjs');
 
 test('all static modules load through CommonJS with useful exports', async (t) => {
   await t.test('namespace exports the shared application shape', () => {
@@ -35,6 +19,14 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(legacyDemoPlan.weeks.length, 4);
     assert.equal(legacyDemoPlan.days.length, 28);
     assert.equal(legacyDemoPlan.exercises.length, 17);
+  });
+
+  await t.test('exercise catalog exports validated browser-independent APIs', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.exerciseCatalog);
+    assert.equal(api.exerciseCatalog.length, 17);
+    assert.deepEqual(api.validateExerciseCatalog(api.exerciseCatalog), []);
+    assert.deepEqual(api.getApprovedExercises(), api.exerciseCatalog);
   });
 
   await t.test('tracker fields export all 25 fields', () => {
