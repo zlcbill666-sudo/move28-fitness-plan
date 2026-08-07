@@ -295,9 +295,11 @@ test('严格写路径读取失败时保持原状态且绝不调用 setItem', () 
   }
 });
 
-test('严格写路径不覆盖非法 JSON 或非字符串读取结果，宽松 load 仍返回默认状态', () => {
+test('严格写路径不覆盖非法JSON、非法schema或非字符串读取结果，宽松load仍返回默认状态', () => {
   const moduleApi = api();
-  for (const rawValue of ['{damaged', undefined, 42, {}]) {
+  const futureState = JSON.stringify({ ...DEFAULT_STATE, schemaVersion: 2, intakeRevision: 7 });
+  const missingSchema = JSON.stringify({ intake: { age: 30 }, intakeRevision: 7 });
+  for (const rawValue of ['{damaged', 'null', '[]', '42', futureState, missingSchema, undefined, 42, {}]) {
     let setCalls = 0;
     let raw = rawValue;
     const storage = {

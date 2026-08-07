@@ -338,6 +338,14 @@
         if (strict) throw createStorageError(READ_ERROR_MESSAGE);
         return createDefaultState(participantId);
       }
+      if (strict) {
+        const schema = raw !== null && typeof raw === 'object' && !Array.isArray(raw)
+          ? ownDataValue(raw, 'schemaVersion')
+          : { present: false, value: undefined };
+        if (!schema.present || schema.value !== SCHEMA_VERSION) {
+          throw createStorageError(READ_ERROR_MESSAGE);
+        }
+      }
       return migrateState(raw, participantId);
     }
 
