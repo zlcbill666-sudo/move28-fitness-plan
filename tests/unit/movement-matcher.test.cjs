@@ -79,8 +79,15 @@ test('器械不足返回结构化错误和可满足的器械方案', () => {
   assert.deepEqual(result.error.requiredOptions, [['chest_press_machine'], ['wall']]);
 });
 
-test('没有approved动作时绝不回退到draft', () => {
+test('默认目录没有可选择的band-row，完整居家器械仍返回水平拉结构化缺口', () => {
   const api = loadMatcher();
+  assert.equal(api.exerciseCatalog.find(item => item.id === 'band-row'), undefined);
+  const defaultResult = match(api, 'horizontal_pull', 'home');
+  assert.equal(defaultResult.ok, false);
+  assert.equal(defaultResult.error.code, 'NO_APPROVED_MATCH');
+  assert.equal(defaultResult.error.pattern, 'horizontal_pull');
+  assert.equal(defaultResult.error.setting, 'home');
+
   const draftHomeRow = {
     ...api.exerciseCatalog.find(item => item.id === 'seated-row'),
     id:'band-row', name:'待审弹力带划船', settings:['home'], equipment:['resistance_band'],
@@ -91,6 +98,7 @@ test('没有approved动作时绝不回退到draft', () => {
   assert.equal(result.ok, false);
   assert.equal(result.error.code, 'NO_APPROVED_MATCH');
   assert.equal(result.error.pattern, 'horizontal_pull');
+  assert.equal(result.error.setting, 'home');
 });
 
 test('匹配结果不会冻结或改写调用方提供的自定义目录', () => {

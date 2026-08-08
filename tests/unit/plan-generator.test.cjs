@@ -123,16 +123,21 @@ test('器械与动作回避生效，缺少关键动作时整份计划原子失�
 
 test('居家水平拉仍缺approved动作，不能伪造完整计划或回退draft', () => {
   const api=loadGenerator();
-  const intake={setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],daysPerWeek:'2',weekdays:['mon','thu'],sessionMinutes:'30'};
+  const intake={setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall','flat_walking_route'],daysPerWeek:'2',weekdays:['mon','thu'],sessionMinutes:'30'};
   const result=generate(api,intake);
   assert.equal(result.status,'manual_review');
   assert.equal(result.plan,null);
-  assert.equal(result.errors[0].pattern,'horizontal_pull');
-  assert.equal(result.errors[0].cause.code,'NO_APPROVED_MATCH');
+  const horizontalPullError=result.errors.find(error=>error.code==='REQUIRED_MOVEMENT_UNAVAILABLE'&&error.pattern==='horizontal_pull');
+  assert.ok(horizontalPullError);
+  assert.equal(horizontalPullError.cause.code,'NO_APPROVED_MATCH');
+  assert.equal(horizontalPullError.cause.setting,'home');
   const draft={...api.exerciseCatalog.find(item=>item.id==='seated-row'),id:'band-row',settings:['home'],equipment:['resistance_band'],equipmentOptions:[['resistance_band']],reviewStatus:'draft'};
   const withDraft=generate(api,intake,'normal',{catalog:[...api.exerciseCatalog,draft]});
   assert.equal(withDraft.status,'manual_review');
-  assert.equal(withDraft.errors[0].cause.code,'NO_APPROVED_MATCH');
+  assert.equal(withDraft.plan,null);
+  const draftGap=withDraft.errors.find(error=>error.code==='REQUIRED_MOVEMENT_UNAVAILABLE'&&error.pattern==='horizontal_pull');
+  assert.ok(draftGap);
+  assert.equal(draftGap.cause.code,'NO_APPROVED_MATCH');
 });
 
 test('自定义catalog被真实消费，空目录和伪造安全字段都被原子拒绝', () => {
