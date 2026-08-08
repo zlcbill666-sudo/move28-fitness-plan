@@ -48,18 +48,28 @@ const VALID_CAPABILITY_PROFILE = Object.freeze({version:1,completed:true,chairRi
 function generateValidPlan(revision){
   clearMove28ModuleCache();
   const generator=loadScript('planGenerator'),catalog=loadScript('exerciseCatalog');
-  return generator.generatePlan({intake:structuredClone(VALID_INTAKE),risk:structuredClone(VALID_RISK),intakeRevision:revision,catalog:catalog.exerciseCatalog});
+  return {...generator.generatePlan({intake:structuredClone(VALID_INTAKE),risk:structuredClone(VALID_RISK),intakeRevision:revision,catalog:catalog.exerciseCatalog}),capabilityRevision:1};
 }
+function saveValidCapability(store){return store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));}
 function approveStoredPlan(storage,moduleApi,reviewedAt='2030-01-02T03:04:05.000Z'){
   const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));
   const store=moduleApi.createLocalStore({storage,now:()=>reviewedAt});
   return store.approvePlanReview({reviewerId:'pilot-reviewer',planId:raw.plan.id,intakeRevision:raw.intakeRevision});
 }
+function boundPlanStore({active=false}={}){
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);
+  const plan=generateValidPlan(1);store.savePlan(plan);
+  if(active)store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
+  return{moduleApi,storage,store,plan};
+}
+function mutateStoredPlan(storage,moduleApi,mutate){const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));mutate(raw);storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));return raw;}
 
 test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活计划',()=>{
   const storage=memoryStorage(),moduleApi=api();
   const store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
   store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  saveValidCapability(store);
   const plan=generateValidPlan(1);store.savePlan(plan);
   const dossier=store.buildDetailedReviewDossier();
   assert.equal(dossier.participantId,'pilot-local');
@@ -74,13 +84,14 @@ test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活�
   for(const forbidden of ['chestSymptoms','age','equipmentBySetting','exclusions','RAW HEALTH'])assert.equal(serialized.includes(forbidden),false);
   const approved=store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
   assert.equal(approved.plan.status,'active');
-  assert.deepEqual(approved.plan.review,{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1});
+  assert.deepEqual(approved.plan.review,{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1});
 });
 
 test('脱敏复核材料不会导出持久化计划中的任意自由文本',()=>{
   const storage=memoryStorage(),moduleApi=api();
   const store=moduleApi.createLocalStore({storage});
   store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  saveValidCapability(store);
   store.savePlan(generateValidPlan(1));
   const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY)),session=raw.plan.weeks[0].sessions[0];
   session.id='RAW HEALTH SESSION';
@@ -98,6 +109,7 @@ test('正式复核API拒绝错误计划、revision、复核人和非pending计�
   const storage=memoryStorage(),moduleApi=api();
   const store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
   store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  saveValidCapability(store);
   const plan=generateValidPlan(1);store.savePlan(plan);
   for(const input of [
     {reviewerId:'Bad Reviewer',planId:plan.id,intakeRevision:1},
@@ -147,8 +159,8 @@ test('能力档案INVALID_INPUT、getter、Proxy与危险键全部fail closed且
 
 test('保存能力档案使旧计划失效，且写后回读失败不伪称成功',()=>{
   const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
-  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));store.savePlan(generateValidPlan(1));
-  const changed=store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);store.savePlan(generateValidPlan(1));
+  const changed=store.saveCapabilityProfile({...VALID_CAPABILITY_PROFILE,chairRise:'hands_supported'});
   assert.equal(changed.plan.status,'stale');assert.equal(changed.plan.staleReason,'capability_changed');assert.equal(changed.plan.staleAt,'2030-01-02T03:04:05.000Z');
   let raw=null;const dropping={getItem:()=>raw,setItem(_key,value){raw=String(value);},removeItem(){}};const failing=moduleApi.createLocalStore({storage:dropping});dropping.setItem=()=>{};
   assert.throws(()=>failing.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE)),error=>error.name==='StorageError');
@@ -166,10 +178,13 @@ test('迁移时重算能力结果、覆盖伪造结果，并对非法档案fail 
   }
 });
 
-test('缺失能力字段的旧持久化计划迁移后固定标记capability_required，显式revision 0路径兼容',()=>{
+test('默认、旧版和显式revision 0状态都不能信任计划，迁移后固定标记capability_required',()=>{
   const moduleApi=api(),legacy={schemaVersion:1,participantId:'pilot-a',intake:structuredClone(VALID_INTAKE),intakeRevision:1,risk:structuredClone(VALID_RISK),plan:{...generateValidPlan(1),status:'active'},logs:{},weeklyReviews:[],consent:{acceptedAt:null,version:'pilot-v1'}};
-  const migrated=moduleApi.migrateState(legacy,'pilot-a');assert.equal(migrated.plan.status,'stale');assert.equal(migrated.plan.staleReason,'capability_required');assert.ok(migrated.plan.staleAt);
-  const storage=memoryStorage(),store=moduleApi.createLocalStore({storage});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));assert.equal(store.savePlan(generateValidPlan(1)).plan.status,'pending_review');
+  for(const raw of [legacy,{...legacy,capabilityProfile:null,capabilityResult:null,capabilityRevision:0}]){
+    const clean=moduleApi.migrateState(raw,'pilot-a');assert.equal(clean.plan.status,'stale');assert.equal(clean.plan.staleReason,'capability_required');assert.ok(clean.plan.staleAt);assert.equal(clean.plan.weeks.length,4);
+  }
+  const storage=memoryStorage(),store=moduleApi.createLocalStore({storage});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  assert.throws(()=>store.savePlan(generateValidPlan(1)),error=>error.name==='StorageError');
 });
 
 test('能力revision硬门拒绝错配计划、批准和完成，匹配时记录revision并正常完成',()=>{
@@ -188,11 +203,47 @@ test('能力revision硬门拒绝错配计划、批准和完成，匹配时记录
   assert.throws(()=>store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id}),error=>error.name==='StorageError');
 });
 
+test('统一能力绑定门逐入口拒绝缺失、0、错配和审核revision错配',()=>{
+  const planMutations=[raw=>{delete raw.plan.capabilityRevision},raw=>{raw.plan.capabilityRevision=0},raw=>{raw.plan.capabilityRevision=2}];
+  for(const mutate of planMutations){
+    const dossierCase=boundPlanStore();mutateStoredPlan(dossierCase.storage,dossierCase.moduleApi,mutate);
+    assert.throws(()=>dossierCase.store.buildDetailedReviewDossier(),error=>error.name==='StorageError');
+    const approveCase=boundPlanStore();mutateStoredPlan(approveCase.storage,approveCase.moduleApi,mutate);
+    assert.throws(()=>approveCase.store.approvePlanReview({reviewerId:'pilot-reviewer',planId:approveCase.plan.id,intakeRevision:1}),error=>error.name==='StorageError');
+  }
+  const activeMutations=[...planMutations,raw=>{raw.plan.review.capabilityRevision=2}];
+  for(const mutate of activeMutations){
+    for(const invoke of [
+      ({store,plan})=>store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id}),
+      ({store,plan})=>store.recordWorkoutStop({sessionId:plan.weeks[0].sessions[0].id,reasonCode:'sudden_severe_pain',actionIndex:0,occurredAt:'2030-01-02T03:05:00.000Z'}),
+      ({store})=>store.recordWeeklyReview({reviewVersion:1,weekNumber:1,completedSessions:2,completionReason:'completed',difficulty:'suitable',movementQuality:'stable',painStatus:'none',painAreas:[],painAffectsDailyActivity:false,recovery:'good',nextWeekTime:'same'})
+    ]){
+      const current=boundPlanStore({active:true});mutateStoredPlan(current.storage,current.moduleApi,mutate);
+      assert.throws(()=>invoke(current),error=>error.name==='StorageError');
+    }
+    const resolveCase=boundPlanStore({active:true});
+    const pending=resolveCase.store.recordWeeklyReview({reviewVersion:1,weekNumber:1,completedSessions:2,completionReason:'completed',difficulty:'too_hard',movementQuality:'stable',painStatus:'none',painAreas:[],painAffectsDailyActivity:false,recovery:'good',nextWeekTime:'same'});
+    mutateStoredPlan(resolveCase.storage,resolveCase.moduleApi,mutate);
+    assert.throws(()=>resolveCase.store.resolveWeeklyReview({reviewId:pending.weeklyReviews[0].id,decision:'accepted'}),error=>error.name==='StorageError');
+  }
+  const reviewOnly=boundPlanStore({active:true});mutateStoredPlan(reviewOnly.storage,reviewOnly.moduleApi,raw=>{raw.plan.review.capabilityRevision=2});
+  assert.equal(reviewOnly.store.buildDetailedReviewDossier().planId,reviewOnly.plan.id);
+});
+
+test('能力状态仅normal或conservative可保存计划',()=>{
+  for(const profile of [{...VALID_CAPABILITY_PROFILE,chairRise:'unable_or_painful'},{...VALID_CAPABILITY_PROFILE,walkTolerance:'warning_symptom'}]){
+    const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage});
+    store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));store.saveCapabilityProfile(profile);
+    assert.throws(()=>store.savePlan(generateValidPlan(1)),error=>error.name==='StorageError');
+  }
+});
+
 test('完成记录只绑定人工复核后的active计划和已知session，刷新后仍可恢复', () => {
   const storage = memoryStorage();
   const moduleApi=api();
   const store = moduleApi.createLocalStore({ storage, now: () => '2030-01-02T03:04:05.000Z' });
   store.saveIntake(structuredClone(VALID_INTAKE), structuredClone(VALID_RISK));
+  saveValidCapability(store);
   const plan=generateValidPlan(1);store.savePlan(plan);
   assert.throws(()=>store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id}),error=>error.name==='StorageError');
   approveStoredPlan(storage,moduleApi);
@@ -225,6 +276,7 @@ test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失�
 
   const validState=store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
   assert.equal(validState.intakeRevision,2);
+  saveValidCapability(store);
   const planInput=generateValidPlan(2);
   const planned = store.savePlan(planInput);
   assert.equal(planned.plan.status, 'pending_review');
@@ -387,7 +439,7 @@ test('审核摘要只导出严格机器标识符，恶意持久化元数据无�
   });
 });
 
-test('审核摘要对有效计划重新执行可信validator并给出准确规模',()=>{const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,participantId:'pilot-a'});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));const plan=generateValidPlan(1);store.savePlan(plan);const summary=store.exportReviewSummary(),sessions=plan.weeks.flatMap(week=>week.sessions);assert.equal(summary.validationResult,'passed');assert.equal(summary.planSummary.weekCount,4);assert.equal(summary.planSummary.sessionCount,sessions.length);assert.equal(summary.planSummary.actionCount,sessions.reduce((total,session)=>total+session.actions.length,0));assert.deepEqual(Object.keys(summary).sort(),['participantId','planSummary','riskCodes','riskLevel','ruleVersion','validationResult'])});
+test('审核摘要对有效计划重新执行可信validator并给出准确规模',()=>{const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,participantId:'pilot-a'});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);const plan=generateValidPlan(1);store.savePlan(plan);const summary=store.exportReviewSummary(),sessions=plan.weeks.flatMap(week=>week.sessions);assert.equal(summary.validationResult,'passed');assert.equal(summary.planSummary.weekCount,4);assert.equal(summary.planSummary.sessionCount,sessions.length);assert.equal(summary.planSummary.actionCount,sessions.reduce((total,session)=>total+session.actions.length,0));assert.deepEqual(Object.keys(summary).sort(),['participantId','planSummary','riskCodes','riskLevel','ruleVersion','validationResult'])});
 
 test('clearAll删除全部Move28本地key、保留无关key，失败时完整尝试且不报告成功', () => {
   const moduleApi = api();

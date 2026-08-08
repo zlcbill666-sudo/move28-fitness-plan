@@ -319,6 +319,22 @@
     });
   }
 
+  function capabilityResultsEqual(left, right) {
+    return Boolean(left && right
+      && left.status === right.status
+      && left.difficultyCap === right.difficultyCap
+      && left.cardioStartMinutes === right.cardioStartMinutes
+      && Array.isArray(left.exclusions) && Array.isArray(right.exclusions)
+      && left.exclusions.length === right.exclusions.length
+      && left.exclusions.every((value, index) => value === right.exclusions[index])
+      && left.variants && right.variants
+      && left.variants.knee_dominant === right.variants.knee_dominant
+      && left.variants.horizontal_push === right.variants.horizontal_push
+      && Array.isArray(left.reasonCodes) && Array.isArray(right.reasonCodes)
+      && left.reasonCodes.length === right.reasonCodes.length
+      && left.reasonCodes.every((value, index) => value === right.reasonCodes[index]));
+  }
+
   function sanitizeWorkoutLogs(value) {
     const logs = cloneObjectOr(value, null, false);
     if (!logs) return {};
@@ -458,12 +474,9 @@
         capabilityValid = true;
       }
     }
-    const explicitCompatibilityState = capabilityFieldsDeclared && capabilityProfile.value === null
-      && capabilityResult.value === null && capabilityRevision.value === 0;
-
     const plan = ownDataValue(raw, 'plan');
     if (!riskMismatch && plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
-    if (defaults.plan && !capabilityValid && !explicitCompatibilityState) {
+    if (defaults.plan && !capabilityValid) {
       defaults.plan.status = 'stale';
       defaults.plan.staleReason = 'capability_required';
       defaults.plan.staleAt = '1970-01-01T00:00:00.000Z';
@@ -676,14 +689,28 @@
       return trustedPlanValidationResult(plan, state) === 'passed';
     }
 
+    function hasCurrentCapabilityBinding(plan, state, options) {
+      const requireReview = Boolean(options && options.requireReview);
+      if (!plan || typeof plan !== 'object' || Array.isArray(plan)
+        || !state || typeof state !== 'object' || Array.isArray(state)
+        || !state.capabilityProfile || typeof state.capabilityProfile !== 'object' || Array.isArray(state.capabilityProfile)
+        || !state.capabilityResult || typeof state.capabilityResult !== 'object' || Array.isArray(state.capabilityResult)
+        || !Number.isSafeInteger(state.capabilityRevision) || state.capabilityRevision < 1
+        || !['normal', 'conservative'].includes(state.capabilityResult.status)
+        || plan.capabilityRevision !== state.capabilityRevision) return false;
+      const trustedResult = recomputeTrustedCapability(state.capabilityProfile);
+      if (!trustedResult || !capabilityResultsEqual(state.capabilityResult, trustedResult)) return false;
+      if (!requireReview) return true;
+      return Boolean(plan.review && plan.review.capabilityRevision === state.capabilityRevision);
+    }
+
     function isPlanApprovedForState(plan, state) {
       const review = plan && plan.review;
       return Boolean(review && review.status === 'approved'
         && sanitizeMachineId(review.reviewerId)
         && review.planId === plan.id
         && review.intakeRevision === state.intakeRevision
-        && (state.capabilityRevision === 0 || (plan.capabilityRevision === state.capabilityRevision
-          && review.capabilityRevision === state.capabilityRevision))
+        && hasCurrentCapabilityBinding(plan, state, { requireReview: true })
         && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review.reviewedAt));
     }
 
@@ -694,11 +721,11 @@
       }
       const state = loadStateForWrite();
       if (cleanPlan.status !== 'generated' || cleanPlan.intakeRevision !== state.intakeRevision
-        || (state.capabilityRevision > 0 && cleanPlan.capabilityRevision !== state.capabilityRevision)
+        || !hasCurrentCapabilityBinding(cleanPlan, state, { requireReview: false })
         || !passesTrustedPlanGate(cleanPlan, state)) throw createStorageError();
       cleanPlan.status = 'pending_review';
       cleanPlan.intakeRevision = state.intakeRevision;
-      if (state.capabilityRevision > 0) cleanPlan.capabilityRevision = state.capabilityRevision;
+      cleanPlan.capabilityRevision = state.capabilityRevision;
       cleanPlan.review = null;
       delete cleanPlan.staleReason;
       delete cleanPlan.staleAt;
@@ -714,7 +741,9 @@
         ? state.intake.weekdays.filter(day => ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day))
         : [];
       if (!planId || !trustedRisk || !risksEqual(state.risk, trustedRisk)
-        || !['pending_review', 'active'].includes(plan.status) || !passesTrustedPlanGate(plan, state)) throw createStorageError();
+        || !['pending_review', 'active'].includes(plan.status)
+        || !hasCurrentCapabilityBinding(plan, state, { requireReview: false })
+        || !passesTrustedPlanGate(plan, state)) throw createStorageError();
       const catalogById = new Map(trustedExerciseCatalog.map(exercise => [exercise.id, exercise]));
       const weeks = plan.weeks.map(week => Object.freeze({
         number: week.number,
@@ -766,15 +795,15 @@
       const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
       if (!plan || plan.status !== 'pending_review' || plan.id !== planId
         || plan.intakeRevision !== state.intakeRevision || clean.intakeRevision !== state.intakeRevision
-        || (state.capabilityRevision > 0 && plan.capabilityRevision !== state.capabilityRevision)
+        || !hasCurrentCapabilityBinding(plan, state, { requireReview: false })
         || !trustedRisk || !risksEqual(state.risk, trustedRisk)
         || !['normal', 'conservative'].includes(trustedRisk.level)
         || !passesTrustedPlanGate(plan, state)) throw createStorageError();
       const reviewedAt = String(now());
       if (!UTC_ISO_PATTERN.test(reviewedAt)) throw createStorageError();
       plan.status = 'active';
-      plan.review = { status: 'approved', reviewerId, reviewedAt, planId, intakeRevision: state.intakeRevision };
-      if (state.capabilityRevision > 0) plan.review.capabilityRevision = state.capabilityRevision;
+      plan.review = { status: 'approved', reviewerId, reviewedAt, planId, intakeRevision: state.intakeRevision,
+        capabilityRevision: state.capabilityRevision };
       return persist(state);
     }
 
@@ -895,10 +924,13 @@
         const proposal = proposeForState(state, weeklyReviewInput(record));
         if (!proposal || !proposal.after || proposal.type !== record.proposal.type
           || proposal.variable !== record.proposal.variable || proposal.reason !== record.proposal.reasonCode
+          || !hasCurrentCapabilityBinding(proposal.after, state, { requireReview: false })
           || !passesTrustedPlanGate(proposal.after, state)) throw createStorageError();
         const adjusted = clonePlainData(proposal.after);
         adjusted.id = `${state.plan.id}-w${record.weekNumber}-a`;
-        if (!passesTrustedPlanGate(adjusted, state)) throw createStorageError();
+        adjusted.capabilityRevision = state.capabilityRevision;
+        if (!hasCurrentCapabilityBinding(adjusted, state, { requireReview: false })
+          || !passesTrustedPlanGate(adjusted, state)) throw createStorageError();
         adjusted.status = 'pending_review'; adjusted.review = null;
         delete adjusted.staleReason; delete adjusted.staleAt;
         record.resultPlanId = adjusted.id;
