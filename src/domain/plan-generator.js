@@ -26,6 +26,8 @@ const CARDIO_PREFERENCES=Object.freeze(['flat_walk','elliptical','mixed','none']
 const CARDIO_AVOIDS=Object.freeze(['none','flat_walk','elliptical']);
 const TRAINING_BREAKS=Object.freeze(['yes','no','unsure']);
 const STRENGTH_EXPERIENCES=Object.freeze(['none','some','regular_under_6m','experienced']);
+const CAPABILITY_FIELDS=Object.freeze(['status','difficultyCap','exclusions','variants','cardioStartMinutes','reasonCodes']);
+const CAPABILITY_STATUSES=Object.freeze(['normal','conservative','manual_review','stop']);
 
 function ownValue(object,key){
   try{
@@ -143,6 +145,30 @@ function safeValidationResult(value){
   }
   return {ok,errors:clean};
 }
+function canonicalCapability(input){
+  const capabilityRevision=ownValue(input,'capabilityRevision');
+  const source=ownValue(input,'capabilityResult');
+  if(!Number.isSafeInteger(capabilityRevision)||capabilityRevision<1||!plainRecord(source))return null;
+  const keys=Object.keys(source);
+  if(keys.length!==CAPABILITY_FIELDS.length||keys.some(key=>!CAPABILITY_FIELDS.includes(key)))return null;
+  const status=ownValue(source,'status');
+  const difficultyCap=ownValue(source,'difficultyCap');
+  const exclusions=stringArray(ownValue(source,'exclusions'),{max:2});
+  const variants=ownValue(source,'variants');
+  const cardioStartMinutes=ownValue(source,'cardioStartMinutes');
+  const reasonCodes=stringArray(ownValue(source,'reasonCodes'),{max:16});
+  if(!CAPABILITY_STATUSES.includes(status)||!Number.isSafeInteger(difficultyCap)||!exclusions||exclusions.some(value=>!['floor','hinge'].includes(value))||!plainRecord(variants)||!Number.isSafeInteger(cardioStartMinutes)||!reasonCodes||reasonCodes.some(code=>!/^[A-Z][A-Z0-9_]{0,79}$/.test(code)))return null;
+  const variantKeys=Object.keys(variants);
+  if(variantKeys.length!==2||variantKeys.some(key=>!['knee_dominant','horizontal_push'].includes(key)))return null;
+  const kneeDominant=ownValue(variants,'knee_dominant'),horizontalPush=ownValue(variants,'horizontal_push');
+  if(!['standard','high_seat'].includes(kneeDominant)||!['standard','close_wall'].includes(horizontalPush))return null;
+  if(difficultyCap!==(status==='normal'?2:1)||![0,8,15].includes(cardioStartMinutes))return null;
+  if(status==='normal'&&(exclusions.length||kneeDominant!=='standard'||horizontalPush!=='standard'||cardioStartMinutes!==15||reasonCodes.length))return null;
+  if(status==='stop'&&cardioStartMinutes!==0)return null;
+  if((status==='conservative'||status==='manual_review')&&cardioStartMinutes===0)return null;
+  if(status!=='normal'&&reasonCodes.length===0)return null;
+  return {capabilityRevision,status,difficultyCap,exclusions:[...exclusions],variants:{knee_dominant:kneeDominant,horizontal_push:horizontalPush},cardioStartMinutes,reasonCodes:[...reasonCodes]};
+}
 function failure(code,details={}){
   return deepFreeze({status:'manual_review',plan:null,errors:[{code,...details}]});
 }
@@ -151,7 +177,8 @@ function canonicalInput(input){
   const intake=ownValue(input,'intake');
   const risk=ownValue(input,'risk');
   const intakeRevision=ownValue(input,'intakeRevision');
-  if(!plainRecord(intake)||!plainRecord(risk)||!Number.isSafeInteger(intakeRevision)||intakeRevision<1)return null;
+  const capability=canonicalCapability(input);
+  if(!plainRecord(intake)||!plainRecord(risk)||!Number.isSafeInteger(intakeRevision)||intakeRevision<1||!capability)return null;
   const finalConfirmed=ownValue(intake,'finalConfirmed');
   const age=ownValue(intake,'age');
   const daysPerWeek=ownValue(intake,'daysPerWeek');
@@ -181,7 +208,8 @@ function canonicalInput(input){
   if(!catalog)return null;
   const sortedWeekdays=[...weekdays].sort((a,b)=>WEEKDAYS.indexOf(a)-WEEKDAYS.indexOf(b));
   const availableEquipment=equipment.filter(item=>!avoidEquipment.includes(item));
-  return {intakeRevision,daysPerWeek,dayCount,sessionMinutes:Number(sessionMinutes),weekdays:sortedWeekdays,setting,equipment:availableEquipment,avoidMovements,cardioPreference,cardioAvoid,trainingBreak,strengthExperience,riskLevel,catalog};
+  const mergedExclusions=[...new Set([...avoidMovements,...capability.exclusions])];
+  return {intakeRevision,...capability,daysPerWeek,dayCount,sessionMinutes:Number(sessionMinutes),weekdays:sortedWeekdays,setting,equipment:availableEquipment,avoidMovements:mergedExclusions,cardioPreference,cardioAvoid,trainingBreak,strengthExperience,riskLevel,catalog};
 }
 function circularGap(first,second){
   const gap=Math.abs(WEEKDAYS.indexOf(first)-WEEKDAYS.indexOf(second));
@@ -223,17 +251,30 @@ function cardioExclusions(input){
   if(input.cardioPreference==='elliptical'||input.cardioAvoid==='flat_walk')exclusions.push('flat-walk');
   return [...new Set(exclusions)];
 }
+function capabilityMatchingExclusions(input,pattern){
+  const exclusions=pattern==='low_impact_cardio'?cardioExclusions(input):[...input.avoidMovements];
+  if(pattern==='knee_dominant'&&input.variants.knee_dominant==='high_seat')exclusions.push('seated-leg-press');
+  if(pattern==='horizontal_push'&&input.variants.horizontal_push==='close_wall')exclusions.push('chest-press-machine','standing-band-chest-press');
+  return [...new Set(exclusions)];
+}
 function matchedAction(input,pattern,weekNumber){
-  const exclusions=pattern==='low_impact_cardio'?cardioExclusions(input):input.avoidMovements;
-  const result=matcherApi.matchExercise({pattern,setting:input.setting,equipment:input.equipment,exclusions,difficulty:2,catalog:input.catalog});
+  const exclusions=capabilityMatchingExclusions(input,pattern);
+  const result=matcherApi.matchExercise({pattern,setting:input.setting,equipment:input.equipment,exclusions,difficultyCap:input.difficultyCap,catalog:input.catalog});
   if(!result||result.ok!==true)return {error:result&&result.error?result.error:{code:'MATCHER_UNAVAILABLE'}};
   if(pattern==='low_impact_cardio'){
-    const durationMin=Math.max(10,Math.min(20,input.sessionMinutes-5));
+    const dose=result.exercise&&result.exercise.dose&&result.exercise.dose.durationMin;
+    const minimum=Array.isArray(dose)?dose[0]:1,maximum=Array.isArray(dose)?dose[1]:input.cardioStartMinutes;
+    const durationMin=Math.min(Math.max(10,Math.min(20,input.sessionMinutes-5)),input.cardioStartMinutes,maximum);
+    if(!Number.isSafeInteger(durationMin)||durationMin<minimum)return {error:{code:'CAPABILITY_CARDIO_UNAVAILABLE'}};
     return {action:{pattern,exerciseId:result.exerciseId,phase:'cardio',durationMin,rpe:4,restSec:0}};
   }
-  const reps=input.riskLevel==='normal'&&weekNumber>=2?9:8;
-  const restSec=input.riskLevel==='conservative'?90:(input.strengthExperience==='none'?75:60);
-  return {action:{pattern,exerciseId:result.exerciseId,phase:'main',sets:2,reps,rpe:5,restSec}};
+  const conservative=input.riskLevel==='conservative'||input.status==='conservative';
+  const reps=!conservative&&weekNumber>=2?9:8;
+  const restSec=conservative?90:(input.strengthExperience==='none'?75:60);
+  const action={pattern,exerciseId:result.exerciseId,phase:'main',sets:2,reps,rpe:5,restSec};
+  if(pattern==='knee_dominant')action.variant=result.exerciseId==='high-seat-sit-to-stand'?'high_seat':'standard';
+  if(pattern==='horizontal_push')action.variant=result.exerciseId==='wall-push-up'?'close_wall':'standard';
+  return {action};
 }
 function buildSession(input,item,weekNumber,index){
   const patterns=item.intent==='full_body_strength'?STRENGTH_PATTERNS:['low_impact_cardio'];
@@ -243,7 +284,7 @@ function buildSession(input,item,weekNumber,index){
     if(matched.error)return {error:{code:'REQUIRED_MOVEMENT_UNAVAILABLE',path:`weeks[${weekNumber-1}].sessions[${index}].actions`,pattern,setting:input.setting,cause:matched.error}};
     actions.push(matched.action);
   }
-  const estimatedMinutes=item.intent==='full_body_strength'?(input.riskLevel==='conservative'?20:18):(item.intent==='recovery'?actions[0].durationMin:actions[0].durationMin+5);
+  const estimatedMinutes=item.intent==='full_body_strength'?((input.riskLevel==='conservative'||input.status==='conservative')?20:18):(item.intent==='recovery'?actions[0].durationMin:actions[0].durationMin+5);
   return {session:{id:`w${weekNumber}-s${index+1}`,weekday:item.weekday,intent:item.intent,setting:input.setting,estimatedMinutes,equipmentBySetting:{[input.setting]:[...input.equipment]},exclusions:[...input.avoidMovements],actions}};
 }
 function assumptionsFor(input){
@@ -251,6 +292,7 @@ function assumptionsFor(input){
   if(input.dayCount===1)assumptions.push({code:'one_day_limited',message:'每周仅安排一次全身训练，步行作为非处方建议。'});
   if(input.dayCount>=5)assumptions.push({code:'first_cycle_capped_at_four',message:'首周期最多安排三次结构化训练和一次恢复。'});
   if(input.riskLevel==='conservative')assumptions.push({code:'catalog_floor_for_conservative',message:'采用动作目录允许的最低组数与RPE，并延长休息。'});
+  if(input.status==='conservative')assumptions.push({code:'capability_conservative_start',message:'能力校准要求使用受控变式、难度上限和降低后的起始剂量。'});
   if(input.trainingBreak==='yes'||input.trainingBreak==='unsure')assumptions.push({code:'returning_to_training',message:'按恢复训练路线保守起步。'});
   if(input.strengthExperience==='none')assumptions.push({code:'beginner_rest_extended',message:'无力量训练经验，延长组间休息并保持基础动作。'});
   return assumptions;
@@ -262,6 +304,7 @@ function generatePlan(rawInput){
   if(!input)return failure('INVALID_GENERATOR_INPUT');
   if(typeof matcherApi.matchExercise!=='function')return failure('MATCHER_UNAVAILABLE');
   if(input.riskLevel==='stop'||input.riskLevel==='manual_review')return failure('RISK_BLOCKED',{riskLevel:input.riskLevel});
+  if(input.status==='stop'||input.status==='manual_review')return failure('CAPABILITY_BLOCKED',{capabilityStatus:input.status});
 
   const schedule=sessionSchedule(input);
   if(!schedule)return failure('RECOVERY_SCHEDULE_UNAVAILABLE');
@@ -277,11 +320,12 @@ function generatePlan(rawInput){
     weeks.push({number:weekNumber,focus:FOCUSES[weekNumber-1],sessions});
   }
   const candidate={
-    id:`plan-${RULE_VERSION}-r${input.intakeRevision}-${input.setting}-${input.daysPerWeek}`,
+    id:`plan-${RULE_VERSION}-r${input.intakeRevision}-c${input.capabilityRevision}-${input.setting}-${input.daysPerWeek}`,
     schemaVersion:SCHEMA_VERSION,
     ruleVersion:RULE_VERSION,
     planVersion:RULE_VERSION,
     intakeRevision:input.intakeRevision,
+    capabilityRevision:input.capabilityRevision,
     riskLevel:input.riskLevel,
     status:'generated',
     assumptions:assumptionsFor(input),
@@ -294,6 +338,8 @@ function generatePlan(rawInput){
       plan:candidate,
       intake:{sessionMinutes:String(input.sessionMinutes),avoidMovements:[...input.avoidMovements],weekdays:[...input.weekdays]},
       risk:{level:input.riskLevel,ruleVersion:RULE_VERSION},
+      capabilityResult:{status:input.status,difficultyCap:input.difficultyCap,exclusions:[...input.exclusions],variants:{...input.variants},cardioStartMinutes:input.cardioStartMinutes,reasonCodes:[...input.reasonCodes]},
+      capabilityRevision:input.capabilityRevision,
       catalog:input.catalog
     }));
   }catch(_error){return failure('VALIDATOR_UNAVAILABLE')}

@@ -49,12 +49,15 @@ test('六类动作意图按场景和器械确定性匹配审核动作', () => {
   }
 });
 
-test('难度上限只允许同级或更简单动作', () => {
+test('难度上限只允许同级或更简单动作，并兼容旧difficulty请求', () => {
   const api = loadMatcher();
-  const result = match(api, 'knee_dominant', 'gym', ['stable_chair','leg_press_machine'], { difficulty:1 });
+  const request={pattern:'knee_dominant',setting:'gym',equipment:['stable_chair','leg_press_machine'],exclusions:[]};
+  const result = api.matchExercise({...request,difficultyCap:1});
   assert.equal(result.ok, true);
   assert.equal(result.exercise.id, 'high-seat-sit-to-stand');
   assert.equal(result.exercise.difficulty, 1);
+  assert.equal(api.matchExercise({...request,difficulty:1}).exercise.id,'high-seat-sit-to-stand');
+  assert.equal(api.matchExercise({...request,difficulty:1,difficultyCap:1}).error.code,'INVALID_REQUEST');
 });
 
 test('能力排除可在臀桥与墙触髋铰链之间安全回退', () => {
@@ -110,6 +113,9 @@ test('有弹力带的居家水平拉匹配approved band-row，无弹力带返回
   assert.equal(noBand.error.pattern, 'horizontal_pull');
   assert.equal(noBand.error.setting, 'home');
   assert.deepEqual(noBand.error.requiredOptions, [['resistance_band']]);
+  const gymLowDifficulty=api.matchExercise({pattern:'horizontal_pull',setting:'gym',equipment:['seated_row_machine','resistance_band'],exclusions:[],difficultyCap:1});
+  assert.equal(gymLowDifficulty.ok,true);
+  assert.equal(gymLowDifficulty.exerciseId,'band-row');
 });
 
 test('居家低冲击有氧优先平地慢走，缺少路线时回退扶椅原地踏步', () => {

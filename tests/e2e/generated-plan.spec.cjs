@@ -13,6 +13,9 @@ async function completeOnboarding(page,overrides={}){
   await page.evaluate(data=>{for(const [key,value] of Object.entries(data))Move28.onboardingController.setField(key,value);Move28.onboardingController.goTo(9)},{...safe,...overrides});
   await page.locator('input[name="finalConfirmed"]').check();
   await page.getByRole('button',{name:/确认并保存结果/}).click();
+  await page.evaluate(values=>{for(const [field,value] of Object.entries(values))Move28.capabilityController.setField(field,value);Move28.capabilityController.goTo(2)},
+    {chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'});
+  await page.getByRole('button',{name:/确认并保存能力档案/}).click();
 }
 
 async function approvePendingPlan(page){
@@ -39,7 +42,7 @@ test('generated-plan 未问卷仅显示只读示例且不写用户记录',async(
 
 test('generated-plan 正常问卷生成后等待人工复核，放行后持久化并显示第1周',async({page})=>{
   await completeOnboarding(page);
-  await expect(page.locator('.ob-saved')).toContainText('人工一致性复核完成前不会开放训练入口');
+  await expect(page.locator('.cap-result')).toContainText('人工一致性复核完成前不会开放训练入口');
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(stored.plan.status).toBe('pending_review');
   expect(stored.plan.review).toBeNull();
@@ -108,8 +111,8 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
 });
 
 test('generated-plan 缺少审核动作时原子阻断且不回退成用户训练计划',async({page})=>{
-  await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],allowSettingSwap:'no'});
-  await expect(page.locator('.ob-saved')).toContainText('需要人工复核');
+  await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','wall'],allowSettingSwap:'no'});
+  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan).toBeNull();
   await page.getByRole('button',{name:'完成，返回首页'}).click();

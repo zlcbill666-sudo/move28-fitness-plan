@@ -691,7 +691,6 @@
       delete candidate.review;
       delete candidate.staleReason;
       delete candidate.staleAt;
-      delete candidate.capabilityRevision;
       candidate.status = 'generated';
       return candidate;
     }
@@ -701,7 +700,8 @@
       if (!candidate) return 'failed';
       if (!trustedValidatePlan || !trustedExerciseCatalog) return 'unavailable';
       try {
-        const result = clonePlainData(trustedValidatePlan({ plan: candidate, intake: state.intake, risk: state.risk, catalog: trustedExerciseCatalog }));
+        const result = clonePlainData(trustedValidatePlan({ plan: candidate, intake: state.intake, risk: state.risk,
+          capabilityResult: state.capabilityResult, capabilityRevision: state.capabilityRevision, catalog: trustedExerciseCatalog }));
         if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.ok !== 'boolean' || !Array.isArray(result.errors)) return 'unavailable';
         return result.ok === true && result.errors.length === 0 ? 'passed' : 'failed';
       } catch (_error) {
@@ -921,7 +921,8 @@
       if (!trustedProposeWeeklyChange) return null;
       let proposal;
       try { proposal = trustedProposeWeeklyChange({ plan: state.plan, review,
-        previousReviews: state.weeklyReviews, intake: state.intake, risk: state.risk }); }
+        previousReviews: state.weeklyReviews, intake: state.intake, risk: state.risk,
+        capabilityResult: state.capabilityResult, capabilityRevision: state.capabilityRevision }); }
       catch (_error) { return null; }
       return proposal && proposal.status === 'ok' && WEEKLY_TYPES.has(proposal.type) ? proposal : null;
     }

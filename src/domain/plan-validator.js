@@ -36,7 +36,12 @@ const MESSAGES=Object.freeze({
   PROGRESSION_JUMP:'周进阶幅度超过首周期允许范围。',
   EMPTY_ACTION_QUEUE:'训练没有确定的动作队列。',
   EQUIPMENT_UNAVAILABLE:'当前场景器械不能满足动作要求。',
-  SESSION_WEEKDAY_UNAVAILABLE:'训练日不在用户可用星期内。'
+  SESSION_WEEKDAY_UNAVAILABLE:'训练日不在用户可用星期内。',
+  CAPABILITY_REVISION_MISMATCH:'计划与当前能力版本不一致。',
+  CAPABILITY_EXCLUSION_CONFLICT:'计划动作违反当前能力排除项。',
+  CAPABILITY_DIFFICULTY_EXCEEDED:'计划动作超过当前能力难度上限。',
+  CAPABILITY_VARIANT_MISMATCH:'计划动作变式与当前能力约束不一致。',
+  CARDIO_START_EXCEEDED:'首周有氧剂量超过当前能力起始上限。'
 });
 
 function deepFreeze(value,seen=new Set()){
@@ -163,6 +168,19 @@ function validateDose(action,exercise,path,errors){
     if(!Object.prototype.hasOwnProperty.call(exercise.dose,key)||!inRange(action[key],exercise.dose[key],{integer}))add(errors,'DOSE_OUT_OF_RANGE',`${path}.${key}`);
   }
 }
+function canonicalCapability(input){
+  const capability=input.capabilityResult,revision=input.capabilityRevision;
+  if(!safeInteger(revision,{min:1})||!plainRecord(capability))return null;
+  const fields=['status','difficultyCap','exclusions','variants','cardioStartMinutes','reasonCodes'];
+  const keys=Object.keys(capability);
+  if(keys.length!==fields.length||keys.some(key=>!fields.includes(key)))return null;
+  if(!['normal','conservative'].includes(capability.status)||capability.difficultyCap!==(capability.status==='normal'?2:1)||!stringArray(capability.exclusions,{max:2})||capability.exclusions.some(value=>!['floor','hinge'].includes(value))||!plainRecord(capability.variants)||!safeInteger(capability.cardioStartMinutes,{min:8,max:15})||![8,15].includes(capability.cardioStartMinutes)||!stringArray(capability.reasonCodes,{max:16}))return null;
+  const variantKeys=Object.keys(capability.variants);
+  if(variantKeys.length!==2||variantKeys.some(key=>!['knee_dominant','horizontal_push'].includes(key))||!['standard','high_seat'].includes(capability.variants.knee_dominant)||!['standard','close_wall'].includes(capability.variants.horizontal_push))return null;
+  if(capability.status==='normal'&&(capability.exclusions.length||capability.variants.knee_dominant!=='standard'||capability.variants.horizontal_push!=='standard'||capability.cardioStartMinutes!==15||capability.reasonCodes.length))return null;
+  if(capability.status==='conservative'&&capability.reasonCodes.length===0)return null;
+  return {revision,status:capability.status,difficultyCap:capability.difficultyCap,exclusions:new Set(capability.exclusions),variants:capability.variants,cardioStartMinutes:capability.cardioStartMinutes};
+}
 function validatePlan(rawInput){
   if(nativeStructuredClone===null||!isCanonicalCloneGraph(rawInput))return invalid();
   let input;
@@ -171,16 +189,19 @@ function validatePlan(rawInput){
   const plan=input.plan,intake=input.intake,risk=input.risk;
   const catalog=Object.prototype.hasOwnProperty.call(input,'catalog')?input.catalog:catalogApi.exerciseCatalog;
   const errors=[];
+  const capability=canonicalCapability(input);
+  if(!capability){add(errors,'INVALID_PLAN_SCHEMA','input.capabilityResult');return result(errors)}
   const sessionMinutesValid=typeof intake.sessionMinutes==='string'&&['20','30','45','60','75'].includes(intake.sessionMinutes);
   const intakeExclusionsValid=stringArray(intake.avoidMovements,{max:32});
   const intakeWeekdaysValid=stringArray(intake.weekdays,{max:7})&&intake.weekdays.length>0&&intake.weekdays.every(day=>WEEKDAYS.includes(day));
   const riskValid=['normal','conservative'].includes(risk.level)&&risk.ruleVersion===RULE_VERSION;
   if(!sessionMinutesValid||!intakeExclusionsValid||!intakeWeekdaysValid||!riskValid){add(errors,'INVALID_PLAN_SCHEMA','input');return result(errors)}
   const catalogById=buildCatalogIndex(catalog,errors);
-  if(plan.status!=='generated'||plan.schemaVersion!==1||plan.ruleVersion!==RULE_VERSION||plan.planVersion!==RULE_VERSION||plan.ruleVersion!==risk.ruleVersion||plan.riskLevel!==risk.level||!safeInteger(plan.intakeRevision,{min:1})||!denseArray(plan.weeks,{min:4,max:4})){
+  if(plan.status!=='generated'||plan.schemaVersion!==1||plan.ruleVersion!==RULE_VERSION||plan.planVersion!==RULE_VERSION||plan.ruleVersion!==risk.ruleVersion||plan.riskLevel!==risk.level||!safeInteger(plan.intakeRevision,{min:1})||!safeInteger(plan.capabilityRevision,{min:1})||!denseArray(plan.weeks,{min:4,max:4})){
     add(errors,'INVALID_PLAN_SCHEMA','plan');
     return result(errors);
   }
+  if(plan.capabilityRevision!==capability.revision)add(errors,'CAPABILITY_REVISION_MISMATCH','plan.capabilityRevision');
   const sessionLimit=Number(intake.sessionMinutes);
   const intakeExclusions=stringArray(intake.avoidMovements,{max:32})?intake.avoidMovements:[];
   const availableWeekdays=new Set(intakeWeekdaysValid?intake.weekdays:[]);
@@ -208,7 +229,7 @@ function validatePlan(rawInput){
         const action=session.actions[actionIndex],actionPath=`${sessionPath}.actions[${actionIndex}]`;
         if(!plainRecord(action)||typeof action.exerciseId!=='string'||typeof action.pattern!=='string'||!['main','cardio'].includes(action.phase)){add(errors,'INVALID_PLAN_SCHEMA',actionPath);continue}
         const expectedPhase=session.intent==='full_body_strength'?'main':'cardio';
-        const allowedFields=expectedPhase==='main'?['pattern','exerciseId','phase','sets','reps','rpe','restSec']:['pattern','exerciseId','phase','durationMin','rpe','restSec'];
+        const allowedFields=expectedPhase==='main'?['pattern','exerciseId','phase','sets','reps','rpe','restSec','variant']:['pattern','exerciseId','phase','durationMin','rpe','restSec'];
         if(action.phase!==expectedPhase||Object.keys(action).some(key=>!allowedFields.includes(key)))add(errors,'INVALID_PLAN_SCHEMA',actionPath);
         if(action.pattern!==expected[actionIndex])add(errors,'MOVEMENT_PATTERN_MISMATCH',`${actionPath}.pattern`);
         const exercise=catalogById&&catalogById.get(action.exerciseId);
@@ -224,9 +245,19 @@ function validatePlan(rawInput){
         if(!trusted.equipmentOptions.some(option=>option.every(id=>available.has(id))))add(errors,'EQUIPMENT_UNAVAILABLE',`${sessionPath}.equipmentBySetting.${session.setting}`);
         const contraindications=trusted.contraindications;
         if(exclusions.has(action.exerciseId)||exclusions.has(action.pattern)||exclusions.has(trusted.pattern)||contraindications.some(tag=>exclusions.has(tag)))add(errors,'CONTRAINDICATED_EXERCISE',`${actionPath}.exerciseId`);
+        if(capability.exclusions.has(action.exerciseId)||capability.exclusions.has(action.pattern)||capability.exclusions.has(trusted.pattern)||contraindications.some(tag=>capability.exclusions.has(tag)))add(errors,'CAPABILITY_EXCLUSION_CONFLICT',`${actionPath}.exerciseId`);
+        if(trusted.difficulty>capability.difficultyCap)add(errors,'CAPABILITY_DIFFICULTY_EXCEEDED',`${actionPath}.exerciseId`);
+        if(action.pattern==='knee_dominant'){
+          const actualVariant=action.exerciseId==='high-seat-sit-to-stand'?'high_seat':'standard';
+          if(action.variant!==actualVariant||(capability.variants.knee_dominant!=='standard'&&action.variant!==capability.variants.knee_dominant))add(errors,'CAPABILITY_VARIANT_MISMATCH',`${actionPath}.variant`);
+        }else if(action.pattern==='horizontal_push'){
+          const actualVariant=action.exerciseId==='wall-push-up'?'close_wall':'standard';
+          if(action.variant!==actualVariant||(capability.variants.horizontal_push!=='standard'&&action.variant!==capability.variants.horizontal_push))add(errors,'CAPABILITY_VARIANT_MISMATCH',`${actionPath}.variant`);
+        }else if(Object.prototype.hasOwnProperty.call(action,'variant'))add(errors,'INVALID_PLAN_SCHEMA',`${actionPath}.variant`);
+        if(weekIndex===0&&action.pattern==='low_impact_cardio'&&action.durationMin>capability.cardioStartMinutes)add(errors,'CARDIO_START_EXCEEDED',`${actionPath}.durationMin`);
         validateDose(action,trusted,actionPath,errors);
         if(Object.prototype.hasOwnProperty.call(action,'durationMin')&&action.durationMin>session.estimatedMinutes)add(errors,'SESSION_DURATION_EXCEEDED',`${actionPath}.durationMin`);
-        if(risk.level==='conservative'&&action.rpe>5)add(errors,'CONSERVATIVE_INTENSITY_EXCEEDED',`${actionPath}.rpe`);
+        if((risk.level==='conservative'||capability.status==='conservative')&&action.rpe>5)add(errors,'CONSERVATIVE_INTENSITY_EXCEEDED',`${actionPath}.rpe`);
       }
     }
   }
@@ -253,7 +284,7 @@ function validatePlan(rawInput){
             const progressed=field==='restSec'?after[field]<before[field]:after[field]>before[field];
             if(!progressed)continue;
             increased.add(field);
-            if(risk.level==='conservative')add(errors,'CONSERVATIVE_INTENSITY_EXCEEDED',`weeks[${weekIndex}].sessions[${sessionIndex}].actions[${actionIndex}].${field}`);
+            if(risk.level==='conservative'||capability.status==='conservative')add(errors,'CONSERVATIVE_INTENSITY_EXCEEDED',`weeks[${weekIndex}].sessions[${sessionIndex}].actions[${actionIndex}].${field}`);
             const limit=PROGRESSION_LIMITS[field],delta=Math.abs(after[field]-before[field]);
             if(limit!==undefined&&delta>limit)add(errors,'PROGRESSION_JUMP',`weeks[${weekIndex}].sessions[${sessionIndex}].actions[${actionIndex}].${field}`);
           }

@@ -6,6 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/load-script.cjs');
+const { capabilityInput } = require('../helpers/capability-fixture.cjs');
 
 function memoryStorage(seed = {}) {
   const data = new Map(Object.entries(seed));
@@ -48,7 +49,7 @@ const VALID_CAPABILITY_PROFILE = Object.freeze({version:1,completed:true,chairRi
 function generateValidPlan(revision){
   clearMove28ModuleCache();
   const generator=loadScript('planGenerator'),catalog=loadScript('exerciseCatalog');
-  return {...generator.generatePlan({intake:structuredClone(VALID_INTAKE),risk:structuredClone(VALID_RISK),intakeRevision:revision,catalog:catalog.exerciseCatalog}),capabilityRevision:1};
+  return generator.generatePlan({intake:structuredClone(VALID_INTAKE),risk:structuredClone(VALID_RISK),intakeRevision:revision,catalog:catalog.exerciseCatalog,...capabilityInput(1)});
 }
 function saveValidCapability(store){return store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));}
 function approveStoredPlan(storage,moduleApi,reviewedAt='2030-01-02T03:04:05.000Z'){

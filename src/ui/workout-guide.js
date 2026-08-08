@@ -164,9 +164,9 @@ function prepareReviewedSession(requestedSession,catalog){
   try{safeState=clonePureData(trustedLoadState())}catch(_error){return null}
   if(!safeRequested||!safeState?.intake||!safeState?.risk||!safeState?.plan)return null;
   const safePlan=safeState.plan,review=safePlan.review;
-  if(safePlan.status!=='active'||safePlan.intakeRevision!==safeState.intakeRevision||safePlan.intakeRevision!==review?.intakeRevision||review?.status!=='approved'||review?.planId!==safePlan.id||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
+  if(safePlan.status!=='active'||safePlan.intakeRevision!==safeState.intakeRevision||safePlan.intakeRevision!==review?.intakeRevision||safePlan.capabilityRevision!==safeState.capabilityRevision||safePlan.capabilityRevision!==review?.capabilityRevision||review?.status!=='approved'||review?.planId!==safePlan.id||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
   const candidate=clonePureData(safePlan);if(!candidate)return null;delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated';
-  let validation;try{validation=trustedValidatePlan({plan:candidate,intake:safeState.intake,risk:safeState.risk,catalog:trustedCatalog})}catch(_error){return null}
+  let validation;try{validation=trustedValidatePlan({plan:candidate,intake:safeState.intake,risk:safeState.risk,capabilityResult:safeState.capabilityResult,capabilityRevision:safeState.capabilityRevision,catalog:trustedCatalog})}catch(_error){return null}
   if(!validation||validation.ok!==true||!Array.isArray(validation.errors)||validation.errors.length!==0)return null;
   const stored=safePlan.weeks.flatMap(week=>week.sessions).find(item=>item.id===safeRequested.id);
   return stored&&sameData(stored,safeRequested)?stored:null;

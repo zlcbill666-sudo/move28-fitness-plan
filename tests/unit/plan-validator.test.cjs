@@ -5,6 +5,7 @@ const path=require('node:path');
 const test=require('node:test');
 const vm=require('node:vm');
 const {projectRoot,clearMove28ModuleCache}=require('../helpers/load-script.cjs');
+const {capabilityInput}=require('../helpers/capability-fixture.cjs');
 
 const fixtures=JSON.parse(fs.readFileSync(path.join(projectRoot,'tests','fixtures','invalid-plans.json'),'utf8'));
 const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
@@ -19,15 +20,15 @@ function loadApis(){
     catalog:require(path.join(projectRoot,'src','data','exercise-catalog.js')).exerciseCatalog
   };
 }
-function generated(generator,level='normal'){
-  const intake={...baseIntake,trainingBreak:level==='conservative'?'yes':'no'};
-  const plan=generator.generatePlan({intake,risk:risk(level),intakeRevision:1});
+function generated(generator,level='normal',withCardio=false){
+  const intake={...baseIntake,trainingBreak:level==='conservative'?'yes':'no',...(withCardio?{daysPerWeek:'3',weekdays:['mon','wed','fri']}:{})};
+  const plan=generator.generatePlan({intake,risk:risk(level),intakeRevision:1,...capabilityInput()});
   assert.equal(plan.status,'generated',JSON.stringify(plan));
-  return {plan,intake,risk:risk(level)};
+  return {plan,intake,risk:risk(level),...capabilityInput()};
 }
 function catalogIndex(catalog,id){return catalog.findIndex(item=>item.id===id)}
 function mutateCase(item,apis){
-  const baseline=generated(apis.generator,item.mutation==='conservative-rpe'?'conservative':'normal');
+  const baseline=generated(apis.generator,item.mutation==='conservative-rpe'?'conservative':'normal',item.mutation==='capability-cardio');
   const plan=structuredClone(baseline.plan);
   const intake=structuredClone(baseline.intake);
   const riskInput=structuredClone(baseline.risk);
@@ -44,7 +45,16 @@ function mutateCase(item,apis){
   if(item.mutation==='conservative-rpe')first.rpe=6;
   if(item.mutation==='multi-progression')plan.weeks[1].sessions[0].actions[0].rpe=6;
   if(item.mutation==='empty-actions')plan.weeks[0].sessions[0].actions=[];
-  return {plan,intake,risk:riskInput,catalog};
+  let capability=capabilityInput();
+  if(item.mutation==='capability-revision')capability={...capability,capabilityRevision:2};
+  if(item.mutation==='capability-exclusion'){
+    capability={capabilityRevision:1,capabilityResult:{status:'conservative',difficultyCap:1,exclusions:['floor'],variants:{knee_dominant:'high_seat',horizontal_push:'close_wall'},cardioStartMinutes:15,reasonCodes:['FLOOR_ACCESS_AVOID_FLOOR']}};
+    plan.weeks[0].sessions[0].actions.find(action=>action.pattern==='core_stability').exerciseId='dead-bug';
+  }
+  if(item.mutation==='capability-difficulty')capability={capabilityRevision:1,capabilityResult:{status:'conservative',difficultyCap:1,exclusions:[],variants:{knee_dominant:'high_seat',horizontal_push:'close_wall'},cardioStartMinutes:15,reasonCodes:['CHAIR_RISE_HANDS_SUPPORTED']}};
+  if(item.mutation==='capability-variant')plan.weeks[0].sessions[0].actions[0].variant='high_seat';
+  if(item.mutation==='capability-cardio')plan.weeks[0].sessions.find(session=>session.intent==='low_impact_cardio').actions[0].durationMin=20;
+  return {plan,intake,risk:riskInput,catalog,...capability};
 }
 
 test('有效生成计划通过硬门槛且结果确定、深冻结、不修改输入',()=>{
@@ -78,6 +88,36 @@ test('invalid-plans fixtures逐类返回稳定错误码和路径',()=>{
     assert.ok(error.path.length>0);
     assert.equal(typeof error.message,'string');
     assert.ok(error.message.length>0);
+    if(item.expectedPath)assert.equal(error.path,item.expectedPath,item.name);
+    if(item.expectedMessage)assert.equal(error.message,item.expectedMessage,item.name);
+  }
+});
+
+test('能力上下文与计划能力revision缺失或为0时统一fail closed',()=>{
+  const apis=loadApis(),baseline={...generated(apis.generator),catalog:apis.catalog};
+  for(const mutate of [
+    input=>{delete input.capabilityResult},input=>{delete input.capabilityRevision},input=>{input.capabilityRevision=0},
+    input=>{delete input.plan.capabilityRevision},input=>{input.plan.capabilityRevision=0}
+  ]){
+    const input=structuredClone(baseline);mutate(input);
+    const result=apis.validator.validatePlan(input);
+    assert.equal(result.ok,false);assert.ok(result.errors.some(error=>error.code==='INVALID_PLAN_SCHEMA'));
+  }
+});
+
+test('动作身份与受控variant双向一致，不能把高位或近墙动作伪装为standard',()=>{
+  const apis=loadApis();
+  const intake={...baseIntake,setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall']};
+  const capability=capabilityInput();
+  const plan=apis.generator.generatePlan({intake,risk:risk(),intakeRevision:1,...capability});
+  assert.equal(plan.status,'generated',JSON.stringify(plan));
+  for(const [pattern,expectedVariant] of [['knee_dominant','high_seat'],['horizontal_push','close_wall']]){
+    const action=plan.weeks[0].sessions[0].actions.find(item=>item.pattern===pattern);
+    assert.equal(action.variant,expectedVariant);
+    const changed=structuredClone(plan),changedAction=changed.weeks[0].sessions[0].actions.find(item=>item.pattern===pattern);
+    changedAction.variant='standard';
+    const result=apis.validator.validatePlan({plan:changed,intake,risk:risk(),catalog:apis.catalog,...capability});
+    assert.ok(result.errors.some(error=>error.code==='CAPABILITY_VARIANT_MISMATCH'&&error.path.endsWith('.variant')));
   }
 });
 
@@ -144,7 +184,7 @@ test('调用方目录不能自证approved、错配媒体或扩大剂量边界',(
   row.cues={pain:row.cues.pain,breathing:row.cues.breathing,movement:row.cues.movement,setup:row.cues.setup};
   result=apis.validator.validatePlan({...baseline,catalog:reordered});
   assert.deepEqual(result,{ok:true,errors:[]});
-  const regenerated=apis.generator.generatePlan({intake:baseline.intake,risk:baseline.risk,intakeRevision:1,catalog:reordered});
+  const regenerated=apis.generator.generatePlan({intake:baseline.intake,risk:baseline.risk,intakeRevision:1,catalog:reordered,...capabilityInput()});
   assert.equal(regenerated.status,'generated');
 });
 
@@ -163,7 +203,7 @@ test('生成器隔离validator异常且不泄漏异常文本',()=>{
   context.Move28.domain.validatePlan=()=>{throw new Error('SECRET_VALIDATOR_TEXT')};
   vm.runInContext(fs.readFileSync(path.join(projectRoot,'src','domain','plan-generator.js'),'utf8'),context);
   let result;
-  assert.doesNotThrow(()=>{result=context.Move28.domain.generatePlan({intake:baseIntake,risk:risk(),intakeRevision:1})});
+  assert.doesNotThrow(()=>{result=context.Move28.domain.generatePlan({intake:baseIntake,risk:risk(),intakeRevision:1,...capabilityInput()})});
   assert.equal(result.status,'manual_review');
   assert.equal(result.plan,null);
   assert.equal(result.errors[0].code,'VALIDATOR_UNAVAILABLE');
@@ -175,7 +215,7 @@ test('生成器强制调用validator，校验失败只返回manual_review且无�
   const catalog=structuredClone(apis.catalog);
   const index=catalogIndex(catalog,'seated-leg-press');
   catalog[index].gif='assets/gifs/not-reviewed.gif';
-  const result=apis.generator.generatePlan({intake:baseIntake,risk:risk(),intakeRevision:1,catalog});
+  const result=apis.generator.generatePlan({intake:baseIntake,risk:risk(),intakeRevision:1,catalog,...capabilityInput()});
   assert.equal(result.status,'manual_review');
   assert.equal(result.plan,null);
   assert.ok(result.errors.some(error=>error.code==='GIF_UNAVAILABLE'));

@@ -66,7 +66,7 @@ function capabilityResultsMatch(left,right){return Boolean(left&&right&&left.sta
 function validationPassed(value){const validation=clonePureData(value);return Boolean(validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0)}
 function validationCandidate(plan){
   const candidate=clonePureData(plan);if(!candidate)return null;
-  delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;delete candidate.capabilityRevision;candidate.status='generated';return candidate;
+  delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated';return candidate;
 }
 function validReview(plan,state){const review=plan&&plan.review;return Boolean(review&&review.status==='approved'&&typeof review.reviewerId==='string'&&/^[a-z][a-z0-9._-]{0,63}$/.test(review.reviewerId)&&review.planId===plan.id&&review.intakeRevision===state.intakeRevision&&plan.capabilityRevision===state.capabilityRevision&&review.capabilityRevision===state.capabilityRevision&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review.reviewedAt))}
 function contextFromState(inputState){
@@ -92,7 +92,7 @@ function contextFromState(inputState){
   if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或人工复核凭据无效，请等待重新复核。'};
   const candidate=validationCandidate(state.plan);
   if(!candidate)return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划无法安全读取，请重新生成。'};
-  let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,catalog:trustedCatalog})}catch(_error){validation=null}
+  let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,capabilityResult:state.capabilityResult,capabilityRevision:state.capabilityRevision,catalog:trustedCatalog})}catch(_error){validation=null}
   return validationPassed(validation)?{mode:'generated',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
 }
 function weeklyPlanLineage(reviews,currentPlanId){const lineage=new Set([currentPlanId]);let changed=true;while(changed&&lineage.size<=17){changed=false;for(const item of reviews)if(item&&item.decision==='accepted'&&lineage.has(item.resultPlanId)&&!lineage.has(item.planId)){lineage.add(item.planId);changed=true}}return lineage}
@@ -138,7 +138,8 @@ function handleCapabilityComplete(profile){
   if(!trustedSaveCapabilityProfileWithPlan)throw new Error('Atomic capability persistence unavailable');
   const current=Move28.storage.loadState();
   if(!current||!Number.isSafeInteger(current.capabilityRevision)||current.capabilityRevision>=Number.MAX_SAFE_INTEGER)throw new Error('Capability revision unavailable');
-  const generated=Move28.domain.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,catalog:trustedCatalog});
+  const nextCapabilityRevision=current.capabilityRevision+1;
+  const generated=Move28.domain.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,capabilityResult:result,capabilityRevision:nextCapabilityRevision,catalog:trustedCatalog});
   if(!generated||generated.status!=='generated'){
     const saved=trustedSaveCapabilityProfile(profile);
     Move28.ui.setPlanContext({mode:'review',plan:null,logs:saved.logs||{},message:'动作、器械或安全硬门槛未满足，需要人工复核。'});

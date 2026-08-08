@@ -60,7 +60,7 @@ function storedGeneratedContext(){
   const plan=stored&&stored.plan,review=plan&&plan.review;
   if(!plan||plan.status!=='active'||plan.intakeRevision!==stored.intakeRevision||review?.status!=='approved'||review?.planId!==plan.id||review?.intakeRevision!==stored.intakeRevision||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
   let candidate;try{if(!nativeStructuredClone)return null;candidate=nativeStructuredClone(plan);delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated'}catch(_error){return null}
-  let validation;try{validation=trustedValidatePlan({plan:candidate,intake:stored.intake,risk:stored.risk,catalog:trustedCatalog})}catch(_error){return null}
+  let validation;try{validation=trustedValidatePlan({plan:candidate,intake:stored.intake,risk:stored.risk,capabilityResult:stored.capabilityResult,capabilityRevision:stored.capabilityRevision,catalog:trustedCatalog})}catch(_error){return null}
   return validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0?{plan,logs:stored.logs||{}}:null;
 }
 function setPlanContext(context){

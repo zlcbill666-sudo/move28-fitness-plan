@@ -1,8 +1,18 @@
-[
-  {"name":"1天20分钟normal健身房","daysPerWeek":"1","sessionMinutes":"20","weekdays":["mon"],"riskLevel":"normal","expectedIntents":["full_body_strength"]},
-  {"name":"2天30分钟normal健身房","daysPerWeek":"2","sessionMinutes":"30","weekdays":["mon","thu"],"riskLevel":"normal","expectedIntents":["full_body_strength","full_body_strength"]},
-  {"name":"3天45分钟normal健身房","daysPerWeek":"3","sessionMinutes":"45","weekdays":["mon","wed","fri"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength"]},
-  {"name":"4天60分钟normal健身房","daysPerWeek":"4","sessionMinutes":"60","weekdays":["mon","tue","thu","sat"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength","recovery"]},
-  {"name":"5天75分钟仍限制四个安排","daysPerWeek":"5plus","sessionMinutes":"75","weekdays":["mon","tue","wed","fri","sun"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength","recovery"]},
-  {"name":"conservative恢复训练","daysPerWeek":"3","sessionMinutes":"30","weekdays":["mon","wed","fri"],"riskLevel":"conservative","trainingBreak":"yes","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength"]}
-]
+{
+  "scheduleCases": [
+    {"name":"1天20分钟normal健身房","daysPerWeek":"1","sessionMinutes":"20","weekdays":["mon"],"riskLevel":"normal","expectedIntents":["full_body_strength"]},
+    {"name":"2天30分钟normal健身房","daysPerWeek":"2","sessionMinutes":"30","weekdays":["mon","thu"],"riskLevel":"normal","expectedIntents":["full_body_strength","full_body_strength"]},
+    {"name":"3天45分钟normal健身房","daysPerWeek":"3","sessionMinutes":"45","weekdays":["mon","wed","fri"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength"]},
+    {"name":"4天60分钟normal健身房","daysPerWeek":"4","sessionMinutes":"60","weekdays":["mon","tue","thu","sat"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength","recovery"]},
+    {"name":"5天75分钟仍限制四个安排","daysPerWeek":"5plus","sessionMinutes":"75","weekdays":["mon","tue","wed","fri","sun"],"riskLevel":"normal","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength","recovery"]},
+    {"name":"conservative恢复训练","daysPerWeek":"3","sessionMinutes":"30","weekdays":["mon","wed","fri"],"riskLevel":"conservative","trainingBreak":"yes","expectedIntents":["full_body_strength","low_impact_cardio","full_body_strength"]}
+  ],
+  "capabilityCases": [
+    {"name":"independent","setting":"gym","equipment":"gym","result":{"status":"normal","difficultyCap":2,"exclusions":[],"variants":{"knee_dominant":"standard","horizontal_push":"standard"},"cardioStartMinutes":15,"reasonCodes":[]},"expected":{"knee":"seated-leg-press","push":"chest-press-machine","cardioMinutes":15}},
+    {"name":"supported","setting":"gym","equipment":"gym","result":{"status":"conservative","difficultyCap":1,"exclusions":[],"variants":{"knee_dominant":"high_seat","horizontal_push":"close_wall"},"cardioStartMinutes":15,"reasonCodes":["CHAIR_RISE_HANDS_SUPPORTED","WALL_PUSHUP_LIMITED_RANGE"]},"expected":{"knee":"high-seat-sit-to-stand","push":"wall-push-up","cardioMinutes":15}},
+    {"name":"floor-avoid","setting":"gym","equipment":"gym","result":{"status":"conservative","difficultyCap":1,"exclusions":["floor"],"variants":{"knee_dominant":"standard","horizontal_push":"standard"},"cardioStartMinutes":15,"reasonCodes":["FLOOR_ACCESS_AVOID_FLOOR"]},"expected":{"status":"manual_review","errorCode":"REQUIRED_MOVEMENT_UNAVAILABLE","pattern":"core_stability","cause":"NO_DIFFICULTY_MATCH"}},
+    {"name":"hinge-avoid","setting":"home","equipment":"home","result":{"status":"conservative","difficultyCap":1,"exclusions":["hinge"],"variants":{"knee_dominant":"standard","horizontal_push":"standard"},"cardioStartMinutes":15,"reasonCodes":["WALL_HINGE_LIMITED_RANGE"]},"expected":{"posterior":"glute-bridge","core":"dead-bug","cardioMinutes":15}},
+    {"name":"low-walk-tolerance","setting":"home","equipment":"home","result":{"status":"conservative","difficultyCap":1,"exclusions":[],"variants":{"knee_dominant":"standard","horizontal_push":"standard"},"cardioStartMinutes":8,"reasonCodes":["WALK_TOLERANCE_FATIGUED_BUT_STABLE"]},"expected":{"cardio":"flat-walk","cardioMinutes":8}},
+    {"name":"skipped","setting":"gym","equipment":"gym","result":{"status":"conservative","difficultyCap":1,"exclusions":["floor","hinge"],"variants":{"knee_dominant":"high_seat","horizontal_push":"close_wall"},"cardioStartMinutes":8,"reasonCodes":["CHAIR_RISE_NOT_ATTEMPTED","WALL_PUSHUP_NOT_ATTEMPTED","WALL_HINGE_NOT_ATTEMPTED","FLOOR_ACCESS_NOT_ATTEMPTED","WALK_TOLERANCE_NOT_ATTEMPTED"]},"expected":{"status":"manual_review","errorCode":"REQUIRED_MOVEMENT_UNAVAILABLE","pattern":"posterior_chain","cause":"NO_DIFFICULTY_MATCH"}}
+  ]
+}

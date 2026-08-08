@@ -12,9 +12,9 @@ const MOVEMENT_INTENTS=Object.freeze(['knee_dominant','posterior_chain','horizon
 const SUPPORTED_SETTINGS=Object.freeze(['gym','home']);
 const MATCH_PRIORITIES=Object.freeze({
   knee_dominant:Object.freeze({gym:Object.freeze(['seated-leg-press','high-seat-sit-to-stand']),home:Object.freeze(['high-seat-sit-to-stand'])}),
-  posterior_chain:Object.freeze({gym:Object.freeze(['seated-leg-curl','glute-bridge']),home:Object.freeze(['glute-bridge','wall-hip-hinge'])}),
+  posterior_chain:Object.freeze({gym:Object.freeze(['seated-leg-curl','glute-bridge','wall-hip-hinge']),home:Object.freeze(['glute-bridge','wall-hip-hinge'])}),
   horizontal_push:Object.freeze({gym:Object.freeze(['chest-press-machine','wall-push-up']),home:Object.freeze(['wall-push-up'])}),
-  horizontal_pull:Object.freeze({gym:Object.freeze(['seated-row']),home:Object.freeze(['band-row'])}),
+  horizontal_pull:Object.freeze({gym:Object.freeze(['seated-row','band-row']),home:Object.freeze(['band-row'])}),
   core_stability:Object.freeze({gym:Object.freeze(['pallof-press','dead-bug']),home:Object.freeze(['dead-bug','pallof-press'])}),
   low_impact_cardio:Object.freeze({gym:Object.freeze(['elliptical-trainer','flat-walk']),home:Object.freeze(['flat-walk','supported-standing-march'])})
 });
@@ -109,7 +109,10 @@ function requestFrom(input){
   const setting=ownValue(input,'setting');
   const equipment=stringArray(ownValue(input,'equipment'),{max:32});
   const exclusions=stringArray(ownValue(input,'exclusions'),{max:32});
-  const difficulty=ownValue(input,'difficulty');
+  const hasDifficulty=own(input,'difficulty');
+  const hasDifficultyCap=own(input,'difficultyCap');
+  if(hasDifficulty===hasDifficultyCap)return null;
+  const difficulty=ownValue(input,hasDifficultyCap?'difficultyCap':'difficulty');
   const catalog=own(input,'catalog')?ownValue(input,'catalog'):catalogApi.exerciseCatalog;
   if(!MOVEMENT_INTENTS.includes(pattern)||!SUPPORTED_SETTINGS.includes(setting)||!equipment||!exclusions||!Number.isInteger(difficulty)||difficulty<1||difficulty>3)return null;
   const approved=safeCatalog(catalog);
@@ -134,7 +137,7 @@ function matchExercise(input){
   });
   if(!allowed.length)return failure('ALL_MATCHES_EXCLUDED',{pattern,setting});
   const difficultyMatched=allowed.filter(exercise=>Number.isInteger(exercise.difficulty)&&exercise.difficulty<=difficulty);
-  if(!difficultyMatched.length)return failure('NO_DIFFICULTY_MATCH',{pattern,setting,difficulty});
+  if(!difficultyMatched.length)return failure('NO_DIFFICULTY_MATCH',{pattern,setting,difficultyCap:difficulty});
   for(const exercise of difficultyMatched){
     const option=availableOption(exercise,equipment);
     if(option)return Object.freeze({ok:true,pattern,setting,exerciseId:exercise.id,exercise:exercise.source,matchedEquipment:Object.freeze([...option])});

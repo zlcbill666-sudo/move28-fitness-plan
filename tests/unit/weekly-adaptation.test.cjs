@@ -7,15 +7,16 @@ const vm=require('node:vm');
 const {generatePlan}=require('../../src/domain/plan-generator.js');
 const {exerciseCatalog}=require('../../src/data/exercise-catalog.js');
 const adaptation=require('../../src/domain/weekly-adaptation.js');
+const {capabilityInput}=require('../helpers/capability-fixture.cjs');
 
 const intake={age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no',allowSettingSwap:'no'};
 const risk={level:'normal',ruleVersion:'pilot-v2',reasons:[]};
 function activePlan(level='normal'){
-  const generated=generatePlan({intake,risk:{...risk,level},intakeRevision:1,catalog:exerciseCatalog});
+  const generated=generatePlan({intake,risk:{...risk,level},intakeRevision:1,catalog:exerciseCatalog,...capabilityInput()});
   const plan=structuredClone(generated);plan.status='active';plan.review={status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1};return plan;
 }
 function review(overrides={}){return{reviewVersion:1,weekNumber:1,completedSessions:2,completionReason:'completed',difficulty:'suitable',movementQuality:'stable',painStatus:'none',painAreas:[],painAffectsDailyActivity:false,recovery:'good',nextWeekTime:'same',...overrides}}
-function propose(plan,weeklyReview,previousReviews=[]){return adaptation.proposeWeeklyChange({plan,review:weeklyReview,previousReviews,intake,risk:{...risk,level:plan.riskLevel}})}
+function propose(plan,weeklyReview,previousReviews=[]){return adaptation.proposeWeeklyChange({plan,review:weeklyReview,previousReviews,intake,risk:{...risk,level:plan.riskLevel},...capabilityInput()})}
 
 test('合适且恢复正常时保持原计划，不修改输入',()=>{const plan=activePlan(),before=structuredClone(plan),result=propose(plan,review());assert.equal(result.type,'keep');assert.equal(result.reason,'suitable_keep');assert.equal(result.after,null);assert.deepEqual(plan,before)});
 test('时间不足只减少下一周一个session变量',()=>{const plan=activePlan(),result=propose(plan,review({completedSessions:1,completionReason:'time',nextWeekTime:'less'}));assert.equal(result.type,'reduce');assert.equal(result.variable,'session_count');assert.equal(result.targetWeekNumber,2);assert.equal(result.after.weeks[1].sessions.length,plan.weeks[1].sessions.length-1);assert.deepEqual(result.after.weeks[0],plan.weeks[0]);assert.deepEqual(result.after.weeks[2],plan.weeks[2])});

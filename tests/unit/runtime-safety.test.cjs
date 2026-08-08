@@ -5,6 +5,7 @@ const storeApi=require('../../src/storage/local-store.js');
 const {generatePlan}=require('../../src/domain/plan-generator.js');
 const {exerciseCatalog}=require('../../src/data/exercise-catalog.js');
 const app=require('../../src/app.js');
+const {capabilityInput}=require('../helpers/capability-fixture.cjs');
 
 const INTAKE={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true};
 const RISK={level:'normal',reasons:[],ruleVersion:'pilot-v2'};
@@ -16,7 +17,7 @@ function approvedStore(options={}){
   const store=storeApi.createLocalStore({storage,now:options.now||(()=> '2030-01-02T03:04:05.000Z')});
   const saved=store.saveIntake(structuredClone(INTAKE),structuredClone(RISK));
   const capable=store.saveCapabilityProfile(structuredClone(CAPABILITY));
-  const generated={...generatePlan({intake:saved.intake,risk:saved.risk,intakeRevision:saved.intakeRevision,catalog:exerciseCatalog}),capabilityRevision:capable.capabilityRevision};
+  const generated=generatePlan({intake:saved.intake,risk:saved.risk,intakeRevision:saved.intakeRevision,catalog:exerciseCatalog,...capabilityInput(capable.capabilityRevision)});
   store.savePlan(generated);
   const raw=JSON.parse(storage.snapshot());
   raw.plan.status='active';

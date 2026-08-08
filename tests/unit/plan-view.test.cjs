@@ -13,7 +13,7 @@ function setup(){
   const guide=require('../../src/ui/workout-guide.js');
   const app=require('../../src/app.js');
   const capabilityResult=require('../../src/domain/capability-engine.js').evaluateCapabilityProfile(capabilityProfile);
-  const plan={...generator.generatePlan({intake,risk,intakeRevision:1,catalog:catalog.exerciseCatalog}),capabilityRevision:1};
+  const plan=generator.generatePlan({intake,risk,intakeRevision:1,catalog:catalog.exerciseCatalog,capabilityResult,capabilityRevision:1});
   assert.equal(plan.status,'generated');
   return{catalog,generator,guide,app,plan,capabilityResult};
 }
