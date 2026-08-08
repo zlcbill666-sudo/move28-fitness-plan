@@ -138,7 +138,7 @@ test('不修改或冻结输入；相同输入输出字节级确定', () => {
   assert.notStrictEqual(first, second);
 });
 
-test('普通 null-prototype 与跨 realm profile 保持相同语义', () => {
+test('普通 null-prototype 保持相同语义，跨 realm profile fail closed', () => {
   const nullPrototype = Object.assign(Object.create(null), ideal());
   const crossRealm = vm.runInNewContext(`({
     version: 1,
@@ -150,7 +150,21 @@ test('普通 null-prototype 与跨 realm profile 保持相同语义', () => {
     walkTolerance: 'comfortable'
   })`);
   assert.deepEqual(evaluateCapabilityProfile(nullPrototype), evaluateCapabilityProfile(ideal()));
-  assert.deepEqual(evaluateCapabilityProfile(crossRealm), evaluateCapabilityProfile(ideal()));
+  assert.deepEqual(evaluateCapabilityProfile(crossRealm), INVALID_RESULT);
+});
+
+test('伪造 null-root 原型与透明 Proxy 原型均 fail closed', () => {
+  const forgedProto = Object.create(null);
+  Object.defineProperty(forgedProto, 'constructor', { value: function Forged() {} });
+  const forgedProfile = Object.assign(Object.create(forgedProto), ideal());
+
+  const proxiedProto = new Proxy(Object.prototype, {});
+  const proxiedProfile = Object.assign(Object.create(proxiedProto), ideal());
+
+  for (const value of [forgedProfile, proxiedProfile]) {
+    assert.doesNotThrow(() => evaluateCapabilityProfile(value));
+    assert.deepEqual(evaluateCapabilityProfile(value), INVALID_RESULT);
+  }
 });
 
 test('输出为深冻结普通对象', () => {

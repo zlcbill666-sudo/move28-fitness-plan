@@ -11,7 +11,8 @@
   const nativeStructuredClone = typeof root.structuredClone === 'function'
     ? root.structuredClone.bind(root)
     : null;
-  const hasOwn = Function.call.bind(Object.prototype.hasOwnProperty);
+  const nativeObjectPrototype = Object.prototype;
+  const hasOwn = Function.call.bind(nativeObjectPrototype.hasOwnProperty);
   const PROFILE_FIELDS = Object.freeze([
     'version', 'completed', 'chairRise', 'wallPushup', 'wallHinge', 'floorAccess', 'walkTolerance'
   ]);
@@ -46,10 +47,7 @@
   function isPlainRecord(value) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
     const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return true;
-    if (Object.getPrototypeOf(prototype) !== null) return false;
-    const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
-    return Boolean(constructor && hasOwn(constructor, 'value') && typeof constructor.value === 'function');
+    return prototype === null || prototype === nativeObjectPrototype;
   }
 
   // 在 clone gate 前只通过反射描述符遍历；不会读取调用方属性，也不会执行 getter。
