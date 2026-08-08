@@ -437,14 +437,32 @@
 
   function weeklyPlanLineage(reviews, currentPlanId, capabilityRevision) {
     const lineage = new Set([currentPlanId]);
-    let changed = true;
-    while (changed && lineage.size <= MAX_WEEKLY_REVIEWS + 1) {
-      changed = false;
-      for (const record of reviews) {
-        if (record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted' && lineage.has(record.resultPlanId) && !lineage.has(record.planId)) {
-          lineage.add(record.planId); changed = true;
-        }
+    const accepted = reviews.filter(record => record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted');
+    const incoming = new Map();
+    const outgoing = new Map();
+    for (const record of accepted) {
+      if (incoming.has(record.resultPlanId) || outgoing.has(record.planId)) return lineage;
+      incoming.set(record.resultPlanId, record.planId);
+      outgoing.set(record.planId, record.resultPlanId);
+    }
+    const globallyVisited = new Set();
+    for (const start of outgoing.keys()) {
+      if (globallyVisited.has(start)) continue;
+      const path = new Set();
+      let cursor = start;
+      while (outgoing.has(cursor)) {
+        if (path.has(cursor)) return new Set([currentPlanId]);
+        path.add(cursor); globallyVisited.add(cursor); cursor = outgoing.get(cursor);
       }
+    }
+    let cursor = currentPlanId;
+    while (incoming.has(cursor)) {
+      const parent = incoming.get(cursor);
+      if (lineage.has(parent)) return new Set([currentPlanId]);
+      lineage.add(parent); cursor = parent;
+    }
+    for (const record of accepted) {
+      if (!lineage.has(record.planId) || !lineage.has(record.resultPlanId)) return new Set([currentPlanId]);
     }
     return lineage;
   }

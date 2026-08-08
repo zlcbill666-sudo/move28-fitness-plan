@@ -183,6 +183,68 @@ test('cues逐项严格映射legacy原文', () => {
   }
 });
 
+test('受控变式指导仅存在于匹配动作，结构和值均为审核后的有限中文文案', () => {
+  const { exerciseCatalog, validateExerciseCatalog } = loadCatalogAndPlan();
+  const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
+  assert.deepEqual(byId['high-seat-sit-to-stand'].variantGuidance, {
+    high_seat:{
+      label:'高位座椅变式',
+      setup:'使用稳固、不会滑动的较高座椅；座面高度以起立时膝部无明显疼痛为准。',
+      range:'只在可控、无痛范围内起立和坐回；若仍需猛冲或膝痛，继续提高座面或停止。'
+    }
+  });
+  assert.deepEqual(byId['wall-push-up'].variantGuidance, {
+    close_wall:{
+      label:'近墙小幅变式',
+      setup:'双脚站得更靠近墙面，让身体倾斜角度更小；双手置于胸口至肩下高度。',
+      range:'胸部只靠近墙到肩部无痛且身体仍成一直线的范围，再平稳推回。'
+    }
+  });
+  assert.deepEqual(exerciseCatalog.filter(item=>Object.hasOwn(item,'variantGuidance')).map(item=>item.id),['high-seat-sit-to-stand','wall-push-up']);
+  for(const id of ['high-seat-sit-to-stand','wall-push-up']){
+    const guidance=byId[id].variantGuidance;
+    assert.equal(Object.isFrozen(guidance),true);
+    for(const entry of Object.values(guidance)){
+      assert.equal(Object.isFrozen(entry),true);
+      assert.deepEqual(Object.keys(entry),['label','setup','range']);
+      assert.ok(Object.values(entry).every(value=>typeof value==='string'&&value.length>0));
+    }
+  }
+  const invalidCases=[
+    {targetId:'high-seat-sit-to-stand',mutate:item=>{item.variantGuidance={unknown_variant:{label:'未知',setup:'设置',range:'幅度'}}}},
+    {targetId:'high-seat-sit-to-stand',mutate:item=>{item.variantGuidance={high_seat:{label:'',setup:'设置',range:'幅度'}}}},
+    {targetId:'high-seat-sit-to-stand',mutate:item=>{item.variantGuidance={high_seat:{label:'标签',setup:'设置',range:'幅度',raw:'high_seat'}}}},
+    {targetId:'high-seat-sit-to-stand',mutate:item=>{item.variantGuidance={high_seat:{label:'标签',setup:'设置'}}}},
+    {targetId:'seated-leg-raise',mutate:item=>{item.variantGuidance={high_seat:{label:'标签',setup:'设置',range:'幅度'}}}}
+  ];
+  for(const [index,{targetId,mutate}] of invalidCases.entries()){
+    const invalid=exerciseCatalog.map(item=>({...item}));
+    const target=invalid.find(item=>item.id===targetId);assert.ok(target,`找不到测试动作 ${targetId}`);
+    mutate(target);
+    assert.ok(validateExerciseCatalog(invalid).some(error=>error.path.includes('variantGuidance')),`case ${index} 未拒绝`);
+  }
+});
+
+test('受控变式指导校验对accessor、Proxy与危险键零getter执行并结构化失败',()=>{
+  const {exerciseCatalog,validateExerciseCatalog}=loadCatalogAndPlan();
+  const cases=[];let reads=0;
+  cases.push(item=>Object.defineProperty(item,'variantGuidance',{enumerable:true,get(){reads+=1;throw new Error('SECRET_VARIANT_GETTER')}}));
+  cases.push(item=>{const guidance={};Object.defineProperty(guidance,'high_seat',{enumerable:true,get(){reads+=1;throw new Error('SECRET_ENTRY_GETTER')}});item.variantGuidance=guidance});
+  cases.push(item=>{const entry={setup:'设置',range:'幅度'};Object.defineProperty(entry,'label',{enumerable:true,get(){reads+=1;throw new Error('SECRET_LABEL_GETTER')}});item.variantGuidance={high_seat:entry}});
+  cases.push(item=>{item.variantGuidance=new Proxy({high_seat:{label:'标签',setup:'设置',range:'幅度'}},{ownKeys(){throw new Error('SECRET_PROXY')}})});
+  cases.push(item=>{item.variantGuidance={high_seat:new Proxy({label:'标签',setup:'设置',range:'幅度'},{getOwnPropertyDescriptor(){throw new Error('SECRET_PROXY')}})}});
+  cases.push(item=>{const guidance={high_seat:{label:'标签',setup:'设置',range:'幅度'}};Object.defineProperty(guidance,'__proto__',{value:'pollution',enumerable:true});item.variantGuidance=guidance});
+  for(const [index,mutate]of cases.entries()){
+    const invalid=exerciseCatalog.map(item=>({...item})),target=invalid.find(item=>item.id==='high-seat-sit-to-stand');assert.ok(target);
+    mutate(target);let errors;
+    assert.doesNotThrow(()=>{errors=validateExerciseCatalog(invalid)},`case ${index} 异常逃逸`);
+    assert.ok(errors.some(error=>error.path.includes('variantGuidance')),`case ${index} 未结构化拒绝`);
+  }
+  assert.equal(reads,0);
+  const inherited=exerciseCatalog.map(item=>({...item}));inherited[0].id='constructor';
+  assert.equal(validateExerciseCatalog(inherited).some(error=>error.path==='catalog[0].variantGuidance'&&error.message.includes('缺少')),false);
+});
+
 test('GIF均为assets/gifs下真实文件，关系引用存在且不自引用', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
   const ids = new Set(exerciseCatalog.map(exercise => exercise.id));

@@ -95,13 +95,42 @@ function contextFromState(inputState){
   let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,capabilityResult:state.capabilityResult,capabilityRevision:state.capabilityRevision,catalog:trustedCatalog})}catch(_error){validation=null}
   return validationPassed(validation)?{mode:'generated',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
 }
-function weeklyPlanLineage(reviews,currentPlanId){const lineage=new Set([currentPlanId]);let changed=true;while(changed&&lineage.size<=17){changed=false;for(const item of reviews)if(item&&item.decision==='accepted'&&lineage.has(item.resultPlanId)&&!lineage.has(item.planId)){lineage.add(item.planId);changed=true}}return lineage}
+function weeklyPlanLineage(reviews,currentPlanId,capabilityRevision){
+  const lineage=new Set([currentPlanId]);
+  const accepted=reviews.filter(item=>item&&item.decision==='accepted'&&item.capabilityRevision===capabilityRevision);
+  const incoming=new Map(),outgoing=new Map();
+  for(const item of accepted){
+    if(typeof item.planId!=='string'||typeof item.resultPlanId!=='string'||incoming.has(item.resultPlanId)||outgoing.has(item.planId))return lineage;
+    incoming.set(item.resultPlanId,item.planId);outgoing.set(item.planId,item.resultPlanId);
+  }
+  const globallyVisited=new Set();
+  for(const start of outgoing.keys()){
+    if(globallyVisited.has(start))continue;
+    const path=new Set();let cursor=start;
+    while(outgoing.has(cursor)){
+      if(path.has(cursor))return new Set([currentPlanId]);
+      path.add(cursor);globallyVisited.add(cursor);cursor=outgoing.get(cursor);
+    }
+  }
+  let cursor=currentPlanId;
+  while(incoming.has(cursor)){
+    const parent=incoming.get(cursor);
+    if(lineage.has(parent))return new Set([currentPlanId]);
+    lineage.add(parent);cursor=parent;
+  }
+  for(const item of accepted)if(!lineage.has(item.planId)||!lineage.has(item.resultPlanId))return new Set([currentPlanId]);
+  return lineage;
+}
 function weeklyReviewTarget(state,context){
-  if(!state||context.mode!=='generated'||!Array.isArray(state.weeklyReviews))return null;
-  const lineage=weeklyPlanLineage(state.weeklyReviews,context.plan.id);
-  const pending=state.weeklyReviews.find(item=>item&&lineage.has(item.planId)&&item.decision==='pending');
+  const trustedInput=clonePureData({state,context});
+  if(!trustedInput)return null;
+  state=trustedInput.state;context=trustedInput.context;
+  if(!state||!context||context.mode!=='generated'||!context.plan||!Array.isArray(state.weeklyReviews)||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1||context.plan.capabilityRevision!==state.capabilityRevision)return null;
+  const currentReviews=state.weeklyReviews.filter(item=>item&&item.capabilityRevision===state.capabilityRevision);
+  const lineage=weeklyPlanLineage(currentReviews,context.plan.id,state.capabilityRevision);
+  const pending=currentReviews.find(item=>lineage.has(item.planId)&&item.decision==='pending');
   if(pending)return{weekNumber:pending.weekNumber,scheduledSessions:pending.answers.scheduledSessions,reviewId:pending.id,proposal:pending.proposal};
-  const reviewed=new Set(state.weeklyReviews.filter(item=>item&&lineage.has(item.planId)).map(item=>item.weekNumber));
+  const reviewed=new Set(currentReviews.filter(item=>lineage.has(item.planId)).map(item=>item.weekNumber));
   const week=context.plan.weeks.find(item=>!reviewed.has(item.number));
   return week?{weekNumber:week.number,scheduledSessions:week.sessions.length}:null;
 }
@@ -224,5 +253,5 @@ function init(){
   ui.renderExercises();ui.renderDayList();ui.renderForm();ui.renderOverview();ui.renderSafety();ui.reveal();
   return Move28;
 }
-return{init,contextFromState,handleOnboardingComplete,handleCapabilityComplete,openGeneratedWorkout,rescreenStepForReason,validationPassed};
+return{init,contextFromState,weeklyReviewTarget,handleOnboardingComplete,handleCapabilityComplete,openGeneratedWorkout,rescreenStepForReason,validationPassed};
 });

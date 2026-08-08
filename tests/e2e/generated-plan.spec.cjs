@@ -8,13 +8,13 @@ async function reset(page){
   await page.evaluate(()=>{localStorage.clear();sessionStorage.clear()});
   await page.reload();
 }
-async function completeOnboarding(page,overrides={}){
+async function completeOnboarding(page,overrides={},capabilityOverrides={}){
   await page.getByRole('button',{name:/生成我的4周计划/}).click();
   await page.evaluate(data=>{for(const [key,value] of Object.entries(data))Move28.onboardingController.setField(key,value);Move28.onboardingController.goTo(9)},{...safe,...overrides});
   await page.locator('input[name="finalConfirmed"]').check();
   await page.getByRole('button',{name:/确认并保存结果/}).click();
   await page.evaluate(values=>{for(const [field,value] of Object.entries(values))Move28.capabilityController.setField(field,value);Move28.capabilityController.goTo(2)},
-    {chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'});
+    {chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable',...capabilityOverrides});
   await page.getByRole('button',{name:/确认并保存能力档案/}).click();
 }
 
@@ -108,6 +108,26 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   expect(record.status).toBe('completed');
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
+});
+
+test('generated-plan 受控能力档案在跟练页显示可信中文变式指导且不回显枚举',async({page})=>{
+  await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],allowSettingSwap:'no'}, {chairRise:'hands_supported',wallPushup:'limited_range'});
+  await page.getByRole('button',{name:'完成，返回首页'}).click();
+  await approvePendingPlan(page);
+  await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+
+  await expect(page.locator('.guide-variant')).toContainText('受控变式 · 高位座椅变式');
+  await expect(page.locator('.guide-variant')).toContainText('使用稳固、不会滑动的较高座椅');
+  await expect(page.locator('.guide-variant')).toContainText('只在可控、无痛范围内起立和坐回');
+  await expect(page.locator('#guideModal')).not.toContainText('high_seat');
+  await page.locator('#guideNext').click();
+  await page.locator('#guideNext').click();
+
+  await expect(page.locator('.guide-variant')).toContainText('受控变式 · 近墙小幅变式');
+  await expect(page.locator('.guide-variant')).toContainText('双脚站得更靠近墙面');
+  await expect(page.locator('.guide-variant')).toContainText('胸部只靠近墙到肩部无痛');
+  await expect(page.locator('#guideModal')).not.toContainText('close_wall');
 });
 
 test('generated-plan 缺少审核动作时原子阻断且不回退成用户训练计划',async({page})=>{

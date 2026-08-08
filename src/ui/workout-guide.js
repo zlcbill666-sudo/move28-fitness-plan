@@ -63,6 +63,17 @@ function doseText(action){
     ?`${action.sets}组 × ${action.reps}次 · RPE ${action.rpe} · 组间休息${action.restSec}秒`
     :`${action.durationMin}分钟 · RPE ${action.rpe}${action.restSec?` · 休息${action.restSec}秒`:''}`;
 }
+function trustedVariantGuidance(action,exercise){
+  const controlled=action.pattern==='knee_dominant'||action.pattern==='horizontal_push';
+  if(!controlled)return Object.prototype.hasOwnProperty.call(action,'variant')?undefined:null;
+  if(exercise.pattern!==action.pattern||typeof action.variant!=='string')return undefined;
+  if(action.variant==='standard')return Object.prototype.hasOwnProperty.call(exercise,'variantGuidance')?undefined:null;
+  const guidance=exercise.variantGuidance;
+  if(!guidance||typeof guidance!=='object'||Array.isArray(guidance)||!Object.prototype.hasOwnProperty.call(guidance,action.variant))return undefined;
+  const entry=guidance[action.variant];
+  if(!entry||typeof entry!=='object'||Array.isArray(entry)||Object.keys(entry).length!==3||!['label','setup','range'].every(key=>typeof entry[key]==='string'&&entry[key]))return undefined;
+  return entry;
+}
 function buildWorkoutSteps(session,catalog){
   if(catalog!==trustedCatalog)return null;
   const safeSession=clonePureData(session),safeCatalog=clonePureData(trustedCatalog);
@@ -72,10 +83,11 @@ function buildWorkoutSteps(session,catalog){
   for(const action of safeSession.actions){
     const exercise=action&&exercises.get(action.exerciseId);
     if(!exercise||!exercise.cues||typeof exercise.gif!=='string')return null;
+    const variantGuidance=trustedVariantGuidance(action,exercise);if(variantGuidance===undefined)return null;
     const strength=action.phase==='main';
     if(strength&&![action.sets,action.reps,action.rpe,action.restSec].every(Number.isFinite))return null;
     if(!strength&&![action.durationMin,action.rpe,action.restSec].every(Number.isFinite))return null;
-    steps.push({action,exercise,music:strength?'strength':'cardio',sessionId:safeSession.id,weekday:safeSession.weekday,intent:safeSession.intent});
+    steps.push({action,exercise,variantGuidance,music:strength?'strength':'cardio',sessionId:safeSession.id,weekday:safeSession.weekday,intent:safeSession.intent});
   }
   return steps;
 }
@@ -115,12 +127,13 @@ function renderReady(){
   setGuideFoot({label:'退出',hidden:false},{label:'开始本节',hidden:false});
 }
 function renderAction(){
-  const step=state.guideSteps[state.guideStep],total=state.guideSteps.length,exercise=step.exercise,action=step.action;
+  const step=state.guideSteps[state.guideStep],total=state.guideSteps.length,exercise=step.exercise,action=step.action,variantGuidance=step.variantGuidance;
   syncGuideMusic(step.music,true);
   $('#guideEyebrow').textContent=`ACTION ${state.guideStep+1} / ${total}`;
   $('#guideTitle').textContent=`${WEEKDAY_LABELS[state.guideSession.weekday]||state.guideSession.weekday} · ${state.guideSession.intent==='full_body_strength'?'全身力量':'低冲击有氧'}`;
   $('#guideBar').style.width=`${(state.guideStep+1)/total*100}%`;
-  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}"><figure class="guide-demo"><img src="${esc(exercise.gif)}" alt="${esc(exercise.name)}动作示范GIF"></figure><div class="guide-instruction"><span class="guide-phase">${action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div><div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)}</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></div></div></div>`;
+  const variantHtml=variantGuidance?`<section class="guide-variant"><b>受控变式 · ${esc(variantGuidance.label)}</b><p><strong>设置指导</strong>${esc(variantGuidance.setup)}</p><p><strong>幅度指导</strong>${esc(variantGuidance.range)}</p></section>`:'';
+  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}"><figure class="guide-demo"><img src="${esc(exercise.gif)}" alt="${esc(exercise.name)}动作示范GIF"></figure><div class="guide-instruction"><span class="guide-phase">${action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div>${variantHtml}<div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)}</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></div></div></div>`;
   setGuideFoot({label:'← 上一步',hidden:state.guideStep===0},{label:state.guideStep===total-1?'完成本节并记录 ✓':'完成此项，下一项 →'});
 }
 function renderExitConfirm(){

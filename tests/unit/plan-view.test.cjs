@@ -46,6 +46,57 @@ test('plan-view active计划必须与当前intake revision一致并再次通过�
   const validationProxy=new Proxy({ok:true,errors:[]},{ownKeys(){throw new Error('SECRET')}});assert.equal(app.validationPassed(validationProxy),false);
 });
 
+test('plan-view active上下文逐项拒绝能力revision缺失、0与错配',()=>{
+  const {app,plan,capabilityResult}=setup();
+  const capability={capabilityProfile,capabilityResult,capabilityRevision:1};
+  const makeActive=()=>({...structuredClone(plan),status:'active',review:{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1}});
+  for(const mutate of [state=>{delete state.capabilityRevision},state=>{state.capabilityRevision=0}]){
+    const state={intake,intakeRevision:1,risk,...capability,plan:makeActive(),logs:{}};mutate(state);
+    assert.equal(app.contextFromState(state).mode,'review');
+  }
+  {const state={intake,intakeRevision:1,risk,...capability,capabilityRevision:2,plan:makeActive(),logs:{}};assert.equal(app.contextFromState(state).mode,'stale')}
+  for(const mutate of [active=>{delete active.capabilityRevision},active=>{active.capabilityRevision=0},active=>{active.capabilityRevision=2}]){
+    const active=makeActive();mutate(active);
+    assert.equal(app.contextFromState({intake,intakeRevision:1,risk,...capability,plan:active,logs:{}}).mode,'stale');
+  }
+  for(const mutate of [active=>{delete active.review.capabilityRevision},active=>{active.review.capabilityRevision=0},active=>{active.review.capabilityRevision=2}]){
+    const active=makeActive();mutate(active);
+    assert.equal(app.contextFromState({intake,intakeRevision:1,risk,...capability,plan:active,logs:{}}).mode,'invalid');
+  }
+});
+
+test('应用层周复盘目标仅沿当前能力revision的完整多跳lineage并在刷新后保持连续',()=>{
+  const {app,plan}=setup();
+  const currentPlan={...structuredClone(plan),id:'plan-current',capabilityRevision:2};
+  const context={mode:'generated',plan:currentPlan};
+  const accepted=(id,planId,resultPlanId,weekNumber,capabilityRevision=2)=>({id,planId,resultPlanId,weekNumber,capabilityRevision,decision:'accepted'});
+  const state={capabilityRevision:2,weeklyReviews:[accepted('r1','plan-origin','plan-middle',1),accepted('r2','plan-middle','plan-current',2)]};
+  const refreshed=JSON.parse(JSON.stringify(state));
+  assert.deepEqual(app.weeklyReviewTarget(refreshed,context),{weekNumber:3,scheduledSessions:currentPlan.weeks[2].sessions.length});
+  const invalidCases=[
+    raw=>{raw.weeklyReviews.forEach(item=>{item.capabilityRevision=1})},
+    raw=>{raw.weeklyReviews.push({...raw.weeklyReviews[0],id:'duplicate'})},
+    raw=>{raw.weeklyReviews=[accepted('cycle-a','plan-origin','plan-middle',1),accepted('cycle-b','plan-middle','plan-origin',2)]},
+    raw=>{raw.weeklyReviews.push(accepted('detached','detached-parent','detached-parent-w1-a',1))},
+    raw=>{raw.weeklyReviews[1].resultPlanId='broken-child'}
+  ];
+  for(const mutate of invalidCases){const raw=JSON.parse(JSON.stringify(state));mutate(raw);assert.deepEqual(app.weeklyReviewTarget(raw,context),{weekNumber:1,scheduledSessions:currentPlan.weeks[0].sessions.length})}
+  const oldPending={id:'old-pending',planId:'plan-current',resultPlanId:null,weekNumber:4,capabilityRevision:1,decision:'pending',answers:{scheduledSessions:99},proposal:{type:'keep'}};
+  assert.deepEqual(app.weeklyReviewTarget({...state,weeklyReviews:[...state.weeklyReviews,oldPending]},context),{weekNumber:3,scheduledSessions:currentPlan.weeks[2].sessions.length});
+  assert.equal(app.weeklyReviewTarget({...state,capabilityRevision:1},context),null);
+});
+
+test('应用层周复盘目标对accessor与Proxy稳定fail closed且零getter执行',()=>{
+  const {app,plan}=setup();let reads=0;
+  const state={capabilityRevision:1,weeklyReviews:[]},context={mode:'generated',plan};
+  const hostileState={capabilityRevision:1};Object.defineProperty(hostileState,'weeklyReviews',{enumerable:true,get(){reads+=1;throw new Error('SECRET_WEEKLY_GETTER')}});
+  const hostileContext={mode:'generated'};Object.defineProperty(hostileContext,'plan',{enumerable:true,get(){reads+=1;throw new Error('SECRET_PLAN_GETTER')}});
+  assert.doesNotThrow(()=>assert.equal(app.weeklyReviewTarget(hostileState,context),null));
+  assert.doesNotThrow(()=>assert.equal(app.weeklyReviewTarget(state,hostileContext),null));
+  assert.doesNotThrow(()=>assert.equal(app.weeklyReviewTarget(new Proxy(state,{ownKeys(){throw new Error('SECRET_PROXY')}}),context),null));
+  assert.equal(reads,0);
+});
+
 test('plan-view加载后篡改遍历intrinsic仍保持零getter执行',()=>{
   const {app}=setup();
   let getterCalls=0;
@@ -75,6 +126,52 @@ test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配�
   assert.equal(guide.buildWorkoutSteps(forged,catalog.exerciseCatalog),null);
   assert.equal(guide.buildWorkoutSteps(session,structuredClone(catalog.exerciseCatalog)),null);
   assert.equal(guide.buildWorkoutSteps({...session,actions:[]},catalog.exerciseCatalog),null);
+});
+test('plan-view 只把动作目录审核过的受控变式指导带入跟练步骤',()=>{
+  const {catalog,guide,plan}=setup();
+  const base=structuredClone(plan.weeks[0].sessions[0]);
+  const action=base.actions.find(item=>item.pattern==='knee_dominant');
+  action.exerciseId='high-seat-sit-to-stand';action.variant='high_seat';action.variantLabel='PLAN_FORGED_LABEL';action.variantInstruction='PLAN_FORGED_INSTRUCTION';
+  let steps=guide.buildWorkoutSteps(base,catalog.exerciseCatalog);
+  let step=steps.find(item=>item.action.pattern==='knee_dominant');
+  assert.deepEqual(step.variantGuidance,{
+    label:'高位座椅变式',
+    setup:'使用稳固、不会滑动的较高座椅；座面高度以起立时膝部无明显疼痛为准。',
+    range:'只在可控、无痛范围内起立和坐回；若仍需猛冲或膝痛，继续提高座面或停止。'
+  });
+  assert.equal(JSON.stringify(step.variantGuidance).includes('high_seat'),false);
+  assert.equal(JSON.stringify(step.variantGuidance).includes('PLAN_FORGED'),false);
+
+  const push=base.actions.find(item=>item.pattern==='horizontal_push');
+  push.exerciseId='wall-push-up';push.variant='close_wall';
+  steps=guide.buildWorkoutSteps(base,catalog.exerciseCatalog);
+  step=steps.find(item=>item.action.pattern==='horizontal_push');
+  assert.deepEqual(step.variantGuidance,{
+    label:'近墙小幅变式',
+    setup:'双脚站得更靠近墙面，让身体倾斜角度更小；双手置于胸口至肩下高度。',
+    range:'胸部只靠近墙到肩部无痛且身体仍成一直线的范围，再平稳推回。'
+  });
+  assert.equal(JSON.stringify(step.variantGuidance).includes('close_wall'),false);
+
+  const standard=structuredClone(plan.weeks[0].sessions[0]);
+  const standardSteps=guide.buildWorkoutSteps(standard,catalog.exerciseCatalog);
+  assert.ok(standardSteps);
+  assert.ok(standardSteps.filter(item=>['knee_dominant','horizontal_push'].includes(item.action.pattern)).every(item=>item.variantGuidance===null));
+});
+test('plan-view 对未知或动作不匹配的variant拒绝且不读取计划自由文本',()=>{
+  const {catalog,guide,plan}=setup();
+  for(const mutation of [
+    action=>{action.variant='unknown_variant'},
+    action=>{action.exerciseId='high-seat-sit-to-stand';action.variant='standard'},
+    action=>{action.exerciseId='seated-leg-press';action.variant='high_seat'}
+  ]){
+    const session=structuredClone(plan.weeks[0].sessions[0]),action=session.actions.find(item=>item.pattern==='knee_dominant');
+    mutation(action);action.variantLabel='PLAN_FORGED_LABEL';action.variantInstruction='PLAN_FORGED_INSTRUCTION';
+    assert.equal(guide.buildWorkoutSteps(session,catalog.exerciseCatalog),null);
+  }
+  const session=structuredClone(plan.weeks[0].sessions[0]),action=session.actions.find(item=>item.pattern==='horizontal_push');
+  action.exerciseId='wall-push-up';action.variant='standard';
+  assert.equal(guide.buildWorkoutSteps(session,catalog.exerciseCatalog),null);
 });
 test('plan-view 跟练入口对accessor、稀疏数组和Proxy稳定fail closed',()=>{
   const {catalog,guide,plan}=setup();let reads=0;

@@ -6,6 +6,36 @@ Move28.data=Object.assign(Move28.data||{},api);
 if(isCommonJS)module.exports=api;
 })(globalThis,function(){
 'use strict';
+const safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor.bind(Object);
+const safeReflectOwnKeys=Reflect.ownKeys.bind(Reflect);
+const safeHasOwnProperty=Function.call.bind(Object.prototype.hasOwnProperty);
+const safeArrayIsArray=Array.isArray.bind(Array);
+const safeStructuredClone=typeof globalThis.structuredClone==='function'?globalThis.structuredClone.bind(globalThis):null;
+const VARIANT_GUIDANCE_FIELDS=Object.freeze(['label','setup','range']);
+function inspectVariantGuidance(item,expectedVariant){
+  try{
+    const descriptor=safeGetOwnPropertyDescriptor(item,'variantGuidance');
+    if(!descriptor)return{present:false,valid:false};
+    if(!safeHasOwnProperty(descriptor,'value'))return{present:true,valid:false};
+    const guidance=descriptor.value;
+    if(!expectedVariant||!guidance||typeof guidance!=='object'||safeArrayIsArray(guidance))return{present:true,valid:false};
+    const guidanceKeys=safeReflectOwnKeys(guidance);
+    if(guidanceKeys.length!==1||guidanceKeys[0]!==expectedVariant)return{present:true,valid:false};
+    const entryDescriptor=safeGetOwnPropertyDescriptor(guidance,expectedVariant);
+    if(!entryDescriptor||!safeHasOwnProperty(entryDescriptor,'value'))return{present:true,valid:false};
+    const entry=entryDescriptor.value;
+    if(!entry||typeof entry!=='object'||safeArrayIsArray(entry))return{present:true,valid:false};
+    const entryKeys=safeReflectOwnKeys(entry);
+    if(entryKeys.length!==VARIANT_GUIDANCE_FIELDS.length||VARIANT_GUIDANCE_FIELDS.some(key=>!entryKeys.includes(key)))return{present:true,valid:false};
+    for(const key of VARIANT_GUIDANCE_FIELDS){
+      const field=safeGetOwnPropertyDescriptor(entry,key);
+      if(!field||!safeHasOwnProperty(field,'value')||typeof field.value!=='string'||!field.value.trim())return{present:true,valid:false};
+    }
+    if(!safeStructuredClone)return{present:true,valid:false};
+    safeStructuredClone(guidance);
+    return{present:true,valid:true};
+  }catch(_error){return{present:true,valid:false}}
+}
 function deepFreeze(value,seen=new WeakSet()){
   if(value===null||(typeof value!=='object'&&typeof value!=='function')||seen.has(value))return value;
   seen.add(value);
@@ -21,6 +51,7 @@ const REVIEW_STATUSES=deepFreeze(['draft','approved','retired']);
 const EXCLUSION_TAGS=deepFreeze(['deep_knee_bend','overhead','floor','single_leg','hinge']);
 const EQUIPMENT_IDS=deepFreeze(['stable_chair','stable_high_bench','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','leg_extension_machine','hip_abduction_machine','wall','elliptical_trainer','treadmill','flat_walking_route']);
 const DOSE_KEYS=deepFreeze(['sets','reps','rpe','restSec','durationMin','holdSec']);
+const VARIANT_GUIDANCE_BY_EXERCISE=deepFreeze(Object.assign(Object.create(null),{'high-seat-sit-to-stand':'high_seat','wall-push-up':'close_wall'}));
 const strengthDose={sets:[2,3],reps:[8,12],rpe:[5,6],restSec:[60,90]};
 const warmupDose={sets:[1,1],reps:[10,10],rpe:[1,3],restSec:[0,30]};
 const cardioDose={sets:[1,1],reps:[1,1],rpe:[4,5],restSec:[0,0],durationMin:[8,40]};
@@ -49,12 +80,12 @@ exercise({id:'standing-band-chest-press',name:'站姿弹力带推胸',pattern:'h
 exercise({id:'seated-row',name:'坐姿划船',pattern:'horizontal_pull',settings:['gym'],equipmentOptions:[['seated_row_machine']],difficulty:2,dose:strengthDose,regressionIds:['band-row'],gif:'assets/gifs/08_坐姿划船.gif'},{groups:['力量A','力量B'],start:'胸部贴靠胸垫或背部保持中立，优先中立握；肩膀远离耳朵。',steps:'先轻收肩胛，再将手肘向身体两侧后拉；拉至手肘与躯干接近即可，缓慢伸臂返回。',breath:'拉回时呼气，伸臂时吸气。',errors:'身体后仰借力；耸肩；手肘过度后伸；快速放回重量。',safety:'肩部仅在无痛范围；肩前方夹痛时减小幅度或取消。'}),
 exercise({id:'band-row',name:'弹力带划船',pattern:'horizontal_pull',settings:['home','gym'],equipmentOptions:[['resistance_band']],difficulty:1,dose:strengthDose,progressionIds:['seated-row'],gif:'assets/gifs/19_弹力带划船.gif'},{groups:['力量A','力量B'],start:'将弹力带牢固固定在胸口高度，面对固定点稳定站立，双脚与髋同宽，躯干中立，双手握住弹力带并伸臂。',steps:'肩膀保持远离耳朵，肘沿身体两侧向后拉至手靠近肋骨；短暂停顿，再受控伸臂回到起点，全程不后仰借力。',breath:'后拉时呼气，受控回位时吸气。',errors:'固定点不牢；耸肩；肘向外张开；身体后仰借力；松手或快速弹回。',safety:'先确认固定点牢固并使用轻阻力；肩、肘或腰出现锐痛时立即停止。'}),
 exercise({id:'pallof-press',name:'抗旋转推压',pattern:'anti_rotation',settings:['gym','home'],equipmentOptions:[['resistance_band'],['cable_machine']],difficulty:2,dose:strengthDose,gif:'assets/gifs/09_抗旋转推压.gif'},{groups:['力量A'],start:'弹力带或拉力器调到胸口高度，身体侧对固定点，双脚略宽于肩，双手握把放胸前。',steps:'收紧腹部，将双手缓慢向前推出；身体不向拉力方向旋转，停1秒后收回。',breath:'推出时缓慢呼气，收回时吸气。',errors:'躯干旋转；耸肩；重量过大；屏住呼吸。',safety:'肩部不适时降低把手高度、缩短推出距离或取消。'}),
-exercise({id:'high-seat-sit-to-stand',name:'高位坐姿起立',pattern:'knee_dominant',settings:['gym','home'],equipmentOptions:[['stable_high_bench'],['stable_chair']],difficulty:1,dose:strengthDose,progressionIds:['seated-leg-press'],gif:'assets/gifs/10_高位坐姿起立.gif'},{groups:['力量B'],start:'选稳固且较高的长凳/椅子，脚略宽于肩，脚尖微向外；身体坐在前半部。',steps:'上身轻微前倾，脚掌发力站起；站直但不后仰，再将臀部向后送，缓慢坐回。',breath:'站起时呼气，坐下时吸气。',errors:'膝盖内扣；猛扑起身；直接跌坐；用手臂大力撑腿。',safety:'GIF仅示范椅子深蹲轨迹；实际不使用史密斯负重。膝痛时提高座位。'}),
+exercise({id:'high-seat-sit-to-stand',name:'高位坐姿起立',pattern:'knee_dominant',settings:['gym','home'],equipmentOptions:[['stable_high_bench'],['stable_chair']],difficulty:1,dose:strengthDose,progressionIds:['seated-leg-press'],gif:'assets/gifs/10_高位坐姿起立.gif',variantGuidance:{high_seat:{label:'高位座椅变式',setup:'使用稳固、不会滑动的较高座椅；座面高度以起立时膝部无明显疼痛为准。',range:'只在可控、无痛范围内起立和坐回；若仍需猛冲或膝痛，继续提高座面或停止。'}}},{groups:['力量B'],start:'选稳固且较高的长凳/椅子，脚略宽于肩，脚尖微向外；身体坐在前半部。',steps:'上身轻微前倾，脚掌发力站起；站直但不后仰，再将臀部向后送，缓慢坐回。',breath:'站起时呼气，坐下时吸气。',errors:'膝盖内扣；猛扑起身；直接跌坐；用手臂大力撑腿。',safety:'GIF仅示范椅子深蹲轨迹；实际不使用史密斯负重。膝痛时提高座位。'}),
 exercise({id:'seated-leg-extension',name:'坐姿腿屈伸',pattern:'knee_extension',settings:['gym'],equipmentOptions:[['leg_extension_machine']],difficulty:2,dose:strengthDose,regressionIds:['seated-knee-extension-unloaded'],gif:'assets/gifs/11_坐姿腿屈伸.gif'},{groups:['力量B'],start:'调座椅使膝关节对准机器转轴，小腿垫在脚踝上方，背部贴垫。',steps:'缓慢伸膝至接近伸直但不锁死，停1秒，再用3秒回落。',breath:'伸腿时呼气，回落时吸气。',errors:'甩腿；锁死膝盖；回落过快；重量过大。',safety:'膝前侧疼痛时减小幅度、减重或取消，改做无痛腿弯举。'}),
 exercise({id:'seated-knee-extension-unloaded',name:'坐姿徒手伸膝',pattern:'knee_extension',settings:['home','gym'],equipmentOptions:[['stable_chair']],difficulty:1,dose:strengthDose,progressionIds:['seated-leg-extension'],gif:'assets/gifs/22_坐姿徒手伸膝.gif'},{groups:['力量B'],start:'坐在稳固有靠背的椅子上，双脚踩地，背部保持直立，双手轻扶椅面或椅侧。',steps:'保持大腿稳定，缓慢伸直一侧膝盖至接近伸直但不锁死；短暂停顿，再受控放回并换腿。',breath:'伸膝时呼气，放回时吸气。',errors:'身体后仰借力；甩腿；膝盖锁死；大腿离开椅面；回落过快。',safety:'先使用无负重和舒适幅度；膝前侧出现锐痛、卡住或明显肿胀时立即停止。'}),
 exercise({id:'supported-calf-raise',name:'扶椅提踵',pattern:'mobility',settings:['home','gym'],equipmentOptions:[['stable_chair']],difficulty:1,dose:strengthDose,gif:'assets/gifs/23_扶椅提踵.gif'},{groups:['力量B','有氧C'],start:'站在稳固椅背后方，双脚与髋同宽，双手只轻扶椅背保持平衡，躯干直立。',steps:'保持膝盖自然伸展，缓慢抬起双脚跟至舒适高度；停顿1秒，再受控落回，不弹跳。',breath:'抬起时呼气，落下时吸气。',errors:'手臂大力压椅；屈膝跳起；脚踝向外翻；快速砸下脚跟。',safety:'先确认椅子不会滑动；小腿、跟腱或脚踝出现锐痛，或站立不稳时立即停止。'}),
 exercise({id:'hip-abduction-machine',name:'髋外展机',pattern:'hip_abduction',settings:['gym'],equipmentOptions:[['hip_abduction_machine']],difficulty:2,dose:strengthDose,gif:'assets/gifs/12_髋外展机.gif'},{groups:['力量B'],start:'背部贴靠垫，双脚踩稳，膝外侧贴住挡垫，骨盆保持中立。',steps:'双膝缓慢向外打开至臀侧发力但不疼，停1秒后受控合回。',breath:'打开时呼气，合回时吸气。',errors:'身体前后摆动；快速弹开；重量过大；双膝猛撞回位。',safety:'髋或膝出现锐痛时缩小范围或停止。'}),
-exercise({id:'wall-push-up',name:'墙壁俯卧撑',pattern:'horizontal_push',settings:['gym','home'],equipmentOptions:[['wall']],difficulty:1,dose:strengthDose,progressionIds:['chest-press-machine'],gif:'assets/gifs/13_墙壁俯卧撑.gif'},{groups:['力量B'],start:'面对墙站立，双手略宽于肩、放在胸口至肩下高度；双脚后退，使身体成一直线。',steps:'弯肘让胸部缓慢靠近墙面，手肘约向下后方30～45度；再推回起点，不锁肘。',breath:'靠近墙时吸气，推开时呼气。',errors:'塌腰；耸肩；手放太高；手肘完全向外张。',safety:'肩部无痛才做；疼痛时取消，距离墙更近可降低难度。'}),
+exercise({id:'wall-push-up',name:'墙壁俯卧撑',pattern:'horizontal_push',settings:['gym','home'],equipmentOptions:[['wall']],difficulty:1,dose:strengthDose,progressionIds:['chest-press-machine'],gif:'assets/gifs/13_墙壁俯卧撑.gif',variantGuidance:{close_wall:{label:'近墙小幅变式',setup:'双脚站得更靠近墙面，让身体倾斜角度更小；双手置于胸口至肩下高度。',range:'胸部只靠近墙到肩部无痛且身体仍成一直线的范围，再平稳推回。'}}},{groups:['力量B'],start:'面对墙站立，双手略宽于肩、放在胸口至肩下高度；双脚后退，使身体成一直线。',steps:'弯肘让胸部缓慢靠近墙面，手肘约向下后方30～45度；再推回起点，不锁肘。',breath:'靠近墙时吸气，推开时呼气。',errors:'塌腰；耸肩；手放太高；手肘完全向外张。',safety:'肩部无痛才做；疼痛时取消，距离墙更近可降低难度。'}),
 exercise({id:'dead-bug',name:'死虫式',pattern:'anti_extension',settings:['gym','home'],equipmentOptions:[['exercise_mat']],difficulty:1,dose:strengthDose,contraindications:['floor'],regressionIds:['heel-slide','bird-dog-regression'],gif:'assets/gifs/14_死虫式.gif'},{groups:['力量B'],start:'仰卧，髋膝约90度，双臂可放身体两侧；腰部轻轻贴地。',steps:'腹部收紧，交替让一侧脚跟缓慢点地再收回；保持腰部不拱起。',breath:'脚跟下放时呼气，收回时吸气。',errors:'腰部离地；动作过快；腿伸得过低；憋气。',safety:'腰部不适时减小幅度或改坐姿交替抬膝。'}),
 exercise({id:'heel-slide',name:'仰卧脚跟滑动',pattern:'anti_extension',settings:['home','gym'],equipmentOptions:[['exercise_mat']],difficulty:1,dose:strengthDose,contraindications:['floor'],progressionIds:['dead-bug'],gif:'assets/gifs/25_仰卧脚跟滑动.gif'},{groups:['力量B'],start:'仰卧在垫上，双膝弯曲、双脚踩地，腹部轻收，腰背保持自然稳定。',steps:'让一侧脚跟贴着垫面缓慢向前滑，滑至腰背仍稳定的范围；再沿原路受控收回并换侧。',breath:'脚跟向前滑时呼气，收回时吸气。',errors:'脚跟离地；腰部拱起；腿完全甩直；动作过快；憋气。',safety:'地面起落不安全或被要求避免地面动作时不做；腰、髋或膝出现锐痛时立即停止。'}),
 exercise({id:'bird-dog-regression',name:'四点支撑单肢滑动',pattern:'anti_extension',settings:['home','gym'],equipmentOptions:[['exercise_mat']],difficulty:1,dose:strengthDose,contraindications:['floor'],progressionIds:['dead-bug'],gif:'assets/gifs/26_四点支撑单肢滑动.gif'},{groups:['力量B'],start:'在垫上四点支撑，双手在肩下、双膝在髋下，背部保持自然平直，腹部轻收。',steps:'保持三个支撑点稳定，将一只手沿垫面缓慢向前滑动至舒适距离；手不离地，随后受控滑回并换侧。',breath:'向前滑时呼气，滑回时吸气。',errors:'手抬离地；躯干旋转或塌腰；臀部向后坐；滑得过远；屏住呼吸。',safety:'手腕、肩、膝或腰出现锐痛时立即停止；需要时在膝下增加软垫，避免地面者不做。'}),
@@ -146,6 +177,11 @@ function validateExerciseCatalog(catalog){
       }
     }
     if(!item.cues||['setup','movement','breathing','pain'].some(key=>typeof item.cues[key]!=='string'))add(`${base}.cues`,'必须包含四项文字提示');
+    const expectedDescriptor=safeGetOwnPropertyDescriptor(VARIANT_GUIDANCE_BY_EXERCISE,item.id);
+    const expectedVariant=expectedDescriptor&&safeHasOwnProperty(expectedDescriptor,'value')?expectedDescriptor.value:null;
+    const inspectedGuidance=inspectVariantGuidance(item,expectedVariant);
+    if(Boolean(expectedVariant)!==inspectedGuidance.present)add(`${base}.variantGuidance`,expectedVariant?'缺少受控变式指导':'该动作不允许受控变式指导');
+    if(inspectedGuidance.present&&!inspectedGuidance.valid)add(`${base}.variantGuidance.${expectedVariant||'unknown'}`,'必须只包含该动作已审核的非空label、setup和range');
   }
   for(let index=0;index<catalog.length;index++){
     if(!Object.hasOwn(catalog,index))continue;
@@ -160,5 +196,5 @@ function validateExerciseCatalog(catalog){
   return errors;
 }
 function getApprovedExercises(catalog=exerciseCatalog){return catalog.filter(exercise=>exercise.reviewStatus==='approved')}
-return{exerciseCatalog,validateExerciseCatalog,getApprovedExercises,PATTERNS,SETTINGS,REVIEW_STATUSES,EXCLUSION_TAGS,EQUIPMENT_IDS,DOSE_KEYS};
+return{exerciseCatalog,validateExerciseCatalog,getApprovedExercises,PATTERNS,SETTINGS,REVIEW_STATUSES,EXCLUSION_TAGS,EQUIPMENT_IDS,DOSE_KEYS,VARIANT_GUIDANCE_BY_EXERCISE};
 });
