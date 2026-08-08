@@ -5,4 +5,14 @@
 .generated-days .day-card .type{margin:0 0 10px}
 .generated-days .day-card .btn{margin-top:auto}
 .generated-days .day-card.completed{border-color:var(--green);background:linear-gradient(180deg,rgba(85,211,154,.12),#fff 40%)}
+.plan-explanation{margin-top:18px;border:1px solid rgba(216,255,62,.24);border-radius:16px;background:rgba(216,255,62,.06);overflow:hidden}
+.plan-explanation summary{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-weight:800;list-style:none}
+.plan-explanation summary::-webkit-details-marker{display:none}
+.plan-explanation summary small{color:var(--muted);font-size:12px;font-weight:600}
+.plan-explanation-body{padding:0 16px 16px;color:var(--text)}
+.plan-explanation-facts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.plan-explanation-facts span{padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px}
+.plan-explanation-body ul{margin:0 0 10px;padding-left:20px}.plan-explanation-body li+li{margin-top:6px}
+.plan-explanation-body p{margin:0 0 10px;line-height:1.6}
+.plan-explanation-body .plan-explanation-note{margin:0;color:var(--muted);font-size:12px}
 @media(max-width:760px){.generated-days{display:grid;grid-template-columns:1fr;overflow:visible}.generated-days .day-card{min-width:0;width:100%}}

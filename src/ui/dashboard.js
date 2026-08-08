@@ -3,20 +3,22 @@ const isCommonJS=typeof module==='object'&&module.exports;
 const Move28=isCommonJS?require('../namespace.js'):(root.Move28=root.Move28||{});
 if(isCommonJS){require('../data/legacy-demo-plan.js');require('../data/tracker-fields.js')}
 const validatorApi=isCommonJS?require('../domain/plan-validator.js'):Move28.domain;
+const explanationApi=isCommonJS?require('../domain/plan-explanation.js'):Move28.domain;
 const catalogApi=isCommonJS?require('../data/exercise-catalog.js'):Move28.data;
 const storageApi=isCommonJS?require('../storage/local-store.js'):Move28.storage;
 const trustedValidatePlan=validatorApi&&typeof validatorApi.validatePlan==='function'?validatorApi.validatePlan:null;
+const trustedBuildPlanExplanation=explanationApi&&typeof explanationApi.buildPlanExplanation==='function'?explanationApi.buildPlanExplanation:null;
 const trustedCatalog=catalogApi&&Array.isArray(catalogApi.exerciseCatalog)?catalogApi.exerciseCatalog:null;
 const trustedLoadState=storageApi&&typeof storageApi.loadState==='function'?storageApi.loadState:null;
-const api=factory(root,Move28,trustedValidatePlan,trustedCatalog,trustedLoadState);
+const api=factory(root,Move28,trustedValidatePlan,trustedBuildPlanExplanation,trustedCatalog,trustedLoadState);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28,trustedValidatePlan,trustedCatalog,trustedLoadState){
+})(globalThis,function(root,Move28,trustedValidatePlan,trustedBuildPlanExplanation,trustedCatalog,trustedLoadState){
 'use strict';
 const DATA=Move28.data.legacyDemoPlan;
 const TRACKER_FIELDS=Move28.data.trackerFields;
 const state=Move28.state;
 const {$,$$,esc,localDate,storage}=Move28.utils;
-const planContext={mode:'demo',plan:null,logs:{},message:''};
+const planContext={mode:'demo',plan:null,logs:{},explanation:null,message:''};
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
 const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
 function dayClass(t){return /力量/.test(t)?'strength':/有氧/.test(t)?'cardio':'recovery'}
@@ -27,6 +29,15 @@ function selectedGeneratedSession(){
   const sessions=generatedSessions(),completed=completedSessionIds();
   return sessions.find(session=>session.id===state.currentSessionId)||sessions.find(session=>!completed.has(session.id))||sessions[0]||null;
 }
+function explanationMarkup(explanation){
+  if(!explanation||explanation.validationResult!=='passed')return'';
+  const strategy=explanation.strategy==='conservative_start'?'安全与能力规则要求保守起步':'安全与能力规则支持标准起步';
+  const setting=explanation.setting==='gym'?'健身房':'居家';
+  const duration=explanation.durationRange.min===explanation.durationRange.max?`${explanation.durationRange.min}分钟`:`${explanation.durationRange.min}–${explanation.durationRange.max}分钟`;
+  const weeklySessions=explanation.weeklySessionRange.min===explanation.weeklySessionRange.max?`每周${explanation.weeklySessionRange.min}节`:`每周${explanation.weeklySessionRange.min}–${explanation.weeklySessionRange.max}节`;
+  const reasons=explanation.reasonLabels.length?`<ul>${explanation.reasonLabels.map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:'<p>五项能力检查未触发动作降级；仍以无痛、动作可控和停止信号优先。</p>';
+  return `<details class="plan-explanation"><summary><span>为什么这样安排</span><small>查看依据</small></summary><div class="plan-explanation-body"><div class="plan-explanation-facts"><span>${esc(strategy)}</span><span>${esc(setting)}场景</span><span>${esc(weeklySessions)}</span><span>${esc(duration)}/节</span></div>${reasons}<p class="plan-explanation-note">这里只显示安全与能力规则形成的受控结论，不展示原始健康问卷答案。</p></div></details>`;
+}
 function renderGeneratedToday(){
   const session=selectedGeneratedSession();
   if(!session){$('#todayCard').innerHTML='<div class="today-content"><span class="chip">计划受限</span><h3>暂未生成可执行计划</h3><p>请修改问卷或等待人工复核；系统不会用示例动作替代你的计划。</p></div>';return}
@@ -34,7 +45,7 @@ function renderGeneratedToday(){
   const sessions=generatedSessions(),completed=completedSessionIds(),done=sessions.filter(item=>completed.has(item.id)).length,pct=Math.round(done/sessions.length*100);
   const week=planContext.plan.weeks.find(item=>item.sessions.some(candidate=>candidate.id===session.id));
   const actionNames=session.actions.map(action=>trustedCatalog.find(item=>item.id===action.exerciseId)?.name||action.exerciseId);
-  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${week.number}周</span><strong>${String(week.number).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)} · ${session.setting==='gym'?'健身房':'居家'}</span><span class="chip">${session.estimatedMinutes}分钟</span></div><h3>${session.intent==='full_body_strength'?'全身力量':'低冲击有氧'}</h3><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div><div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><div class="day-controls"><button class="btn primary today-start" onclick="openGeneratedWorkout('${esc(session.id)}')">▶ 开始本节训练</button></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
+  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${week.number}周</span><strong>${String(week.number).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)} · ${session.setting==='gym'?'健身房':'居家'}</span><span class="chip">${session.estimatedMinutes}分钟</span></div><h3>${session.intent==='full_body_strength'?'全身力量':'低冲击有氧'}</h3><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div>${explanationMarkup(planContext.explanation)}<div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><div class="day-controls"><button class="btn primary today-start" onclick="openGeneratedWorkout('${esc(session.id)}')">▶ 开始本节训练</button></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
 }
 function renderDemoToday(){const d=DATA.days[state.currentDay-1],p=legacyProgress();$('#todayCard').innerHTML=`<div class="today-day"><span>只读示例 / 第${d.week}周</span><strong>${String(d.day).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">示例计划</span><span class="chip">${esc(d.weekday)} · ${esc(d.place)}</span><span class="chip">${esc(d.duration)}</span></div><h3>${esc(d.type)}</h3><div class="today-grid"><div class="today-block"><div class="label">热身与力量</div><div class="today-value">${esc(d.strength)}</div></div><div class="today-block"><div class="label">有氧 / 步行</div><div class="today-value">${esc(d.cardio)}</div></div></div><div class="progress-text">示例只用于了解结构，不会写入训练记录。旧示例记录：${p.done}/28。</div><div class="day-controls"><button class="btn" onclick="moveDay(-1)">← 前一天</button><button class="btn" onclick="moveDay(1)">后一天 →</button></div></div>`}
 function renderToday(){if(planContext.mode==='generated')renderGeneratedToday();else if(planContext.mode==='demo')renderDemoToday();else $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要复核'}</span><h3>暂未生成可执行计划</h3><p>${esc(planContext.message||'请修改问卷或等待人工复核；当前不会开放训练入口。')}</p></div>`}
@@ -58,18 +69,21 @@ function storedGeneratedContext(){
   if(!trustedLoadState||!trustedValidatePlan||!trustedCatalog)return null;let stored;
   try{stored=trustedLoadState()}catch(_error){return null}
   const plan=stored&&stored.plan,review=plan&&plan.review;
-  if(!plan||plan.status!=='active'||plan.intakeRevision!==stored.intakeRevision||review?.status!=='approved'||review?.planId!==plan.id||review?.intakeRevision!==stored.intakeRevision||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
+  if(!plan||plan.status!=='active'||plan.intakeRevision!==stored.intakeRevision||!Number.isSafeInteger(stored.capabilityRevision)||stored.capabilityRevision<1||plan.capabilityRevision!==stored.capabilityRevision||review?.status!=='approved'||review?.planId!==plan.id||review?.intakeRevision!==stored.intakeRevision||review?.capabilityRevision!==stored.capabilityRevision||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
   let candidate;try{if(!nativeStructuredClone)return null;candidate=nativeStructuredClone(plan);delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated'}catch(_error){return null}
   let validation;try{validation=trustedValidatePlan({plan:candidate,intake:stored.intake,risk:stored.risk,capabilityResult:stored.capabilityResult,capabilityRevision:stored.capabilityRevision,catalog:trustedCatalog})}catch(_error){return null}
-  return validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0?{plan,logs:stored.logs||{}}:null;
+  if(!(validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0))return null;
+  let explanation=null;
+  try{const built=trustedBuildPlanExplanation?trustedBuildPlanExplanation({plan,capabilityResult:stored.capabilityResult,capabilityRevision:stored.capabilityRevision}):null;if(built&&built.validationResult==='passed')explanation=built}catch(_error){explanation=null}
+  return{plan,logs:stored.logs||{},explanation};
 }
 function setPlanContext(context){
   const requestedMode=ownData(context,'mode');
   if(requestedMode==='generated'){
-    const trusted=storedGeneratedContext();planContext.mode=trusted?'generated':'invalid';planContext.plan=trusted?.plan||null;planContext.logs=trusted?.logs||{};planContext.message=trusted?'':'计划未通过有效状态、人工复核或安全校验。';
+    const trusted=storedGeneratedContext();planContext.mode=trusted?'generated':'invalid';planContext.plan=trusted?.plan||null;planContext.logs=trusted?.logs||{};planContext.explanation=trusted?.explanation||null;planContext.message=trusted?'':'计划未通过有效状态、人工复核或安全校验。';
   }else{
     planContext.mode=['demo','blocked','review','stale','invalid'].includes(requestedMode)?requestedMode:'invalid';
-    planContext.plan=null;planContext.logs={};
+    planContext.plan=null;planContext.logs={};planContext.explanation=null;
     const message=ownData(context,'message');planContext.message=typeof message==='string'?message:'';
   }
   state.currentWeek=1;

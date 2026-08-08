@@ -32,6 +32,7 @@ test('generated-plan 未问卷仅显示只读示例且不写用户记录',async(
   await expect(page.locator('#todayCard')).toContainText('示例计划');
   await expect(page.getByRole('button',{name:/开始本节训练|一步一步带我练/})).toHaveCount(0);
   await expect(page.locator('#tracker')).toBeHidden();
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
   await expect(page.getByRole('link',{name:/查看示例计划/})).toBeVisible();
   expect(await page.evaluate(()=>localStorage.getItem('move28-pilot-v1'))).toBeNull();
   const bypass=await page.evaluate(()=>Move28.guide.openWorkout({plan:{status:'active'},intake:{},risk:{},sessionId:'evil-session',catalog:[{id:'evil',reviewStatus:'approved',gif:'javascript:alert(1)'}]}));
@@ -51,6 +52,7 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await expect(page.locator('#todayCard')).toContainText('人工一致性复核完成前');
   await expect(page.locator('.today-start')).toHaveCount(0);
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
   const runtimeBypass=await page.evaluate(()=>{
     Move28.domain.validatePlan=()=>({ok:true,errors:[]});
     Move28.data.exerciseCatalog=[{id:'evil',reviewStatus:'approved',gif:'javascript:alert(1)'}];
@@ -63,6 +65,17 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
   await approvePendingPlan(page);
   await expect(page.locator('#todayCard')).toContainText('第1周');
   await expect(page.locator('#todayCard')).toContainText('全身力量');
+  await expect(page.locator('.plan-explanation')).toHaveCount(1);
+  await expect(page.locator('.plan-explanation summary')).toContainText('为什么这样安排');
+  await page.locator('.plan-explanation summary').click();
+  await expect(page.locator('.plan-explanation')).toContainText('安全与能力规则支持标准起步');
+  await expect(page.locator('.plan-explanation')).toContainText('健身房场景');
+  await expect(page.locator('.plan-explanation')).toContainText('不展示原始健康问卷答案');
+  await expect(page.locator('.plan-explanation')).not.toContainText('pregnancyPostpartum');
+  await expect(page.locator('.plan-explanation')).not.toContainText('chestSymptoms');
+  await expect(page.locator('.plan-explanation')).not.toContainText('20_40');
+  await expect(page.locator('.plan-explanation')).not.toContainText('independent_controlled');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   await expect(page.locator('#weekView .day-card')).toHaveCount(stored.plan.weeks[0].sessions.length);
   await expect(page.getByRole('button',{name:'开始本节训练'})).toBeVisible();
   const catalogRender=await page.evaluate(()=>{
@@ -73,6 +86,24 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
   });
   expect(catalogRender.after).toBe(catalogRender.before);
   expect(catalogRender.after).not.toContain('EVIL_RUNTIME_CATALOG');
+  const builderBinding=await page.evaluate(()=>{
+    window.__move28ExplanationXss=false;
+    const before=document.querySelector('.plan-explanation').textContent;
+    Move28.domain.buildPlanExplanation=()=>({version:'plan-explanation.v1',strategy:'<img src=x onerror="window.__move28ExplanationXss=true">',setting:'gym',weeklySessionRange:{min:2,max:2},durationRange:{min:18,max:18},reasonCodes:[],reasonLabels:['</li><img src=x onerror="window.__move28ExplanationXss=true">'],validationResult:'passed'});
+    Move28.ui.setPlanContext({mode:'generated'});
+    return{before,after:document.querySelector('.plan-explanation').textContent,images:document.querySelectorAll('.plan-explanation img').length,executed:window.__move28ExplanationXss};
+  });
+  expect(builderBinding.after).toBe(builderBinding.before);
+  expect(builderBinding.images).toBe(0);
+  expect(builderBinding.executed).toBe(false);
+  await page.evaluate(()=>{
+    const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
+    state.plan.review.capabilityRevision+=1;
+    localStorage.setItem('move28-pilot-v1',JSON.stringify(state));
+    Move28.ui.setPlanContext({mode:'generated'});
+  });
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
 });
 
 test('generated-plan 跟练严格消费session.actions，每屏一个动作并完成记录',async({page})=>{
@@ -114,6 +145,14 @@ test('generated-plan 受控能力档案在跟练页显示可信中文变式指�
   await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],allowSettingSwap:'no'}, {chairRise:'hands_supported',wallPushup:'limited_range'});
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await approvePendingPlan(page);
+  await page.locator('.plan-explanation summary').click();
+  await expect(page.locator('.plan-explanation')).toContainText('安全与能力规则要求保守起步');
+  await expect(page.locator('.plan-explanation')).toContainText('坐站需要手部辅助');
+  await expect(page.locator('.plan-explanation')).toContainText('墙壁推举活动范围有限');
+  await expect(page.locator('.plan-explanation')).not.toContainText('high_seat');
+  await expect(page.locator('.plan-explanation')).not.toContainText('close_wall');
+  await expect(page.locator('.plan-explanation')).not.toContainText('hands_supported');
+  await expect(page.locator('.plan-explanation')).not.toContainText('limited_range');
   await page.getByRole('button',{name:'开始本节训练'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
 
@@ -137,5 +176,6 @@ test('generated-plan 缺少审核动作时原子阻断且不回退成用户训�
   expect(state.plan).toBeNull();
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await expect(page.locator('#todayCard')).toContainText('暂未生成可执行计划');
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
 });

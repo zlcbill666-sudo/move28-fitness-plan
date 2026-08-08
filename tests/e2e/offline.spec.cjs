@@ -32,9 +32,19 @@ test.afterEach(async ({ page }) => {
 test('离线资源清单包含全部本地CSS、JS、GIF和四段音乐', async () => {
   for (const relative of audioFiles) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
-  expect((html.match(/<script\s+src=/g) || []).length).toBe(18);
-  expect((html.match(/<link[^>]+stylesheet/g) || []).length).toBe(2);
-  expect(fs.readdirSync(path.join(projectRoot, 'assets', 'gifs')).filter(name => name.endsWith('.gif'))).toHaveLength(25);
+  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => match[1]);
+  const styles = [...html.matchAll(/<link[^>]+href="([^"]+)"[^>]+stylesheet|<link[^>]+stylesheet[^>]+href="([^"]+)"/g)].map(match => match[1] || match[2]);
+  expect(scripts.length).toBeGreaterThan(0);
+  expect(styles.length).toBeGreaterThan(0);
+  expect(new Set(scripts).size).toBe(scripts.length);
+  expect(new Set(styles).size).toBe(styles.length);
+  for (const relative of [...scripts, ...styles]) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
+  const catalogPath = path.join(projectRoot, 'src', 'data', 'exercise-catalog.js');
+  delete require.cache[require.resolve(catalogPath)];
+  const catalog = require(catalogPath).exerciseCatalog;
+  const referencedGifs = catalog.map(item => path.basename(decodeURIComponent(item.gif))).sort();
+  const packagedGifs = fs.readdirSync(path.join(projectRoot, 'assets', 'gifs')).filter(name => name.endsWith('.gif')).sort();
+  expect(packagedGifs).toEqual(referencedGifs);
 });
 
 test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', async ({ page }) => {
