@@ -71,6 +71,13 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(api.evaluateRisk({ age: 17, redFlags: false }).level, 'normal');
   });
 
+  await t.test('capability engine exports its deterministic browser-independent API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.capabilityEngine);
+    assert.equal(typeof api.evaluateCapabilityProfile, 'function');
+    assert.deepEqual(Object.keys(api), ['evaluateCapabilityProfile']);
+  });
+
   await t.test('local store exports versioned browser-independent APIs', () => {
     clearMove28ModuleCache();
     const api = require(modules.localStore);
@@ -150,5 +157,12 @@ test('risk engine 通过 helper 重复加载时共享 CommonJS 缓存实例', ()
   clearMove28ModuleCache();
   const first = loadScript('riskEngine');
   const second = loadScript('riskEngine');
+  assert.strictEqual(first, second);
+});
+
+test('capability engine 通过 helper 重复加载时共享 CommonJS 缓存实例', () => {
+  clearMove28ModuleCache();
+  const first = loadScript('capabilityEngine');
+  const second = loadScript('capabilityEngine');
   assert.strictEqual(first, second);
 });
