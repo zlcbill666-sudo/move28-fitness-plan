@@ -1,6 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const test = require('node:test');
 const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/load-script.cjs');
@@ -234,7 +235,9 @@ test('band-row元数据、四类提示、legacy字段与原创动画契约精确
   for (let index = 0; index <= gif.length - 3; index++) {
     if (gif[index] === 0x21 && gif[index + 1] === 0xf9 && gif[index + 2] === 0x04) frameCount += 1;
   }
-  assert.ok(frameCount >= 12, `弹力带划船GIF应至少12帧，实际${frameCount}帧`);
+  assert.equal(frameCount, 15);
+  assert.ok(gif.includes(Buffer.from('NETSCAPE2.0')), '弹力带划船GIF必须包含循环播放标记');
+  assert.equal(crypto.createHash('sha256').update(gif).digest('hex'), '29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c');
 });
 
 test('验证器为损坏目录返回可定位的结构化错误', () => {
