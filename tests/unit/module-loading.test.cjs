@@ -126,6 +126,15 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(api.DRAFT_KEY, 'move28-onboarding-draft-v1');
   });
 
+  await t.test('capability assessment exports finite three-screen APIs without a DOM', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.capabilityAssessment);
+    assert.equal(typeof api.createCapabilityAssessment, 'function');
+    assert.equal(typeof api.validateStep, 'function');
+    assert.equal(api.STEPS.length, 3);
+    assert.equal(api.DRAFT_KEY, 'move28-capability-draft-v1');
+  });
+
   await t.test('weekly review exports controller API without a DOM', () => {
     clearMove28ModuleCache();
     const api = require(modules.weeklyReview);

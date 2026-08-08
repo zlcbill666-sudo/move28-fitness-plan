@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
   };
   Object.entries(handlers).forEach(([event,handler])=>page.on(event,handler)); runtime.set(page,{issues,handlers});
   await page.goto('/index.html');
-  await page.evaluate(()=>{ localStorage.removeItem('move28-pilot-v1'); sessionStorage.removeItem('move28-onboarding-draft-v1'); });
+  await page.evaluate(()=>{ localStorage.removeItem('move28-pilot-v1'); sessionStorage.removeItem('move28-onboarding-draft-v1'); sessionStorage.removeItem('move28-capability-draft-v1'); });
   await page.reload();
 });
 
@@ -38,6 +38,14 @@ async function inject(page, overrides={}){
 async function confirm(page){
   await page.locator('input[name="finalConfirmed"]').check();
   await page.getByRole('button',{name:/确认并保存结果/}).click();
+}
+async function answerCapability(page, overrides={}){
+  const answers={chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable',...overrides};
+  await page.evaluate(values=>{ for(const [field,value] of Object.entries(values)) Move28.capabilityController.setField(field,value); Move28.capabilityController.goTo(2); },answers);
+  await page.getByRole('button',{name:/确认并保存能力档案/}).click();
+}
+async function chooseCapability(page, field, value){
+  await page.locator(`label:has(input[name="${field}"][value="${value}"])`).click();
 }
 
 test('入口打开单屏问卷，边界未确认不能前进，且没有身份字段', async ({ page }) => {
@@ -61,20 +69,61 @@ test('安全筛查逐项缺失时不能继续', async ({ page }) => {
   await expect(page.locator('.ob-errors p')).toHaveCount(9);
 });
 
-test('完整成年安全答案确认前不持久化，确认后revision为1', async ({ page }) => {
+test('完整成年安全答案确认后只保存intake并打开能力校准，不提前生成计划', async ({ page }) => {
   await open(page); await inject(page);
   expect(await page.evaluate(()=>Move28.onboardingController.setField('name','secret'))).toBe(false);
   await expect(page.locator('[data-risk-level="normal"]')).toBeVisible();
   expect(await page.evaluate(()=>localStorage.getItem('move28-pilot-v1'))).toBeNull();
   await confirm(page);
-  await expect(page.locator('.ob-saved')).toContainText('已保存到本机');
+  await expect(page.locator('#capabilityAssessmentView')).toHaveAttribute('aria-hidden','false');
+  await expect(page.getByRole('heading',{name:'下肢起身与髋部控制'})).toBeVisible();
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.intakeRevision).toBe(1); expect(state.risk.level).toBe('normal'); expect(state.risk.ruleVersion).toBe('pilot-v2');
+  expect(state.capabilityProfile).toBeNull(); expect(state.capabilityRevision).toBe(0); expect(state.plan).toBeNull();
   expect(state.intake.name).toBeUndefined(); expect(state.intake.phone).toBeUndefined();
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-onboarding-draft-v1'))).toBeNull();
-  await page.getByRole('button',{name:'完成，返回首页'}).click();
-  await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden','true');
-  expect(await page.evaluate(()=>sessionStorage.getItem('move28-onboarding-draft-v1'))).toBeNull();
+});
+
+test('能力校准严格三屏验证，允许逐项跳过，完整答案保存revision但Task5前居家计划进入人工复核', async ({ page }) => {
+  await open(page); await inject(page); await confirm(page);
+  await page.getByRole('button',{name:'继续 →'}).click();
+  await expect(page.locator('.cap-errors')).toContainText('未尝试');
+  await chooseCapability(page,'chairRise','not_attempted');
+  await chooseCapability(page,'wallHinge','not_attempted');
+  await page.getByRole('button',{name:'继续 →'}).click();
+  await expect(page.getByRole('heading',{name:'上肢推力与地面可达性'})).toBeVisible();
+  await chooseCapability(page,'wallPushup','not_attempted');
+  await chooseCapability(page,'floorAccess','not_attempted');
+  await page.getByRole('button',{name:'继续 →'}).click();
+  await chooseCapability(page,'walkTolerance','not_attempted');
+  await page.getByRole('button',{name:/确认并保存能力档案/}).click();
+  await expect(page.locator('.cap-result')).toContainText('人工复核');
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.capabilityRevision).toBe(1); expect(state.capabilityProfile.completed).toBe(true); expect(state.plan).toBeNull();
+  expect(await page.evaluate(()=>sessionStorage.getItem('move28-capability-draft-v1'))).toBeNull();
+});
+
+test('能力警示症状仍保存有效profile，但停止自动生成', async ({ page }) => {
+  await open(page); await inject(page); await confirm(page);
+  await answerCapability(page,{walkTolerance:'warning_symptom'});
+  await expect(page.locator('.cap-result')).toContainText('停止信号');
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.capabilityProfile.walkTolerance).toBe('warning_symptom'); expect(state.capabilityResult.status).toBe('stop'); expect(state.plan).toBeNull();
+});
+
+test('能力草稿刷新恢复当前屏，Escape关闭且仍可从首页优先恢复', async ({ page }) => {
+  await open(page); await inject(page); await confirm(page);
+  await chooseCapability(page,'chairRise','hands_supported');
+  await chooseCapability(page,'wallHinge','controlled');
+  await page.getByRole('button',{name:'继续 →'}).click();
+  await page.reload();
+  await expect(page.locator('#capabilityAssessmentView')).toHaveAttribute('aria-hidden','false');
+  await expect(page.getByRole('heading',{name:'上肢推力与地面可达性'})).toBeVisible();
+  expect((await page.evaluate(()=>Move28.capabilityController.getState().answers)).chairRise).toBe('hands_supported');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#capabilityAssessmentView')).toHaveAttribute('aria-hidden','true');
+  await page.getByRole('button',{name:/生成我的4周计划/}).click();
+  await expect(page.locator('#capabilityAssessmentView')).toHaveAttribute('aria-hidden','false');
 });
 
 test('停止条件阻断；返回修改胸部答案会实时重算为stop', async ({ page }) => {
@@ -171,20 +220,20 @@ test('本机保存失败后保留当前答案并可原地重试', async ({ page 
   expect(await page.evaluate(()=>localStorage.getItem('move28-pilot-v1'))).toBeNull();
   await page.evaluate(()=>{ Storage.prototype.setItem=window.__move28SetItem; delete window.__move28SetItem; });
   await page.getByRole('button',{name:/确认并保存结果/}).click();
-  await expect(page.locator('.ob-saved')).toContainText('已保存到本机');
+  await expect(page.locator('#capabilityAssessmentView')).toHaveAttribute('aria-hidden','false');
 });
 
 test('完成与destroy都会释放路由且不会被Back重新打开', async ({ page }) => {
   await open(page); await inject(page); await confirm(page);
   await expect(page).not.toHaveURL(/#onboarding$/);
-  await page.getByRole('button',{name:'完成，返回首页'}).click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden','true');
   await page.goBack();
   await expect(page).not.toHaveURL(/#onboarding$/);
   await page.goForward();
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden','true');
-  await open(page);
-  await page.evaluate(()=>Move28.onboardingController.destroy());
+  await page.evaluate(()=>localStorage.removeItem('move28-pilot-v1'));
+  await page.evaluate(()=>{ Move28.onboardingController.open(); Move28.onboardingController.destroy(); });
   await expect(page).not.toHaveURL(/#onboarding$/);
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden','true');
 });
@@ -201,4 +250,20 @@ test('390×844单列无横滚且长偏好屏可滚动、底部按钮固定可见
   expect(dimensions.footerBottom).toBeLessThanOrEqual(dimensions.height);
   await page.locator('.ob-content').evaluate(element=>{ element.scrollTop=element.scrollHeight; });
   await expect(page.locator('input[name="musicEnabled"][value="no"]')).toBeInViewport();
+});
+
+test('390×844能力校准保持单列、底部操作可见且无横向溢出', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await open(page); await inject(page); await confirm(page);
+  const dimensions=await page.evaluate(()=>({
+    scrollWidth:document.documentElement.scrollWidth,
+    width:document.documentElement.clientWidth,
+    columns:getComputedStyle(document.querySelector('.cap-options')).gridTemplateColumns.split(' ').length,
+    footerBottom:document.querySelector('.cap-foot').getBoundingClientRect().bottom,
+    viewport:innerHeight
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width);
+  expect(dimensions.columns).toBe(1);
+  expect(dimensions.footerBottom).toBeLessThanOrEqual(dimensions.viewport);
+  await expect(page.locator('.cap-next')).toBeVisible();
 });
