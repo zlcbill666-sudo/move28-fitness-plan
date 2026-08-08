@@ -56,10 +56,12 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/domain/movement-matcher.js',
     'src/domain/plan-validator.js',
     'src/domain/plan-generator.js',
+    'src/domain/weekly-adaptation.js',
     'src/storage/local-store.js',
     'src/ui/onboarding.js',
     'src/ui/dashboard.js',
     'src/ui/workout-guide.js',
+    'src/ui/weekly-review.js',
     'src/app.js'
   ]);
 

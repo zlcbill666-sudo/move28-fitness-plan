@@ -8,6 +8,7 @@ const modules = Object.freeze({
   movementMatcher: path.join(projectRoot, 'src', 'domain', 'movement-matcher.js'),
   planValidator: path.join(projectRoot, 'src', 'domain', 'plan-validator.js'),
   planGenerator: path.join(projectRoot, 'src', 'domain', 'plan-generator.js'),
+  weeklyAdaptation: path.join(projectRoot, 'src', 'domain', 'weekly-adaptation.js'),
   localStore: path.join(projectRoot, 'src', 'storage', 'local-store.js'),
   exerciseCatalog: path.join(projectRoot, 'src', 'data', 'exercise-catalog.js'),
   legacyPlan: path.join(projectRoot, 'src', 'data', 'legacy-demo-plan.js'),
@@ -15,14 +16,18 @@ const modules = Object.freeze({
   dashboard: path.join(projectRoot, 'src', 'ui', 'dashboard.js'),
   workoutGuide: path.join(projectRoot, 'src', 'ui', 'workout-guide.js'),
   onboarding: path.join(projectRoot, 'src', 'ui', 'onboarding.js'),
+  weeklyReview: path.join(projectRoot, 'src', 'ui', 'weekly-review.js'),
   app: path.join(projectRoot, 'src', 'app.js'),
 });
 
 function clearMove28ModuleCache() {
   const dependencySafeOrder = [
     modules.app,
+    modules.weeklyReview,
     modules.workoutGuide,
     modules.onboarding,
+    modules.localStore,
+    modules.weeklyAdaptation,
     modules.planGenerator,
     modules.planValidator,
     modules.movementMatcher,
@@ -31,7 +36,6 @@ function clearMove28ModuleCache() {
     modules.legacyPlan,
     modules.exerciseCatalog,
     modules.riskEngine,
-    modules.localStore,
     modules.namespace,
   ];
   for (const modulePath of dependencySafeOrder) {

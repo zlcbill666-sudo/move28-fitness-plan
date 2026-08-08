@@ -55,6 +55,13 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(api.STRENGTH_PATTERNS, ['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability']);
   });
 
+  await t.test('weekly adaptation exports deterministic single-variable API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.weeklyAdaptation);
+    assert.equal(typeof api.proposeWeeklyChange, 'function');
+    assert.equal(api.REVIEW_VERSION, 1);
+  });
+
   await t.test('risk engine exports deterministic browser-independent APIs', () => {
     clearMove28ModuleCache();
     const api = require(modules.riskEngine);
@@ -71,6 +78,8 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.loadState, 'function');
     assert.equal(typeof api.saveIntake, 'function');
     assert.equal(typeof api.savePlan, 'function');
+    assert.equal(typeof api.recordWeeklyReview, 'function');
+    assert.equal(typeof api.resolveWeeklyReview, 'function');
     assert.equal(typeof api.clearAll, 'function');
     assert.equal(typeof api.exportReviewSummary, 'function');
     assert.equal(api.STORAGE_KEY, 'move28-pilot-v1');
@@ -108,6 +117,12 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.deriveRiskIntake, 'function');
     assert.equal(api.STEPS.length, 10);
     assert.equal(api.DRAFT_KEY, 'move28-onboarding-draft-v1');
+  });
+
+  await t.test('weekly review exports controller API without a DOM', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.weeklyReview);
+    assert.equal(typeof api.createWeeklyReview, 'function');
   });
 
   await t.test('app exports init without initializing the DOM', () => {
