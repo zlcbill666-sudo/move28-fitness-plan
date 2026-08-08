@@ -29,6 +29,13 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
   let state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan.status).toBe('pending_review');
   expect(state.plan.weeks).toHaveLength(4);
+  const dossier = await page.evaluate(() => window.Move28.storage.buildDetailedReviewDossier());
+  expect(dossier.selectedSetting).toBe('gym');
+  expect(dossier.availableEquipment).toContain('resistance_band');
+  expect(dossier.validationResult).toBe('passed');
+  expect(dossier.lineage).toEqual({ validationResult: 'passed', currentPlanId: dossier.planId, acceptedEdges: [] });
+  expect(dossier.weeks.flatMap(week => week.sessions).flatMap(session => session.actions)
+    .every(action => action.reviewStatus === 'approved')).toBe(true);
   await finishSavedScreen(page);
   await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
 
@@ -55,7 +62,7 @@ test('居家缺少弹力带时原子受限，不生成或开放训练计划', as
     equipment: ['stable_chair', 'exercise_mat', 'wall'],
     allowSettingSwap: 'no'
   });
-  await expect(page.locator('.ob-saved')).toContainText('需要人工复核');
+  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan).toBeNull();
   await finishSavedScreen(page);
@@ -107,7 +114,7 @@ test('修改健康答案立即使旧计划失效且刷新后训练入口不恢�
   await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
 });
 
-test('重复确认不会重复增加revision或生成多个计划', async ({ page }) => {
+test('重复确认不会重复增加intake revision或绕过能力校准提前生成计划', async ({ page }) => {
   await openAndFill(page);
   await page.evaluate(() => {
     const button = [...document.querySelectorAll('button')].find(node => /确认并保存结果/.test(node.textContent));
@@ -116,7 +123,8 @@ test('重复确认不会重复增加revision或生成多个计划', async ({ pag
   });
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.intakeRevision).toBe(1);
-  expect(state.plan?.status).toBe('pending_review');
+  expect(state.capabilityRevision).toBe(0);
+  expect(state.plan).toBeNull();
 });
 
 test('390×844跟练GIF、音乐区、停止按钮和固定操作区不重叠', async ({ page }, testInfo) => {

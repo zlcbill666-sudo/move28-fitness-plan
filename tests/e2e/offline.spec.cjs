@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const fs = require('node:fs');
-const { safeIntake, completeOnboarding, approvePendingPlan, resetHttp } = require('./helpers/pilot-flow.cjs');
+const { safeIntake, completeCapability, completeOnboarding, approvePendingPlan, resetHttp } = require('./helpers/pilot-flow.cjs');
 
 const projectRoot = process.env.MOVE28_OFFLINE_ROOT
   ? path.resolve(process.env.MOVE28_OFFLINE_ROOT)
@@ -32,9 +32,9 @@ test.afterEach(async ({ page }) => {
 test('离线资源清单包含全部本地CSS、JS、GIF和四段音乐', async () => {
   for (const relative of audioFiles) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
-  expect((html.match(/<script\s+src=/g) || []).length).toBe(16);
+  expect((html.match(/<script\s+src=/g) || []).length).toBe(18);
   expect((html.match(/<link[^>]+stylesheet/g) || []).length).toBe(2);
-  expect(fs.readdirSync(path.join(projectRoot, 'assets', 'gifs')).filter(name => name.endsWith('.gif'))).toHaveLength(17);
+  expect(fs.readdirSync(path.join(projectRoot, 'assets', 'gifs')).filter(name => name.endsWith('.gif'))).toHaveLength(25);
 });
 
 test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', async ({ page }) => {
@@ -74,8 +74,11 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
   await page.locator('input[name="finalConfirmed"]').check();
   await context.setOffline(true);
   await page.getByRole('button', { name: /确认并保存结果/ }).click();
-  await expect(page.locator('.ob-saved')).toContainText('已保存到本机');
+  await expect(page.locator('.ob-saved')).toContainText('请完成能力校准');
+  await completeCapability(page);
+  await expect(page.locator('.cap-result')).toContainText('已保存到本机');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.capabilityRevision).toBe(1);
   expect(state.plan.status).toBe('pending_review');
 
   await page.evaluate(() => {

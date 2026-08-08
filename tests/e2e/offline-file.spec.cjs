@@ -53,12 +53,14 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/data/legacy-demo-plan.js',
     'src/data/tracker-fields.js',
     'src/domain/risk-engine.js',
+    'src/domain/capability-engine.js',
     'src/domain/movement-matcher.js',
     'src/domain/plan-validator.js',
     'src/domain/plan-generator.js',
     'src/domain/weekly-adaptation.js',
     'src/storage/local-store.js',
     'src/ui/onboarding.js',
+    'src/ui/capability-assessment.js',
     'src/ui/dashboard.js',
     'src/ui/workout-guide.js',
     'src/ui/weekly-review.js',
@@ -67,10 +69,10 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   ]);
 
   const gifs = page.locator('#exerciseGrid img');
-  await expect(gifs).toHaveCount(17);
+  await expect(gifs).toHaveCount(25);
   await expect.poll(async () => gifs.evaluateAll(images =>
     images.filter(image => image.complete && image.naturalWidth > 0).length
-  )).toBe(17);
+  )).toBe(25);
 
   expect(await page.evaluate(() => ({
     namespace: typeof window.Move28,
@@ -96,9 +98,9 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     setPlanContext: 'function',
     renderToday: 'undefined',
     dashboardProxies: Array(6).fill('function'),
-    exerciseCatalogCount: 17,
+    exerciseCatalogCount: 25,
     validateExerciseCatalog: 'function',
-    approvedExerciseCount: 17,
+    approvedExerciseCount: 25,
     legacyTrackerHeaders: 'undefined',
     trackerFieldCount: 25
   });

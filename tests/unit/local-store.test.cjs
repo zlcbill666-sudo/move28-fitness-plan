@@ -81,11 +81,15 @@ test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活�
   assert.deepEqual(dossier.constraintCodes,[]);
   assert.equal(dossier.riskLevel,'normal');
   assert.equal(dossier.validationResult,'passed');
+  assert.equal(dossier.selectedSetting,'gym');
+  assert.ok(dossier.availableEquipment.includes('resistance_band'));
   assert.deepEqual(dossier.availableWeekdays,['mon','thu']);
+  assert.deepEqual(dossier.lineage,{validationResult:'passed',currentPlanId:plan.id,acceptedEdges:[]});
   assert.deepEqual(dossier.weeks.map(week=>week.number),[1,2,3,4]);
-  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.pattern&&action.gif&&action.dose&&Object.prototype.hasOwnProperty.call(action,'variant')))));
+  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.reviewStatus==='approved'&&action.pattern&&action.gif&&action.dose&&Object.prototype.hasOwnProperty.call(action,'variant')))));
   const serialized=JSON.stringify(dossier);
-  for(const forbidden of ['chestSymptoms','age','equipmentBySetting','exclusions','chairRise','wallPushup','wallHinge','floorAccess','walkTolerance','RAW HEALTH'])assert.equal(serialized.includes(forbidden),false);
+  for(const forbiddenKey of ['chestSymptoms','age','equipmentBySetting','exclusions','chairRise','wallPushup','wallHinge','floorAccess','walkTolerance'])assert.equal(serialized.includes(`"${forbiddenKey}":`),false,forbiddenKey);
+  assert.equal(serialized.includes('RAW HEALTH'),false);
   const approved=store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
   assert.equal(approved.plan.status,'active');
   assert.deepEqual(approved.plan.review,{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1});

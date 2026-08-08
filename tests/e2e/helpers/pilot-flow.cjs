@@ -48,6 +48,14 @@ const safeIntake = Object.freeze({
   musicEnabled: 'no'
 });
 
+const safeCapability = Object.freeze({
+  chairRise: 'independent_controlled',
+  wallHinge: 'controlled',
+  wallPushup: 'controlled',
+  floorAccess: 'comfortable',
+  walkTolerance: 'comfortable'
+});
+
 async function resetHttp(page) {
   await page.goto('/index.html');
   await page.evaluate(() => {
@@ -57,7 +65,16 @@ async function resetHttp(page) {
   await page.reload();
 }
 
-async function completeOnboarding(page, overrides = {}) {
+async function completeCapability(page, overrides = {}) {
+  await page.locator('#capabilityAssessmentView[aria-hidden="false"]').waitFor();
+  await page.evaluate(data => {
+    for (const [key, value] of Object.entries(data)) window.Move28.capabilityController.setField(key, value);
+    window.Move28.capabilityController.goTo(2);
+  }, { ...safeCapability, ...overrides });
+  await page.getByRole('button', { name: /确认并保存能力档案/ }).click();
+}
+
+async function completeOnboarding(page, overrides = {}, capabilityOverrides = {}) {
   await page.getByRole('button', { name: /生成我的4周计划|重新填写问卷|重新完成安全筛查/ }).first().click();
   await page.evaluate(data => {
     for (const [key, value] of Object.entries(data)) {
@@ -67,6 +84,8 @@ async function completeOnboarding(page, overrides = {}) {
   }, { ...safeIntake, ...overrides });
   await page.locator('input[name="finalConfirmed"]').check();
   await page.getByRole('button', { name: /确认并保存结果/ }).click();
+  const needsCapability = await page.evaluate(() => ['normal','conservative'].includes(window.Move28.storage.loadState()?.risk?.level));
+  if (needsCapability) await completeCapability(page, capabilityOverrides);
 }
 
 async function approvePendingPlan(page) {
@@ -82,4 +101,4 @@ async function approvePendingPlan(page) {
   await page.reload();
 }
 
-module.exports = { gymEquipment, safeIntake, resetHttp, completeOnboarding, approvePendingPlan };
+module.exports = { gymEquipment, safeIntake, safeCapability, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };

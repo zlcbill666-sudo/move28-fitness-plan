@@ -467,6 +467,30 @@
     return lineage;
   }
 
+  function buildWeeklyLineageSummary(reviews, currentPlanId, capabilityRevision) {
+    const accepted = reviews.filter(record => record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted');
+    const lineage = weeklyPlanLineage(reviews, currentPlanId, capabilityRevision);
+    if (accepted.some(record => !lineage.has(record.planId) || !lineage.has(record.resultPlanId))) return null;
+    const byResultPlanId = new Map(accepted.map(record => [record.resultPlanId, record]));
+    const edges = [];
+    let cursor = currentPlanId;
+    while (byResultPlanId.has(cursor)) {
+      const record = byResultPlanId.get(cursor);
+      edges.unshift(Object.freeze({
+        sourcePlanId: record.planId,
+        resultPlanId: record.resultPlanId,
+        weekNumber: record.weekNumber,
+        capabilityRevision: record.capabilityRevision
+      }));
+      cursor = record.planId;
+    }
+    return Object.freeze({
+      validationResult: 'passed',
+      currentPlanId,
+      acceptedEdges: Object.freeze(edges)
+    });
+  }
+
   function migrateState(raw, participantId) {
     const defaults = createDefaultState(participantId);
     if (raw === null || typeof raw !== 'object') return defaults;
@@ -811,10 +835,18 @@
       const availableWeekdays = state.intake && Array.isArray(state.intake.weekdays)
         ? state.intake.weekdays.filter(day => ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day))
         : [];
+      const selectedSetting = state.intake && ['home', 'gym'].includes(state.intake.setting) ? state.intake.setting : null;
+      const trustedEquipmentIds = new Set(trustedExerciseCatalog.flatMap(exercise => exercise.equipmentOptions.flat()));
+      const availableEquipment = state.intake && Array.isArray(state.intake.equipment)
+        ? state.intake.equipment.filter(item => trustedEquipmentIds.has(item))
+        : [];
       if (!planId || !trustedRisk || !risksEqual(state.risk, trustedRisk)
+        || !selectedSetting
         || !['pending_review', 'active'].includes(plan.status)
         || !hasCurrentCapabilityBinding(plan, state, { requireReview: plan.status === 'active' })
         || !passesTrustedPlanGate(plan, state)) throw createStorageError();
+      const lineageSummary = buildWeeklyLineageSummary(state.weeklyReviews, planId, state.capabilityRevision);
+      if (!lineageSummary) throw createStorageError();
       const catalogById = new Map(trustedExerciseCatalog.map(exercise => [exercise.id, exercise]));
       const weeks = plan.weeks.map(week => Object.freeze({
         number: week.number,
@@ -829,6 +861,7 @@
             return Object.freeze({
               id: exercise.id,
               name: exercise.name,
+              reviewStatus: exercise.reviewStatus,
               pattern: action.pattern,
               phase: action.phase,
               variant: Object.prototype.hasOwnProperty.call(action, 'variant') ? action.variant : null,
@@ -849,12 +882,15 @@
         capabilityStatus: state.capabilityResult.status,
         capabilityRevision: state.capabilityRevision,
         constraintCodes: Object.freeze([...state.capabilityResult.reasonCodes]),
+        selectedSetting,
+        availableEquipment: Object.freeze([...availableEquipment]),
         availableWeekdays: Object.freeze([...availableWeekdays]),
         ruleVersion: trustedRisk.ruleVersion,
         riskLevel: trustedRisk.level,
         riskCodes: Object.freeze(trustedRisk.reasons.map(reason => reason.code)),
         planVersion: TRUSTED_PLAN_VERSIONS.has(plan.planVersion) ? plan.planVersion : null,
         validationResult: 'passed',
+        lineage: lineageSummary,
         weeks: Object.freeze(weeks)
       });
     }

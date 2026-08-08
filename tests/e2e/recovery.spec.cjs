@@ -1,7 +1,7 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
-const { resetHttp, safeIntake, completeOnboarding, approvePendingPlan } = require('./helpers/pilot-flow.cjs');
+const { resetHttp, safeIntake, completeCapability, completeOnboarding, approvePendingPlan } = require('./helpers/pilot-flow.cjs');
 
 async function openFilledConfirmation(page) {
   await page.getByRole('button', { name: /生成我的4周计划/ }).click();
@@ -79,9 +79,12 @@ test('sessionStorage不可用不改变安全结论，最终档案仍可持久保
   await page.goto('/index.html');
   await openFilledConfirmation(page);
   await confirm(page);
-  await expect(page.locator('.ob-saved')).toContainText('已保存到本机');
+  await expect(page.locator('.ob-saved')).toContainText('请完成能力校准');
+  await completeCapability(page);
+  await expect(page.locator('.cap-result')).toContainText('已保存到本机');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.risk.level).toBe('normal');
+  expect(state.capabilityRevision).toBe(1);
   expect(state.plan.status).toBe('pending_review');
   expect(issues).toEqual([]);
 });
