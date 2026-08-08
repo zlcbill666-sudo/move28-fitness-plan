@@ -57,9 +57,23 @@ test('难度上限只允许同级或更简单动作', () => {
   assert.equal(result.exercise.difficulty, 1);
 });
 
+test('能力排除可在臀桥与墙触髋铰链之间安全回退', () => {
+  const api = loadMatcher();
+  const noFloor = match(api, 'posterior_chain', 'home', ['exercise_mat','wall'], { exclusions:['floor'] });
+  assert.equal(noFloor.ok, true);
+  assert.equal(noFloor.exerciseId, 'wall-hip-hinge');
+  const noHinge = match(api, 'posterior_chain', 'home', ['exercise_mat','wall'], { exclusions:['hinge'] });
+  assert.equal(noHinge.ok, true);
+  assert.equal(noHinge.exerciseId, 'glute-bridge');
+  const neither = match(api, 'posterior_chain', 'home', ['stable_chair'], { exclusions:[] });
+  assert.equal(neither.ok, false);
+  assert.equal(neither.error.code, 'INSUFFICIENT_EQUIPMENT');
+  assert.deepEqual(neither.error.requiredOptions, [['exercise_mat'],['wall']]);
+});
+
 test('禁忌标签、动作ID和动作模式均能排除候选', () => {
   const api = loadMatcher();
-  const floor = match(api, 'posterior_chain', 'home', ['exercise_mat'], { exclusions:['floor'] });
+  const floor = match(api, 'posterior_chain', 'home', ['exercise_mat','wall'], { exclusions:['floor','hinge'] });
   assert.equal(floor.ok, false);
   assert.equal(floor.error.code, 'ALL_MATCHES_EXCLUDED');
   const byId = match(api, 'horizontal_push', 'home', ['wall'], { exclusions:['wall-push-up'] });
