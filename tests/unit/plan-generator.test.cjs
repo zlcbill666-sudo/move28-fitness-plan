@@ -121,23 +121,17 @@ test('器械与动作回避生效，缺少关键动作时整份计划原子失�
   assert.ok(floor.weeks.flatMap(week=>week.sessions).flatMap(session=>session.actions).every(action=>!['glute-bridge','dead-bug'].includes(action.exerciseId)));
 });
 
-test('居家水平拉仍缺approved动作，不能伪造完整计划或回退draft', () => {
+test('居家完整器械使用approved band-row生成完整计划', () => {
   const api=loadGenerator();
   const intake={setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall','flat_walking_route'],daysPerWeek:'2',weekdays:['mon','thu'],sessionMinutes:'30'};
   const result=generate(api,intake);
-  assert.equal(result.status,'manual_review');
-  assert.equal(result.plan,null);
-  const horizontalPullError=result.errors.find(error=>error.code==='REQUIRED_MOVEMENT_UNAVAILABLE'&&error.pattern==='horizontal_pull');
-  assert.ok(horizontalPullError);
-  assert.equal(horizontalPullError.cause.code,'NO_APPROVED_MATCH');
-  assert.equal(horizontalPullError.cause.setting,'home');
-  const draft={...api.exerciseCatalog.find(item=>item.id==='seated-row'),id:'band-row',settings:['home'],equipment:['resistance_band'],equipmentOptions:[['resistance_band']],reviewStatus:'draft'};
-  const withDraft=generate(api,intake,'normal',{catalog:[...api.exerciseCatalog,draft]});
-  assert.equal(withDraft.status,'manual_review');
-  assert.equal(withDraft.plan,null);
-  const draftGap=withDraft.errors.find(error=>error.code==='REQUIRED_MOVEMENT_UNAVAILABLE'&&error.pattern==='horizontal_pull');
-  assert.ok(draftGap);
-  assert.equal(draftGap.cause.code,'NO_APPROVED_MATCH');
+  assert.equal(result.status,'generated',JSON.stringify(result.errors));
+  assert.equal(result.weeks.length,4);
+  const actions=result.weeks.flatMap(week=>week.sessions).flatMap(session=>session.actions);
+  const rows=actions.filter(action=>action.pattern==='horizontal_pull');
+  assert.ok(rows.length>0);
+  assert.ok(rows.every(action=>action.exerciseId==='band-row'));
+  assert.equal(api.exerciseCatalog.find(item=>item.id==='band-row').reviewStatus,'approved');
 });
 
 test('自定义catalog被真实消费，空目录和伪造安全字段都被原子拒绝', () => {

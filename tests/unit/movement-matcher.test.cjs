@@ -32,6 +32,7 @@ test('六类动作意图按场景和器械确定性匹配审核动作', () => {
     ['horizontal_push','gym',equipment.gym,'chest-press-machine'],
     ['horizontal_push','home',equipment.home,'wall-push-up'],
     ['horizontal_pull','gym',equipment.gym,'seated-row'],
+    ['horizontal_pull','home',equipment.home,'band-row'],
     ['core_stability','gym',equipment.gym,'pallof-press'],
     ['core_stability','home',equipment.home,'dead-bug'],
     ['low_impact_cardio','gym',equipment.gym,'elliptical-trainer'],
@@ -79,26 +80,22 @@ test('器械不足返回结构化错误和可满足的器械方案', () => {
   assert.deepEqual(result.error.requiredOptions, [['chest_press_machine'], ['wall']]);
 });
 
-test('默认目录没有可选择的band-row，完整居家器械仍返回水平拉结构化缺口', () => {
+test('有弹力带的居家水平拉匹配approved band-row，无弹力带返回器械不足', () => {
   const api = loadMatcher();
-  assert.equal(api.exerciseCatalog.find(item => item.id === 'band-row'), undefined);
+  const bandRow = api.exerciseCatalog.find(item => item.id === 'band-row');
+  assert.ok(bandRow);
+  assert.equal(bandRow.reviewStatus, 'approved');
   const defaultResult = match(api, 'horizontal_pull', 'home');
-  assert.equal(defaultResult.ok, false);
-  assert.equal(defaultResult.error.code, 'NO_APPROVED_MATCH');
-  assert.equal(defaultResult.error.pattern, 'horizontal_pull');
-  assert.equal(defaultResult.error.setting, 'home');
+  assert.equal(defaultResult.ok, true);
+  assert.equal(defaultResult.exerciseId, 'band-row');
+  assert.deepEqual(defaultResult.matchedEquipment, ['resistance_band']);
 
-  const draftHomeRow = {
-    ...api.exerciseCatalog.find(item => item.id === 'seated-row'),
-    id:'band-row', name:'待审弹力带划船', settings:['home'], equipment:['resistance_band'],
-    equipmentOptions:[['resistance_band']], reviewStatus:'draft'
-  };
-  const catalog = [...api.exerciseCatalog, draftHomeRow];
-  const result = api.matchExercise({ pattern:'horizontal_pull', setting:'home', equipment:['resistance_band'], exclusions:[], difficulty:3, catalog });
-  assert.equal(result.ok, false);
-  assert.equal(result.error.code, 'NO_APPROVED_MATCH');
-  assert.equal(result.error.pattern, 'horizontal_pull');
-  assert.equal(result.error.setting, 'home');
+  const noBand = match(api, 'horizontal_pull', 'home', ['stable_chair','wall']);
+  assert.equal(noBand.ok, false);
+  assert.equal(noBand.error.code, 'INSUFFICIENT_EQUIPMENT');
+  assert.equal(noBand.error.pattern, 'horizontal_pull');
+  assert.equal(noBand.error.setting, 'home');
+  assert.deepEqual(noBand.error.requiredOptions, [['resistance_band']]);
 });
 
 test('匹配结果不会冻结或改写调用方提供的自定义目录', () => {
@@ -233,7 +230,7 @@ test('场景切换保持session intent、动作意图和剂量，只替换动作
   assert.equal(result.replacements.length, session.actions.length);
 });
 
-test('无法完整替换时原子失败，不返回部分session', () => {
+test('有弹力带时包含水平拉的session可完整切换到home', () => {
   const api = loadMatcher();
   const session = {
     intent:'full_body_strength', setting:'gym', equipmentBySetting:{home:equipment.home},
@@ -243,11 +240,10 @@ test('无法完整替换时原子失败，不返回部分session', () => {
     ]
   };
   const result = api.swapSessionSetting(session, 'home', api.exerciseCatalog);
-  assert.equal(result.ok, false);
-  assert.equal(result.error.code, 'SESSION_SWAP_UNAVAILABLE');
-  assert.equal(result.error.actionIndex, 1);
-  assert.equal(result.error.cause.code, 'NO_APPROVED_MATCH');
-  assert.equal(Object.hasOwn(result, 'session'), false);
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.session.setting, 'home');
+  assert.deepEqual(result.session.actions.map(action => action.exerciseId), ['wall-push-up','band-row']);
+  assert.deepEqual(result.session.actions.map(action => action.pattern), ['horizontal_push','horizontal_pull']);
 });
 
 test('经典浏览器脚本按目录后匹配器顺序加载且不依赖DOM或storage', () => {

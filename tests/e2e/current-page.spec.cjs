@@ -122,13 +122,17 @@ test('四周计划和安全区保持完整行为基线', async ({ page }) => {
   ]);
 });
 
-test('动作库中的17个GIF资料均存在并成功加载', async ({ page }) => {
+test('动作库全部GIF资料均存在并成功加载，包含已审核弹力带划船', async ({ page }) => {
   await openCurrentPage(page);
   const gifs = page.locator('#exerciseGrid img');
-  await expect(gifs).toHaveCount(17);
+  const catalogSize = await page.evaluate(() => Move28.data.exerciseCatalog.length);
+  await expect(gifs).toHaveCount(catalogSize);
   await expect.poll(async () => gifs.evaluateAll(images =>
     images.filter(image => image.complete && image.naturalWidth > 0).length
-  )).toBe(17);
+  )).toBe(catalogSize);
+  const bandRow = page.locator('#exerciseGrid img[alt="弹力带划船动作GIF"]');
+  await expect(bandRow).toHaveCount(1);
+  await expect(bandRow).toHaveAttribute('src', 'assets/gifs/19_弹力带划船.gif');
 });
 
 test('未问卷的28天示例保持只读，不开放旧跟练或写入记录', async ({ page }) => {

@@ -7,13 +7,13 @@ const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/
 
 const EXPECTED_NAMES = [
   '坐姿抬腿', '脚踝绕环', '坐姿腿举', '坐姿腿弯举', '臀桥', '推胸机', '坐姿划船',
-  '抗旋转推压', '高位坐姿起立', '坐姿腿屈伸', '髋外展机', '墙壁俯卧撑', '死虫式',
+  '弹力带划船', '抗旋转推压', '高位坐姿起立', '坐姿腿屈伸', '髋外展机', '墙壁俯卧撑', '死虫式',
   '椭圆机／交叉训练机', '平地慢走', '大腿后侧拉伸', '小腿拉伸'
 ];
 const EXPECTED_GIFS = [
   'assets/gifs/02_坐姿抬腿.gif', 'assets/gifs/03_脚踝绕环.gif', 'assets/gifs/04_坐姿腿举.gif',
   'assets/gifs/05_坐姿腿弯举.gif', 'assets/gifs/06_臀桥.gif', 'assets/gifs/07_推胸机.gif',
-  'assets/gifs/08_坐姿划船.gif', 'assets/gifs/09_抗旋转推压.gif', 'assets/gifs/10_高位坐姿起立.gif',
+  'assets/gifs/08_坐姿划船.gif', 'assets/gifs/19_弹力带划船.gif', 'assets/gifs/09_抗旋转推压.gif', 'assets/gifs/10_高位坐姿起立.gif',
   'assets/gifs/11_坐姿腿屈伸.gif', 'assets/gifs/12_髋外展机.gif', 'assets/gifs/13_墙壁俯卧撑.gif',
   'assets/gifs/14_死虫式.gif', 'assets/gifs/15_椭圆机.gif', 'assets/gifs/16_平地慢走.gif',
   'assets/gifs/17_大腿后侧拉伸.gif', 'assets/gifs/18_小腿拉伸.gif'
@@ -44,9 +44,8 @@ function loadCatalogAndPlan() {
   return { ...catalogApi, ...planApi };
 }
 
-test('17项动作目录保持现有顺序、名称、GIF与已审核基线', () => {
+test('动作目录保持现有顺序、名称、GIF与已审核基线', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
-  assert.equal(exerciseCatalog.length, 17);
   assert.deepEqual(exerciseCatalog.map(exercise => exercise.name), EXPECTED_NAMES);
   assert.deepEqual(exerciseCatalog.map(exercise => exercise.gif), EXPECTED_GIFS);
   assert.ok(exerciseCatalog.every(exercise => exercise.reviewStatus === 'approved'));
@@ -115,7 +114,8 @@ test('关系图精确锁定，不允许目录隐式新增关系', () => {
     { id: 'seated-leg-curl', regressionIds: [], progressionIds: [] },
     { id: 'glute-bridge', regressionIds: [], progressionIds: [] },
     { id: 'chest-press-machine', regressionIds: ['wall-push-up'], progressionIds: [] },
-    { id: 'seated-row', regressionIds: [], progressionIds: [] },
+    { id: 'seated-row', regressionIds: ['band-row'], progressionIds: [] },
+    { id: 'band-row', regressionIds: [], progressionIds: ['seated-row'] },
     { id: 'pallof-press', regressionIds: [], progressionIds: [] },
     { id: 'high-seat-sit-to-stand', regressionIds: [], progressionIds: ['seated-leg-press'] },
     { id: 'seated-leg-extension', regressionIds: [], progressionIds: [] },
@@ -188,13 +188,53 @@ test('legacyDemoPlan.exercises直接引用目录对象，不复制动作内容',
   exerciseCatalog.forEach((exercise, index) => assert.strictEqual(legacyDemoPlan.exercises[index], exercise));
 });
 
-test('当前MVP明确保留home horizontal_pull与hinge缺口', () => {
+test('band-row关闭home horizontal_pull缺口，同时保留Task6的hinge缺口', () => {
   const { getApprovedExercises } = loadCatalogAndPlan();
   const homePatterns = new Set(getApprovedExercises()
     .filter(exercise => exercise.settings.includes('home'))
     .map(exercise => exercise.pattern));
-  assert.equal(homePatterns.has('horizontal_pull'), false);
+  assert.equal(homePatterns.has('horizontal_pull'), true);
   assert.equal(homePatterns.has('hinge'), false);
+});
+
+test('band-row元数据、四类提示、legacy字段与原创动画契约精确锁定', () => {
+  const { exerciseCatalog } = loadCatalogAndPlan();
+  const bandRow = exerciseCatalog.find(exercise => exercise.id === 'band-row');
+  assert.ok(bandRow);
+  assert.equal(bandRow.name, '弹力带划船');
+  assert.equal(bandRow.pattern, 'horizontal_pull');
+  assert.deepEqual(bandRow.settings, ['home', 'gym']);
+  assert.deepEqual(bandRow.equipment, ['resistance_band']);
+  assert.deepEqual(bandRow.equipmentOptions, [['resistance_band']]);
+  assert.equal(bandRow.difficulty, 1);
+  assert.deepEqual(bandRow.dose, { sets:[2,3], reps:[8,12], rpe:[5,6], restSec:[60,90] });
+  assert.deepEqual(bandRow.contraindications, []);
+  assert.deepEqual(bandRow.regressionIds, []);
+  assert.deepEqual(bandRow.progressionIds, ['seated-row']);
+  assert.equal(bandRow.reviewStatus, 'approved');
+  assert.deepEqual(bandRow.cues, {
+    setup:'将弹力带牢固固定在胸口高度，面对固定点稳定站立，双脚与髋同宽，躯干中立，双手握住弹力带并伸臂。',
+    movement:'肩膀保持远离耳朵，肘沿身体两侧向后拉至手靠近肋骨；短暂停顿，再受控伸臂回到起点，全程不后仰借力。',
+    breathing:'后拉时呼气，受控回位时吸气。',
+    pain:'先确认固定点牢固并使用轻阻力；肩、肘或腰出现锐痛时立即停止。'
+  });
+  assert.equal(bandRow.cues.setup, bandRow.start);
+  assert.equal(bandRow.cues.movement, bandRow.steps);
+  assert.equal(bandRow.cues.breathing, bandRow.breath);
+  assert.equal(bandRow.cues.pain, bandRow.safety);
+  assert.equal(typeof bandRow.errors, 'string');
+  assert.ok(bandRow.errors.includes('后仰借力'));
+  assert.deepEqual(bandRow.groups, ['力量A', '力量B']);
+
+  const gif = fs.readFileSync(path.join(projectRoot, 'assets', 'gifs', '19_弹力带划船.gif'));
+  assert.match(gif.subarray(0, 6).toString('ascii'), /^GIF8[79]a$/);
+  assert.equal(gif.readUInt16LE(6), 180);
+  assert.equal(gif.readUInt16LE(8), 180);
+  let frameCount = 0;
+  for (let index = 0; index <= gif.length - 3; index++) {
+    if (gif[index] === 0x21 && gif[index + 1] === 0xf9 && gif[index + 2] === 0x04) frameCount += 1;
+  }
+  assert.ok(frameCount >= 12, `弹力带划船GIF应至少12帧，实际${frameCount}帧`);
 });
 
 test('验证器为损坏目录返回可定位的结构化错误', () => {

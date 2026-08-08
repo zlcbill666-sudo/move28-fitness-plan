@@ -85,7 +85,7 @@ test('完整成年安全答案确认后只保存intake并打开能力校准，�
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-onboarding-draft-v1'))).toBeNull();
 });
 
-test('能力校准严格三屏验证，允许逐项跳过，完整答案保存revision但Task5前居家计划进入人工复核', async ({ page }) => {
+test('能力校准严格三屏验证，允许逐项跳过，完整档案保存revision且器械组合不足时进入人工复核', async ({ page }) => {
   await open(page); await inject(page); await confirm(page);
   await page.getByRole('button',{name:'继续 →'}).click();
   await expect(page.locator('.cap-errors')).toContainText('未尝试');
