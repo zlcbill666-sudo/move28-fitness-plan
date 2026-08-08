@@ -132,7 +132,7 @@
       const selected = answers[field];
       return `<fieldset class="cap-check"><legend>${esc(COPY[field][0])}</legend><p>${esc(COPY[field][1])}</p><div class="cap-options">${OPTIONS[field].map(([value, label]) => `<label><input type="radio" name="${field}" value="${value}"${selected === value ? ' checked' : ''}><span>${esc(label)}</span></label>`).join('')}</div></fieldset>`;
     }
-    function render() {
+    function render(focusTitle, focusField) {
       const current = STEPS[step];
       const warning = answers.walkTolerance === 'warning_symptom' && step === 2
         ? '<div class="cap-warning" role="status"><b>已记录停止信号</b><span>请不要继续测试。该有效档案仍会保存，但不会自动生成计划。</span></div>' : '';
@@ -140,8 +140,12 @@
       element.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
       element.classList.toggle('open', isOpen);
       if (isOpen) {
-        const title = element.querySelector('.cap-head h1');
-        if (title && typeof title.focus === 'function') title.focus({ preventScroll: true });
+        const selected = focusField && element.querySelector(`[name="${focusField}"]:checked`);
+        if (selected && typeof selected.focus === 'function') selected.focus({ preventScroll: true });
+        else if (focusTitle !== false) {
+          const title = element.querySelector('.cap-head h1');
+          if (title && typeof title.focus === 'function') title.focus({ preventScroll: true });
+        }
       }
     }
     function showErrors(errors) {
@@ -177,7 +181,7 @@
       else delete answers[field];
       resultMessage = '';
       saveDraft();
-      if (isOpen) render();
+      if (isOpen) render(false, field);
       return getState();
     }
     function next() {

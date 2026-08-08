@@ -89,6 +89,7 @@ test('能力校准严格三屏验证，允许逐项跳过，完整答案保存re
   await page.getByRole('button',{name:'继续 →'}).click();
   await expect(page.locator('.cap-errors')).toContainText('未尝试');
   await chooseCapability(page,'chairRise','not_attempted');
+  await expect(page.locator('input[name="chairRise"][value="not_attempted"]')).toBeFocused();
   await chooseCapability(page,'wallHinge','not_attempted');
   await page.getByRole('button',{name:'继续 →'}).click();
   await expect(page.getByRole('heading',{name:'上肢推力与地面可达性'})).toBeVisible();
