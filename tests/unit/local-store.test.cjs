@@ -166,6 +166,19 @@ test('保存能力档案使旧计划失效，且写后回读失败不伪称成�
   assert.throws(()=>failing.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE)),error=>error.name==='StorageError');
 });
 
+test('能力revision达到最大安全整数时拒绝递增且保持存储原字节',()=>{
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage});
+  store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));
+  const seeded=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));
+  seeded.capabilityRevision=Number.MAX_SAFE_INTEGER;
+  storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(seeded));
+  const before=storage.raw(moduleApi.STORAGE_KEY);
+  const writesBefore=storage.calls.filter(([method])=>method==='setItem').length;
+  assert.throws(()=>store.saveCapabilityProfile({...VALID_CAPABILITY_PROFILE,chairRise:'hands_supported'}),error=>error.name==='StorageError');
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  assert.equal(storage.calls.filter(([method])=>method==='setItem').length,writesBefore);
+});
+
 test('迁移时重算能力结果、覆盖伪造结果，并对非法档案fail closed',()=>{
   const moduleApi=api();const forged={...DEFAULT_STATE,capabilityProfile:structuredClone(VALID_CAPABILITY_PROFILE),capabilityResult:{status:'stop',reasonCodes:['FORGED']},capabilityRevision:2};
   const migrated=moduleApi.migrateState(forged,'pilot-a');assert.equal(migrated.capabilityRevision,2);assert.equal(migrated.capabilityResult.status,'normal');assert.deepEqual(migrated.capabilityResult.reasonCodes,[]);

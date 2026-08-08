@@ -483,7 +483,6 @@
     defaults.risk = recomputedRisk;
 
     const capabilityProfile = ownDataValue(raw, 'capabilityProfile');
-    const capabilityResult = ownDataValue(raw, 'capabilityResult');
     const capabilityRevision = ownDataValue(raw, 'capabilityRevision');
     const capabilityFieldsDeclared = capabilityProfile.present && capabilityRevision.present;
     let capabilityValid = false;
@@ -674,6 +673,7 @@
       const trustedResult = recomputeTrustedCapability(cleanProfile);
       if (!trustedResult) throw invalidPlainData();
       const state = loadStateForWrite();
+      if (state.capabilityRevision >= Number.MAX_SAFE_INTEGER) throw createStorageError();
       state.capabilityProfile = cleanProfile;
       state.capabilityResult = trustedResult;
       state.capabilityRevision += 1;
