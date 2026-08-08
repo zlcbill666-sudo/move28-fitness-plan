@@ -8,12 +8,19 @@
   'use strict';
 
   const safeArrayIsArray = Array.isArray;
+  const safeGetPrototypeOf = Object.getPrototypeOf;
   const safeGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
   const safeOwnKeys = Reflect.ownKeys;
   const safeHasOwn = Function.prototype.call.bind(Object.prototype.hasOwnProperty);
   const safeSetHas = Function.prototype.call.bind(Set.prototype.has);
   const safeArrayIncludes = Function.prototype.call.bind(Array.prototype.includes);
+  const safeArrayPush = Function.prototype.call.bind(Array.prototype.push);
+  const safeArrayPop = Function.prototype.call.bind(Array.prototype.pop);
+  const SafeWeakSet = WeakSet;
+  const safeWeakSetAdd = Function.prototype.call.bind(WeakSet.prototype.add);
+  const safeWeakSetHas = Function.prototype.call.bind(WeakSet.prototype.has);
   const safeStructuredClone = typeof root.structuredClone === 'function' ? root.structuredClone.bind(root) : null;
+  const safeObjectPrototype = Object.prototype;
   const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
   const DRAFT_KEY = 'move28-capability-draft-v1';
@@ -61,16 +68,34 @@
   });
 
   const own = (value, key) => safeHasOwn(value || {}, key);
+  function hasSafeCloneGraph(value) {
+    const stack = [{ value, depth: 0 }], seen = new SafeWeakSet();
+    let nodes = 0;
+    while (stack.length) {
+      const item = safeArrayPop(stack), current = item.value;
+      if (current === null || typeof current === 'string' || typeof current === 'boolean') continue;
+      if (typeof current === 'number') { if (!Number.isFinite(current)) return false; continue; }
+      if (typeof current !== 'object' || item.depth > 16) return false;
+      if (safeWeakSetHas(seen, current)) continue;
+      safeWeakSetAdd(seen, current);
+      if (++nodes > 1000) return false;
+      const array = safeArrayIsArray(current), prototype = safeGetPrototypeOf(current);
+      if (!array && prototype !== safeObjectPrototype && prototype !== null) return false;
+      const keys = safeOwnKeys(current);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        if (typeof key !== 'string' || safeSetHas(DANGEROUS_KEYS, key)) return false;
+        const descriptor = safeGetOwnPropertyDescriptor(current, key);
+        if (!descriptor || !safeHasOwn(descriptor, 'value')) return false;
+        if (!(array && key === 'length')) safeArrayPush(stack, { value: descriptor.value, depth: item.depth + 1 });
+      }
+    }
+    return true;
+  }
   function sanitizeAnswers(value) {
     try {
       if (!value || typeof value !== 'object' || safeArrayIsArray(value) || !safeStructuredClone) return {};
-      const keys = safeOwnKeys(value);
-      for (let index = 0; index < keys.length; index += 1) {
-        const key = keys[index];
-        if (typeof key !== 'string' || safeSetHas(DANGEROUS_KEYS, key)) return {};
-        const descriptor = safeGetOwnPropertyDescriptor(value, key);
-        if (!descriptor || !safeHasOwn(descriptor, 'value')) return {};
-      }
+      if (!hasSafeCloneGraph(value)) return {};
       // Native structuredClone rejects Proxy values. It is called only after every
       // own property is proven to be a data descriptor, so accessors never run.
       const snapshot = safeStructuredClone(value);

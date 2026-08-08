@@ -83,6 +83,20 @@ test('sanitizer rejects ordinary, throwing and revoked Proxy without executing g
   } finally { Object.getOwnPropertyDescriptor = originalDescriptor; }
 });
 
+test('sanitizer rejects nested object and array accessors with zero getter execution', () => {
+  const { sanitizeAnswers } = load();
+  let getterCalls = 0;
+  const nestedObject = {};
+  Object.defineProperty(nestedObject, 'secret', { enumerable: true, get() { getterCalls += 1; return 'secret'; } });
+  const nestedArray = [];
+  Object.defineProperty(nestedArray, '0', { enumerable: true, get() { getterCalls += 1; return 'secret'; } });
+  nestedArray.length = 1;
+  assert.deepEqual(sanitizeAnswers({ ...complete, extra: { nested: nestedObject } }), {});
+  assert.deepEqual(sanitizeAnswers({ ...complete, extra: [[nestedArray]] }), {});
+  assert.deepEqual(sanitizeAnswers({ ...complete, extra: new Proxy({ safe: true }, {}) }), {});
+  assert.equal(getterCalls, 0);
+});
+
 test('each screen validates its own required finite fields, including skip values', () => {
   const { validateStep } = load();
   assert.equal(validateStep('lower', {}).ok, false);
