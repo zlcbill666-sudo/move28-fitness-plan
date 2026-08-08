@@ -84,6 +84,7 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.createLocalStore, 'function');
     assert.equal(typeof api.loadState, 'function');
     assert.equal(typeof api.saveIntake, 'function');
+    assert.equal(typeof api.saveCapabilityProfileWithPlan, 'function');
     assert.equal(typeof api.savePlan, 'function');
     assert.equal(typeof api.recordWeeklyReview, 'function');
     assert.equal(typeof api.resolveWeeklyReview, 'function');

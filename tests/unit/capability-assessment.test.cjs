@@ -60,6 +60,29 @@ test('sanitizer retains only finite answers and drops extra or invalid fields', 
   assert.deepEqual(sanitizeAnswers(Object.create({ chairRise: 'independent_controlled' })), {});
 });
 
+test('sanitizer rejects ordinary, throwing and revoked Proxy without executing getters', () => {
+  const { sanitizeAnswers } = load();
+  let getterCalls = 0;
+  const accessor = { ...complete };
+  Object.defineProperty(accessor, 'secret', { enumerable: true, get() { getterCalls += 1; return 'secret'; } });
+  assert.deepEqual(sanitizeAnswers(accessor), {});
+  assert.equal(getterCalls, 0);
+  assert.deepEqual(sanitizeAnswers(new Proxy({ ...complete }, {})), {});
+  assert.deepEqual(sanitizeAnswers(new Proxy({ ...complete }, { getOwnPropertyDescriptor() { throw new Error('secret'); } })), {});
+  const revocable = Proxy.revocable({ ...complete }, {}); revocable.revoke();
+  assert.doesNotThrow(() => assert.deepEqual(sanitizeAnswers(revocable.proxy), {}));
+  const originalDescriptor = Object.getOwnPropertyDescriptor;
+  Object.getOwnPropertyDescriptor = function(value, key) {
+    const descriptor = originalDescriptor(value, key);
+    if (descriptor && typeof descriptor.get === 'function') return { value: value[key], enumerable: true, configurable: true, writable: true };
+    return descriptor;
+  };
+  try {
+    assert.deepEqual(sanitizeAnswers(accessor), {});
+    assert.equal(getterCalls, 0);
+  } finally { Object.getOwnPropertyDescriptor = originalDescriptor; }
+});
+
 test('each screen validates its own required finite fields, including skip values', () => {
   const { validateStep } = load();
   assert.equal(validateStep('lower', {}).ok, false);

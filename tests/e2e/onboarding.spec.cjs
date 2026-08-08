@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const runtime = new WeakMap();
+const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const safe = {
   boundaryAccepted:true, age:30, pregnancyPostpartum:'no', goal:'habit', activityDays:'3', walkCapacity:'20_40', strengthExperience:'some', trainingBreak:'no',
   daysPerWeek:'3', sessionMinutes:'30', weekdays:['mon','wed','fri'], gymOftenUnavailable:'no', setting:'home', equipment:['stable_chair','resistance_band'], allowSettingSwap:'yes',
@@ -110,6 +111,27 @@ test('能力警示症状仍保存有效profile，但停止自动生成', async (
   await expect(page.locator('.cap-result')).toContainText('停止信号');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityProfile.walkTolerance).toBe('warning_symptom'); expect(state.capabilityResult.status).toBe('stop'); expect(state.plan).toBeNull();
+});
+
+test('健身房能力与计划原子保存，写入失败重试不会提前递增revision', async ({ page }) => {
+  await open(page); await inject(page,{setting:'gym',equipment:gymEquipment}); await confirm(page);
+  await page.evaluate(values=>{
+    for(const [field,value] of Object.entries(values))Move28.capabilityController.setField(field,value);
+    Move28.capabilityController.goTo(2);
+    window.__move28SetItem=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(key,value){if(key==='move28-pilot-v1')throw new Error('blocked');return window.__move28SetItem.call(this,key,value);};
+  },{chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'});
+  await page.getByRole('button',{name:/确认并保存能力档案/}).click();
+  await expect(page.locator('.cap-result')).toContainText('本机保存失败');
+  let state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.capabilityRevision).toBe(0);expect(state.capabilityProfile).toBeNull();expect(state.plan).toBeNull();
+  expect(await page.evaluate(()=>sessionStorage.getItem('move28-capability-draft-v1'))).not.toBeNull();
+  await page.evaluate(()=>{Storage.prototype.setItem=window.__move28SetItem;delete window.__move28SetItem;});
+  await page.getByRole('button',{name:/确认并保存能力档案/}).click();
+  await expect(page.locator('.cap-result')).toContainText('人工一致性复核');
+  state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.capabilityRevision).toBe(1);expect(state.plan.status).toBe('pending_review');expect(state.plan.capabilityRevision).toBe(1);
+  expect(await page.evaluate(()=>sessionStorage.getItem('move28-capability-draft-v1'))).toBeNull();
 });
 
 test('能力草稿刷新恢复当前屏，Escape关闭且仍可从首页优先恢复', async ({ page }) => {

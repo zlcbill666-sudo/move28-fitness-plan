@@ -20,7 +20,18 @@ const api=factory(root,Move28);Move28.init=api.init;if(isCommonJS)module.exports
 let initialized=false;
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
 const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
-const functionToString=Function.prototype.toString,nativeObjectSource=functionToString.call(Object);
+const safeArrayIsArray=Array.isArray;
+const safeGetPrototypeOf=Object.getPrototypeOf;
+const safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor;
+const safeOwnKeys=Reflect.ownKeys;
+const safeSetHas=Function.prototype.call.bind(Set.prototype.has);
+const safeFunctionToString=Function.prototype.call.bind(Function.prototype.toString);
+const safeArrayPush=Function.prototype.call.bind(Array.prototype.push);
+const safeArrayPop=Function.prototype.call.bind(Array.prototype.pop);
+const SafeWeakSet=WeakSet;
+const safeWeakSetAdd=Function.prototype.call.bind(WeakSet.prototype.add);
+const safeWeakSetHas=Function.prototype.call.bind(WeakSet.prototype.has);
+const nativeObjectSource=safeFunctionToString(Object);
 const trustedValidatePlan=typeof Move28.domain.validatePlan==='function'?Move28.domain.validatePlan:null;
 const trustedDeriveRiskIntake=typeof Move28.domain.deriveRiskIntake==='function'?Move28.domain.deriveRiskIntake:null;
 const trustedEvaluateRisk=typeof Move28.domain.evaluateRisk==='function'?Move28.domain.evaluateRisk:null;
@@ -29,21 +40,22 @@ const trustedCatalog=Array.isArray(Move28.data.exerciseCatalog)?Move28.data.exer
 const trustedRecordWorkoutStop=typeof Move28.storage.recordWorkoutStop==='function'?Move28.storage.recordWorkoutStop:null;
 const trustedRecordWeeklyReview=typeof Move28.storage.recordWeeklyReview==='function'?Move28.storage.recordWeeklyReview:null;
 const trustedSaveCapabilityProfile=typeof Move28.storage.saveCapabilityProfile==='function'?Move28.storage.saveCapabilityProfile:null;
+const trustedSaveCapabilityProfileWithPlan=typeof Move28.storage.saveCapabilityProfileWithPlan==='function'?Move28.storage.saveCapabilityProfileWithPlan:null;
 const trustedResolveWeeklyReview=typeof Move28.storage.resolveWeeklyReview==='function'?Move28.storage.resolveWeeklyReview:null;
 const trustedCreatePrivacyTools=Move28.privacy&&typeof Move28.privacy.createPrivacyTools==='function'?Move28.privacy.createPrivacyTools:null;
 const RESCREEN_STEP_BY_REASON=Object.freeze({sudden_severe_pain:6,unable_to_bear_weight:6,joint_pain_persisted_or_worsened:6,chest_pain_or_pressure:7,near_faint_or_faint:7,abnormal_shortness_of_breath:7,neurologic_or_consciousness_change:7});
 function rescreenStepForReason(reasonCode){return RESCREEN_STEP_BY_REASON[reasonCode]??7}
 function plainRecord(value){
   if(!value||typeof value!=='object')return false;
-  const proto=Object.getPrototypeOf(value);if(proto===null)return true;if(Object.getPrototypeOf(proto)!==null)return false;
-  const descriptor=Object.getOwnPropertyDescriptor(proto,'constructor');
-  return Boolean(descriptor&&'value'in descriptor&&typeof descriptor.value==='function'&&functionToString.call(descriptor.value)===nativeObjectSource);
+  const proto=safeGetPrototypeOf(value);if(proto===null)return true;if(safeGetPrototypeOf(proto)!==null)return false;
+  const descriptor=safeGetOwnPropertyDescriptor(proto,'constructor');
+  return Boolean(descriptor&&'value'in descriptor&&typeof descriptor.value==='function'&&safeFunctionToString(descriptor.value)===nativeObjectSource);
 }
 function clonePureData(value){
   if(!nativeStructuredClone)return null;
   try{
-    const stack=[{value,depth:0}],seen=new WeakSet();let nodes=0;
-    while(stack.length){const item=stack.pop(),current=item.value;if(current===null||['string','boolean'].includes(typeof current))continue;if(typeof current==='number'){if(!Number.isFinite(current))return null;continue}if(typeof current!=='object'||seen.has(current)||item.depth>32)return null;seen.add(current);if(++nodes>10000)return null;const array=Array.isArray(current);if(!array&&!plainRecord(current))return null;const keys=Reflect.ownKeys(current);if(keys.some(key=>typeof key!=='string'||DANGEROUS_KEYS.has(key)))return null;if(array){const lengthDescriptor=Object.getOwnPropertyDescriptor(current,'length');if(!lengthDescriptor||!('value'in lengthDescriptor)||!Number.isSafeInteger(lengthDescriptor.value)||lengthDescriptor.value>256)return null;const dataKeys=keys.filter(key=>key!=='length');if(dataKeys.length!==lengthDescriptor.value)return null;for(let index=0;index<lengthDescriptor.value;index+=1)if(dataKeys[index]!==String(index))return null}for(const key of keys){if(key==='length'&&array)continue;const descriptor=Object.getOwnPropertyDescriptor(current,key);if(!descriptor||!('value'in descriptor))return null;stack.push({value:descriptor.value,depth:item.depth+1})}}
+    const stack=[{value,depth:0}],seen=new SafeWeakSet();let nodes=0;
+    while(stack.length){const item=safeArrayPop(stack),current=item.value;if(current===null||typeof current==='string'||typeof current==='boolean')continue;if(typeof current==='number'){if(!Number.isFinite(current))return null;continue}if(typeof current!=='object'||safeWeakSetHas(seen,current)||item.depth>32)return null;safeWeakSetAdd(seen,current);if(++nodes>10000)return null;const array=safeArrayIsArray(current);if(!array&&!plainRecord(current))return null;const keys=safeOwnKeys(current);for(let keyIndex=0;keyIndex<keys.length;keyIndex+=1){const key=keys[keyIndex];if(typeof key!=='string'||safeSetHas(DANGEROUS_KEYS,key))return null}if(array){const lengthDescriptor=safeGetOwnPropertyDescriptor(current,'length');if(!lengthDescriptor||!('value'in lengthDescriptor)||!Number.isSafeInteger(lengthDescriptor.value)||lengthDescriptor.value>256)return null;let dataIndex=0;for(let keyIndex=0;keyIndex<keys.length;keyIndex+=1){const key=keys[keyIndex];if(key==='length')continue;if(key!==String(dataIndex))return null;dataIndex+=1}if(dataIndex!==lengthDescriptor.value)return null}for(let keyIndex=0;keyIndex<keys.length;keyIndex+=1){const key=keys[keyIndex];if(key==='length'&&array)continue;const descriptor=safeGetOwnPropertyDescriptor(current,key);if(!descriptor||!('value'in descriptor))return null;safeArrayPush(stack,{value:descriptor.value,depth:item.depth+1})}}
     return nativeStructuredClone(value);
   }catch(_error){return null}
 }
@@ -118,18 +130,22 @@ function handleOnboardingComplete({intake,risk,canGenerate}){
 function handleCapabilityComplete(profile){
   if(!trustedSaveCapabilityProfile||!trustedEvaluateCapabilityProfile)throw new Error('Capability persistence unavailable');
   const result=trustedEvaluateCapabilityProfile(profile);
-  const saved=trustedSaveCapabilityProfile(profile);
   if(!result||!['normal','conservative'].includes(result.status)){
+    const saved=trustedSaveCapabilityProfile(profile);
     activatePlanView(saved);
     return{message:result&&result.status==='stop'?'能力档案已保存；出现停止信号，请先重新安全筛查或咨询合适的专业人员。':'能力档案已保存；当前需要人工复核，未生成训练计划。'};
   }
-  const generated=Move28.domain.generatePlan({intake:saved.intake,risk:saved.risk,intakeRevision:saved.intakeRevision,catalog:trustedCatalog});
+  if(!trustedSaveCapabilityProfileWithPlan)throw new Error('Atomic capability persistence unavailable');
+  const current=Move28.storage.loadState();
+  if(!current||!Number.isSafeInteger(current.capabilityRevision)||current.capabilityRevision>=Number.MAX_SAFE_INTEGER)throw new Error('Capability revision unavailable');
+  const generated=Move28.domain.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,catalog:trustedCatalog});
   if(!generated||generated.status!=='generated'){
+    const saved=trustedSaveCapabilityProfile(profile);
     Move28.ui.setPlanContext({mode:'review',plan:null,logs:saved.logs||{},message:'动作、器械或安全硬门槛未满足，需要人工复核。'});
     return{message:'能力档案已保存到本机，但计划未通过完整校验，需要人工复核。'};
   }
-  const capabilityBoundPlan=Object.assign({},generated,{capabilityRevision:saved.capabilityRevision});
-  const persisted=Move28.storage.savePlan(capabilityBoundPlan);
+  const capabilityBoundPlan=Object.assign({},generated,{capabilityRevision:current.capabilityRevision+1});
+  const persisted=trustedSaveCapabilityProfileWithPlan(profile,capabilityBoundPlan);
   activatePlanView(persisted);
   return{message:'能力档案与4周计划已保存到本机；人工一致性复核完成前不会开放训练入口。'};
 }

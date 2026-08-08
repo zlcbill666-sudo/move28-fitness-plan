@@ -157,6 +157,20 @@ test('能力档案INVALID_INPUT、getter、Proxy与危险键全部fail closed且
   assert.equal(getterCalls,0);assert.equal(Object.prototype.polluted,undefined);
 });
 
+test('能力档案与计划单次原子写入，校验失败时两者都不改变',()=>{
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  const writesBefore=storage.calls.filter(([method])=>method==='setItem').length;
+  const saved=store.saveCapabilityProfileWithPlan(structuredClone(VALID_CAPABILITY_PROFILE),generateValidPlan(1));
+  assert.equal(storage.calls.filter(([method])=>method==='setItem').length,writesBefore+1);
+  assert.equal(saved.capabilityRevision,1);assert.equal(saved.plan.status,'pending_review');assert.equal(saved.plan.capabilityRevision,1);
+  const before=storage.raw(moduleApi.STORAGE_KEY),writesAfter=storage.calls.filter(([method])=>method==='setItem').length;
+  const nextPlan={...generateValidPlan(1),capabilityRevision:1};
+  assert.throws(()=>store.saveCapabilityProfileWithPlan({...VALID_CAPABILITY_PROFILE,chairRise:'hands_supported'},nextPlan),error=>error.name==='StorageError');
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  assert.equal(storage.calls.filter(([method])=>method==='setItem').length,writesAfter);
+});
+
 test('保存能力档案使旧计划失效，且写后回读失败不伪称成功',()=>{
   const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
   store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);store.savePlan(generateValidPlan(1));

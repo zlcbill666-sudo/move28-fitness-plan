@@ -45,6 +45,24 @@ test('plan-view active计划必须与当前intake revision一致并再次通过�
   assert.doesNotThrow(()=>assert.equal(app.validationPassed(hostileValidation),false));assert.equal(validationReads,0);
   const validationProxy=new Proxy({ok:true,errors:[]},{ownKeys(){throw new Error('SECRET')}});assert.equal(app.validationPassed(validationProxy),false);
 });
+
+test('plan-view加载后篡改遍历intrinsic仍保持零getter执行',()=>{
+  const {app}=setup();
+  let getterCalls=0;
+  const hostile={intake:null};
+  Object.defineProperty(hostile,'secret',{enumerable:true,get(){getterCalls+=1;return'secret'}});
+  const originalDescriptor=Object.getOwnPropertyDescriptor;
+  Object.getOwnPropertyDescriptor=function(value,key){
+    const descriptor=originalDescriptor(value,key);
+    if(descriptor&&typeof descriptor.get==='function')return{value:value[key],enumerable:true,configurable:true,writable:true};
+    return descriptor;
+  };
+  try{
+    assert.equal(app.contextFromState(hostile).mode,'invalid');
+    assert.equal(getterCalls,0);
+  }finally{Object.getOwnPropertyDescriptor=originalDescriptor;}
+});
+
 test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配或提供任选项',()=>{
   const {catalog,guide,plan}=setup();
   const session=plan.weeks[0].sessions[0];

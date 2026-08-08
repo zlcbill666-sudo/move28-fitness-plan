@@ -757,6 +757,33 @@
       return persist(state);
     }
 
+    function saveCapabilityProfileWithPlan(profile, plan) {
+      const cleanProfile = clonePlainData(profile);
+      const cleanPlan = clonePlainData(plan);
+      if (!cleanProfile || typeof cleanProfile !== 'object' || Array.isArray(cleanProfile)
+        || !cleanPlan || typeof cleanPlan !== 'object' || Array.isArray(cleanPlan)) throw invalidPlainData();
+      const trustedResult = recomputeTrustedCapability(cleanProfile);
+      if (!trustedResult || !['normal', 'conservative'].includes(trustedResult.status)) throw createStorageError();
+      const state = loadStateForWrite();
+      if (state.capabilityRevision >= Number.MAX_SAFE_INTEGER) throw createStorageError();
+      const nextRevision = state.capabilityRevision + 1;
+      state.capabilityProfile = cleanProfile;
+      state.capabilityResult = trustedResult;
+      state.capabilityRevision = nextRevision;
+      if (cleanPlan.status !== 'generated' || cleanPlan.intakeRevision !== state.intakeRevision
+        || cleanPlan.capabilityRevision !== nextRevision
+        || !hasCurrentCapabilityBinding(cleanPlan, state, { requireReview: false })
+        || !passesTrustedPlanGate(cleanPlan, state)) throw createStorageError();
+      cleanPlan.status = 'pending_review';
+      cleanPlan.intakeRevision = state.intakeRevision;
+      cleanPlan.capabilityRevision = nextRevision;
+      cleanPlan.review = null;
+      delete cleanPlan.staleReason;
+      delete cleanPlan.staleAt;
+      state.plan = cleanPlan;
+      return persist(state);
+    }
+
     function buildDetailedReviewDossier() {
       const state = loadStateForWrite(), plan = state.plan;
       const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
@@ -1023,7 +1050,7 @@
       return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
   function createLocalParticipantId() {
@@ -1048,6 +1075,7 @@
     loadState: defaultStore.loadState,
     saveIntake: defaultStore.saveIntake,
     saveCapabilityProfile: defaultStore.saveCapabilityProfile,
+    saveCapabilityProfileWithPlan: defaultStore.saveCapabilityProfileWithPlan,
     savePlan: defaultStore.savePlan,
     buildDetailedReviewDossier: defaultStore.buildDetailedReviewDossier,
     approvePlanReview: defaultStore.approvePlanReview,

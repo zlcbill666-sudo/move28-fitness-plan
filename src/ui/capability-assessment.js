@@ -7,6 +7,15 @@
 })(globalThis, function(root) {
   'use strict';
 
+  const safeArrayIsArray = Array.isArray;
+  const safeGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+  const safeOwnKeys = Reflect.ownKeys;
+  const safeHasOwn = Function.prototype.call.bind(Object.prototype.hasOwnProperty);
+  const safeSetHas = Function.prototype.call.bind(Set.prototype.has);
+  const safeArrayIncludes = Function.prototype.call.bind(Array.prototype.includes);
+  const safeStructuredClone = typeof root.structuredClone === 'function' ? root.structuredClone.bind(root) : null;
+  const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
   const DRAFT_KEY = 'move28-capability-draft-v1';
   const PROFILE_FIELDS = Object.freeze(['chairRise', 'wallPushup', 'wallHinge', 'floorAccess', 'walkTolerance']);
   const ENUMS = Object.freeze({
@@ -51,18 +60,30 @@
     walkTolerance: ['五分钟平地步行耐受', '只在安全筛查通过后，以能说短句的速度平地步行；可随时停止。']
   });
 
-  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+  const own = (value, key) => safeHasOwn(value || {}, key);
   function sanitizeAnswers(value) {
-    const output = {};
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return output;
     try {
-      for (const field of PROFILE_FIELDS) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, field);
-        if (!descriptor || !own(descriptor, 'value')) continue;
-        if (typeof descriptor.value === 'string' && ENUMS[field].includes(descriptor.value)) output[field] = descriptor.value;
+      if (!value || typeof value !== 'object' || safeArrayIsArray(value) || !safeStructuredClone) return {};
+      const keys = safeOwnKeys(value);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        if (typeof key !== 'string' || safeSetHas(DANGEROUS_KEYS, key)) return {};
+        const descriptor = safeGetOwnPropertyDescriptor(value, key);
+        if (!descriptor || !safeHasOwn(descriptor, 'value')) return {};
       }
+      // Native structuredClone rejects Proxy values. It is called only after every
+      // own property is proven to be a data descriptor, so accessors never run.
+      const snapshot = safeStructuredClone(value);
+      if (!snapshot || typeof snapshot !== 'object' || safeArrayIsArray(snapshot)) return {};
+      const output = {};
+      for (let index = 0; index < PROFILE_FIELDS.length; index += 1) {
+        const field = PROFILE_FIELDS[index];
+        const descriptor = safeGetOwnPropertyDescriptor(snapshot, field);
+        if (!descriptor || !own(descriptor, 'value')) continue;
+        if (typeof descriptor.value === 'string' && safeArrayIncludes(ENUMS[field], descriptor.value)) output[field] = descriptor.value;
+      }
+      return output;
     } catch (_error) { return {}; }
-    return output;
   }
   function validateStep(stepId, value) {
     const step = STEPS.find(item => item.id === stepId);
