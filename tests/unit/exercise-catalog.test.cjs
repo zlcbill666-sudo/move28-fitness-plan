@@ -289,7 +289,7 @@ test('Task6第二组动作元数据、关系与原创媒体契约精确锁定', 
   const strengthDose = { sets:[2,3], reps:[8,12], rpe:[5,6], restSec:[60,90] };
   const expected = {
     'supported-calf-raise': { name:'扶椅提踵', pattern:'mobility', equipment:'stable_chair', dose:strengthDose, contraindications:[], progressionIds:[], gif:'23_扶椅提踵.gif', hash:'c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872' },
-    'supported-standing-march': { name:'扶椅原地踏步', pattern:'locomotion', equipment:'stable_chair', dose:{sets:[1,1],reps:[1,1],rpe:[2,4],restSec:[0,60],durationMin:[2,10]}, contraindications:[], progressionIds:['flat-walk'], gif:'24_扶椅原地踏步.gif', hash:'75d3d667dd9f22f94aa6c3b3993ec0a473b341426d39738b19989cbb4e464a5e' },
+    'supported-standing-march': { name:'扶椅原地踏步', pattern:'locomotion', equipment:'stable_chair', dose:{sets:[1,1],reps:[1,1],rpe:[2,4],restSec:[0,60],durationMin:[2,10]}, contraindications:[], progressionIds:['flat-walk'], gif:'24_扶椅原地踏步.gif', hash:'4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed' },
     'heel-slide': { name:'仰卧脚跟滑动', pattern:'anti_extension', equipment:'exercise_mat', dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'25_仰卧脚跟滑动.gif', hash:'91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93' },
     'bird-dog-regression': { name:'四点支撑单肢滑动', pattern:'anti_extension', equipment:'exercise_mat', dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'26_四点支撑单肢滑动.gif', hash:'496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49' }
   };
