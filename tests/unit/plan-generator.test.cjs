@@ -156,7 +156,7 @@ test('stop、manual_review、未确认、版本不符及非法revision固定阻�
     {intake:baseIntake,risk:risk('stop'),intakeRevision:1},
     {intake:baseIntake,risk:risk('manual_review'),intakeRevision:1},
     {intake:{...baseIntake,finalConfirmed:false},risk:risk(),intakeRevision:1},
-    {intake:{...baseIntake,age:17},risk:risk(),intakeRevision:1},
+    {intake:{...baseIntake,age:121},risk:risk(),intakeRevision:1},
     {intake:{...baseIntake,trainingBreak:'yes'},risk:risk(),intakeRevision:1},
     {intake:baseIntake,risk:{...risk(),ruleVersion:'pilot-v1'},intakeRevision:1},
     {intake:baseIntake,risk:risk(),intakeRevision:-1}

@@ -60,8 +60,8 @@ test('age routing preserves risk level while applying pilot eligibility separate
   assert.equal(age15.canGenerate, false);
   const age17 = onboarding.evaluateOnboarding({ ...safe, age:17 });
   assert.equal(age17.risk.level, 'normal');
-  assert.equal(age17.pilotEligible, false);
-  assert.equal(age17.canGenerate, false);
+  assert.equal(age17.pilotEligible, true);
+  assert.equal(age17.canGenerate, true);
   const adult = onboarding.evaluateOnboarding(safe);
   assert.equal(adult.risk.level, 'normal');
   assert.equal(adult.canGenerate, true);

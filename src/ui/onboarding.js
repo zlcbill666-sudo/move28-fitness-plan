@@ -185,7 +185,7 @@
     if (typeof evaluate !== 'function') throw new Error('Risk evaluator unavailable');
     const canonical = sanitizeIntake(intake);
     const risk = evaluate(deriveRiskIntake(canonical));
-    const adult = Number.isSafeInteger(canonical.age) && canonical.age >= 18;
+    const adult = Number.isSafeInteger(canonical.age) && canonical.age >= 16;
     const intakeComplete = validateAll(canonical, false).ok;
     const pilotEligible = intakeComplete && adult && (risk.level === 'normal' || risk.level === 'conservative');
     return { risk, adult, intakeComplete, pilotEligible, canGenerate:pilotEligible };
@@ -319,7 +319,7 @@
       const functionalFields = Array.isArray(riskApi.FUNCTIONAL_REVIEW_FIELDS) ? riskApi.FUNCTIONAL_REVIEW_FIELDS : [];
       const needsFunctionalReview = Array.isArray(risk.reasons) && risk.reasons.some(reason => functionalFields.includes(reason.field));
       const manualCopy = needsFunctionalReview ? '<b>基础活动能力需要人工审核</b><span>当前试用不会自动生成计划；请先复核日常活动限制与适合的训练起点。</span>' : '<b>需要人工审核</b><span>在获得人工复核前，不进入计划生成。</span>';
-      const routeCopy = risk.level === 'stop' ? '<b>暂不进入自动计划</b><span>你的答案触发了停止条件。请停止自动训练路由，并向医生或与该情况匹配的合格专业人员咨询；如有紧急症状请联系急救服务。</span>' : risk.level === 'manual_review' ? manualCopy : !evaluation.adult ? '<b>首轮仅限18岁及以上</b><span>风险等级保持不变，但本轮试用不开放计划生成。</span>' : risk.level === 'conservative' ? '<b>可以保守起步</b><span>首周将采用更低负荷和更谨慎的进阶边界。</span>' : '<b>可以进入成年试用流程</b><span>当前筛查未触发额外限制；训练中仍需持续观察身体信号。</span>';
+      const routeCopy = risk.level === 'stop' ? '<b>暂不进入自动计划</b><span>你的答案触发了停止条件。请停止自动训练路由，并向医生或与该情况匹配的合格专业人员咨询；如有紧急症状请联系急救服务。</span>' : risk.level === 'manual_review' ? manualCopy : !evaluation.adult ? '<b>16岁以下需要人工审核</b><span>当前不会自动生成计划，请先完成适龄人工复核。</span>' : risk.level === 'conservative' ? '<b>可以保守起步</b><span>首周将采用更低负荷和更谨慎的进阶边界。</span>' : '<b>可以进入常规生成流程</b><span>当前筛查未触发额外限制；训练中仍需持续观察身体信号。</span>';
       return `<div class="ob-route ${statusClass}" data-risk-level="${risk.level}">${routeCopy}</div><div class="ob-summary">${summary.map(row => `<div><span>${esc(row.label)}</span><b>${esc(row.value)}</b></div>`).join('')}</div><div class="ob-edit-links"><button type="button" data-go="1">修改基本情况</button><button type="button" data-go="4">修改时间</button><button type="button" data-go="5">修改器械</button><button type="button" data-go="6">修改疼痛与动作能力</button><button type="button" data-go="7">修改安全筛查</button></div>${risk.reasons && risk.reasons.length ? `<details class="ob-reasons"><summary>查看安全路由依据（${risk.reasons.length}项）</summary><ul>${risk.reasons.map(reason => `<li>${esc(reason.message)}</li>`).join('')}</ul></details>` : ''}<label class="ob-consent"><input type="checkbox" name="finalConfirmed" value="true"${intake.finalConfirmed === true ? ' checked' : ''}><span><b>我确认</b>以上答案准确，并理解此结果不是诊断；最终确认后才保存到本机。</span></label>`;
     }
 

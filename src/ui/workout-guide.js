@@ -80,6 +80,7 @@ function buildWorkoutSteps(session,catalog){
   return steps;
 }
 const getWorkoutAudio=()=>$('#workoutAudio');
+function persistMusicPreference(key,value){try{storage.setItem(key,value);return true}catch(_error){Move28.ui.showToast?.('音乐偏好未能保存；训练和安全停止仍可继续');return false}}
 function updateMusicUI(){
   const workoutAudio=getWorkoutAudio(),m=MUSIC[state.musicKey],playing=!workoutAudio.paused;
   $('#musicDock').classList.toggle('paused',!playing);
@@ -92,16 +93,16 @@ function syncGuideMusic(key,allowPlay=true){
   const workoutAudio=getWorkoutAudio(),m=MUSIC[key];if(!m)return;
   if(state.musicKey!==key){state.musicKey=key;workoutAudio.pause();workoutAudio.src=m.src}
   workoutAudio.volume=state.musicVolume;$('#musicVolume').value=Math.round(state.musicVolume*100);
-  if(state.musicEnabled&&allowPlay)workoutAudio.play().catch(error=>{if(error.name!=='AbortError'){state.musicEnabled=false;storage.setItem('move28-music-enabled','0');updateMusicUI()}});
+  if(state.musicEnabled&&allowPlay)workoutAudio.play().catch(error=>{if(error.name!=='AbortError'){state.musicEnabled=false;persistMusicPreference('move28-music-enabled','0');updateMusicUI()}});
   updateMusicUI();
 }
 Move28.toggleWorkoutMusic=()=>{
   const workoutAudio=getWorkoutAudio();
-  if(workoutAudio.paused){state.musicEnabled=true;storage.setItem('move28-music-enabled','1');workoutAudio.play().catch(()=>Move28.ui.showToast('请再点一次播放音乐'))}
-  else{state.musicEnabled=false;storage.setItem('move28-music-enabled','0');workoutAudio.pause()}
+  if(workoutAudio.paused){state.musicEnabled=true;persistMusicPreference('move28-music-enabled','1');workoutAudio.play().catch(()=>Move28.ui.showToast('请再点一次播放音乐'))}
+  else{state.musicEnabled=false;persistMusicPreference('move28-music-enabled','0');workoutAudio.pause()}
   updateMusicUI();
 };
-Move28.setWorkoutVolume=value=>{const workoutAudio=getWorkoutAudio();state.musicVolume=Math.max(0,Math.min(1,Number(value)/100));workoutAudio.volume=state.musicVolume;storage.setItem('move28-music-volume',String(Math.round(state.musicVolume*100)))};
+Move28.setWorkoutVolume=value=>{const workoutAudio=getWorkoutAudio(),numeric=Number(value);state.musicVolume=Number.isFinite(numeric)?Math.max(0,Math.min(1,numeric/100)):0.32;workoutAudio.volume=state.musicVolume;persistMusicPreference('move28-music-volume',String(Math.round(state.musicVolume*100)))};
 function setGuideFoot(back,next){
   const backButton=$('#guideBack'),nextButton=$('#guideNext');
   backButton.textContent=back.label;backButton.style.visibility=back.hidden?'hidden':'visible';backButton.disabled=Boolean(back.disabled);

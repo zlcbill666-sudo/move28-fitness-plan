@@ -98,11 +98,11 @@ test('非安全问题选择不确定仍可完成问卷并按保守路线处理',
   expect(await page.evaluate(()=>Move28.onboardingController.getState().evaluation.canGenerate)).toBe(true);
 });
 
-test('17岁保留normal风险但首轮试用不可生成', async ({ page }) => {
+test('17岁保留normal风险并进入常规生成流程', async ({ page }) => {
   await open(page); await inject(page,{age:17});
-  await expect(page.locator('[data-risk-level="normal"]')).toContainText('首轮仅限18岁及以上');
+  await expect(page.locator('[data-risk-level="normal"]')).toContainText('可以进入常规生成流程');
   const evaluation=await page.evaluate(()=>Move28.onboardingController.getState().evaluation);
-  expect(evaluation.risk.level).toBe('normal'); expect(evaluation.canGenerate).toBe(false);
+  expect(evaluation.risk.level).toBe('normal'); expect(evaluation.canGenerate).toBe(true);
 });
 
 test('明显肿胀与基础活动受限写入正式人工审核理由', async ({ page }) => {

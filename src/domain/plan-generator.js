@@ -168,7 +168,7 @@ function canonicalInput(input){
   const riskLevel=ownValue(risk,'level');
   const ruleVersion=ownValue(risk,'ruleVersion');
   const dayCount=typeof daysPerWeek==='string'&&Object.prototype.hasOwnProperty.call(DAY_COUNTS,daysPerWeek)?DAY_COUNTS[daysPerWeek]:null;
-  if(finalConfirmed!==true||!Number.isSafeInteger(age)||age<18||age>120||!dayCount||typeof sessionMinutes!=='string'||!SESSION_MINUTES.includes(Number(sessionMinutes))||!weekdays||weekdays.length<dayCount||weekdays.some(day=>!WEEKDAYS.includes(day))||!SETTINGS.includes(setting)||!equipment||!avoidMovements||!avoidEquipment||!CARDIO_PREFERENCES.includes(cardioPreference)||!CARDIO_AVOIDS.includes(cardioAvoid)||!TRAINING_BREAKS.includes(trainingBreak)||!STRENGTH_EXPERIENCES.includes(strengthExperience))return null;
+  if(finalConfirmed!==true||!Number.isSafeInteger(age)||age<16||age>120||!dayCount||typeof sessionMinutes!=='string'||!SESSION_MINUTES.includes(Number(sessionMinutes))||!weekdays||weekdays.length<dayCount||weekdays.some(day=>!WEEKDAYS.includes(day))||!SETTINGS.includes(setting)||!equipment||!avoidMovements||!avoidEquipment||!CARDIO_PREFERENCES.includes(cardioPreference)||!CARDIO_AVOIDS.includes(cardioAvoid)||!TRAINING_BREAKS.includes(trainingBreak)||!STRENGTH_EXPERIENCES.includes(strengthExperience))return null;
   if(!['normal','conservative','manual_review','stop'].includes(riskLevel)||ruleVersion!==RULE_VERSION)return null;
   if((trainingBreak==='yes'||trainingBreak==='unsure')&&riskLevel==='normal')return null;
   if(Array.isArray(catalogApi.EQUIPMENT_IDS)&&equipment.some(item=>!catalogApi.EQUIPMENT_IDS.includes(item)))return null;
