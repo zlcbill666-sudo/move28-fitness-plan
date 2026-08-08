@@ -3,20 +3,22 @@
   const validatorApi = isCommonJS ? require('../domain/plan-validator.js') : root.Move28 && root.Move28.domain;
   const catalogApi = isCommonJS ? require('../data/exercise-catalog.js') : root.Move28 && root.Move28.data;
   const adaptationApi = isCommonJS ? require('../domain/weekly-adaptation.js') : root.Move28 && root.Move28.domain;
-  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {});
+  const riskApi = isCommonJS ? require('../domain/risk-engine.js') : root.Move28 && root.Move28.domain;
+  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {});
   if (isCommonJS) {
     module.exports = api;
   } else {
     const Move28 = root.Move28 = root.Move28 || {};
     Move28.storage = api;
   }
-})(globalThis, function(root, validatorApi, catalogApi, adaptationApi) {
+})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi) {
   'use strict';
 
   const STORAGE_KEY = 'move28-pilot-v1';
   const SCHEMA_VERSION = 1;
   const CONSENT_VERSION = 'pilot-v1';
-  const OWNED_KEYS = Object.freeze([STORAGE_KEY]);
+  const OWNED_KEYS = Object.freeze([STORAGE_KEY, 'move28-tracker-v1', 'move28-current-day', 'move28-music-enabled', 'move28-music-volume']);
+  const ONBOARDING_DRAFT_KEY = 'move28-onboarding-draft-v1';
   const INVALID_DATA_MESSAGE = 'Invalid plain data';
   const READ_ERROR_MESSAGE = 'Unable to read local participant state';
   const SAVE_ERROR_MESSAGE = 'Unable to save local participant state';
@@ -34,6 +36,11 @@
   const trustedValidatePlan = typeof validatorApi.validatePlan === 'function' ? validatorApi.validatePlan : null;
   const trustedExerciseCatalog = Array.isArray(catalogApi.exerciseCatalog) ? catalogApi.exerciseCatalog : null;
   const trustedProposeWeeklyChange = typeof adaptationApi.proposeWeeklyChange === 'function' ? adaptationApi.proposeWeeklyChange : null;
+  const trustedDeriveRiskIntake = typeof riskApi.deriveRiskIntake === 'function' ? riskApi.deriveRiskIntake : null;
+  const trustedEvaluateRisk = typeof riskApi.evaluateRisk === 'function' ? riskApi.evaluateRisk : null;
+  const TRUSTED_RISK_CODES = new Set(Array.isArray(riskApi.REASON_CODES) ? riskApi.REASON_CODES : []);
+  const TRUSTED_RULE_VERSIONS = new Set(['pilot-v1', typeof riskApi.RULE_VERSION === 'string' ? riskApi.RULE_VERSION : 'pilot-v2']);
+  const TRUSTED_PLAN_VERSIONS = new Set(TRUSTED_RULE_VERSIONS);
   const WEEKLY_DECISIONS = new Set(['pending','accepted','rejected','rescreen']);
   const WEEKLY_TYPES = new Set(['keep','reduce','replace','progress_one_variable','rescreen']);
   const WEEKLY_COMPLETION_REASONS = new Set(['completed','time','difficulty','fatigue','other']);
@@ -259,6 +266,24 @@
     return { level: risk.level, reasons, ruleVersion };
   }
 
+  function recomputeTrustedRisk(intake) {
+    try {
+      if (!trustedDeriveRiskIntake || !trustedEvaluateRisk) return null;
+      const derived = trustedDeriveRiskIntake(intake);
+      if (!derived) return null;
+      return sanitizeRisk(trustedEvaluateRisk(derived));
+    } catch (_error) { return null; }
+  }
+
+  function risksEqual(left, right) {
+    if (!left || !right || left.level !== right.level || left.ruleVersion !== right.ruleVersion
+      || left.reasons.length !== right.reasons.length) return false;
+    return left.reasons.every((reason, index) => {
+      const other = right.reasons[index];
+      return other && reason.code === other.code && reason.field === other.field && reason.message === other.message;
+    });
+  }
+
   function sanitizeWorkoutLogs(value) {
     const logs = cloneObjectOr(value, null, false);
     if (!logs) return {};
@@ -361,6 +386,11 @@
     // values have no trustworthy migration path and must fail closed.
     if (!schema.present || schema.value !== SCHEMA_VERSION) return defaults;
 
+    const persistedParticipant = ownDataValue(raw, 'participantId');
+    if (persistedParticipant.present && typeof persistedParticipant.value === 'string' && PARTICIPANT_ID_PATTERN.test(persistedParticipant.value)) {
+      defaults.participantId = persistedParticipant.value;
+    }
+
     const intake = ownDataValue(raw, 'intake');
     if (intake.present && intake.value !== null) {
       defaults.intake = cloneObjectOr(intake.value, null, false);
@@ -372,10 +402,13 @@
     }
 
     const risk = ownDataValue(raw, 'risk');
-    if (risk.present && risk.value !== null) defaults.risk = sanitizeRisk(risk.value);
+    const storedRisk = risk.present && risk.value !== null ? sanitizeRisk(risk.value) : null;
+    const recomputedRisk = defaults.intake ? recomputeTrustedRisk(defaults.intake) : null;
+    const riskMismatch = Boolean(defaults.intake && (!storedRisk || !recomputedRisk || !risksEqual(storedRisk, recomputedRisk)));
+    defaults.risk = recomputedRisk;
 
     const plan = ownDataValue(raw, 'plan');
-    if (plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
+    if (!riskMismatch && plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
 
     const logs = ownDataValue(raw, 'logs');
     if (logs.present) defaults.logs = sanitizeWorkoutLogs(logs.value);
@@ -516,14 +549,15 @@
       if (cleanIntake === null || typeof cleanIntake !== 'object' || Array.isArray(cleanIntake)) {
         throw invalidPlainData();
       }
-      let cleanRisk = null;
+      const trustedRisk = recomputeTrustedRisk(cleanIntake);
+      if (!trustedRisk) throw invalidPlainData();
       if (risk !== undefined && risk !== null) {
-        cleanRisk = sanitizeRisk(risk);
-        if (!cleanRisk) throw invalidPlainData();
+        const suppliedRisk = sanitizeRisk(risk);
+        if (!suppliedRisk || !risksEqual(suppliedRisk, trustedRisk)) throw invalidPlainData();
       }
       const state = loadStateForWrite();
       state.intake = cleanIntake;
-      state.risk = cleanRisk;
+      state.risk = trustedRisk;
       state.intakeRevision += 1;
       if (state.plan) {
         state.plan.status = 'stale';
@@ -543,15 +577,21 @@
       return candidate;
     }
 
-    function passesTrustedPlanGate(plan, state) {
+    function trustedPlanValidationResult(plan, state) {
       const candidate = candidateForValidation(plan);
-      if (!candidate || !trustedValidatePlan || !trustedExerciseCatalog) return false;
+      if (!candidate) return 'failed';
+      if (!trustedValidatePlan || !trustedExerciseCatalog) return 'unavailable';
       try {
-        const result = trustedValidatePlan({ plan: candidate, intake: state.intake, risk: state.risk, catalog: trustedExerciseCatalog });
-        return Boolean(result && result.ok === true && Array.isArray(result.errors) && result.errors.length === 0);
+        const result = clonePlainData(trustedValidatePlan({ plan: candidate, intake: state.intake, risk: state.risk, catalog: trustedExerciseCatalog }));
+        if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.ok !== 'boolean' || !Array.isArray(result.errors)) return 'unavailable';
+        return result.ok === true && result.errors.length === 0 ? 'passed' : 'failed';
       } catch (_error) {
-        return false;
+        return 'unavailable';
       }
+    }
+
+    function passesTrustedPlanGate(plan, state) {
+      return trustedPlanValidationResult(plan, state) === 'passed';
     }
 
     function hasReviewApproval(plan, state) {
@@ -710,52 +750,83 @@
       return persist(state);
     }
 
-    function clearAll() {
-      if (!durable) return false;
-      try {
-        for (const key of OWNED_KEYS) storage.removeItem(key);
-        return true;
-      } catch (_error) {
-        return false;
+    function clearAllDetailed() {
+      const scopeByKey = new Map([
+        [STORAGE_KEY, 'local.pilot'], ['move28-tracker-v1', 'local.tracker'],
+        ['move28-current-day', 'local.currentDay'], ['move28-music-enabled', 'local.musicEnabled'],
+        ['move28-music-volume', 'local.musicVolume']
+      ]);
+      if (!durable) return Object.freeze({ ok: false, status: 'unavailable', failedScopes: Object.freeze([...scopeByKey.values()]) });
+      const failed = new Set();
+      for (const key of OWNED_KEYS) {
+        try { storage.removeItem(key); } catch (_error) { failed.add(scopeByKey.get(key)); }
       }
+      for (const key of OWNED_KEYS) {
+        try { if (storage.getItem(key) !== null) failed.add(scopeByKey.get(key)); }
+        catch (_error) { failed.add(scopeByKey.get(key)); }
+      }
+      const failedScopes = Object.freeze([...failed]);
+      return Object.freeze({ ok: failedScopes.length === 0, status: failedScopes.length === 0 ? 'deleted' : 'partial_failure', failedScopes });
+    }
+
+    function clearAll() {
+      return clearAllDetailed().ok;
+    }
+
+    function buildReviewSummary(inputState) {
+      const cloned = clonePlainData(inputState);
+      if (!cloned || typeof cloned !== 'object' || Array.isArray(cloned)) throw invalidPlainData();
+      const state = migrateState(cloned, normalizeParticipantId(cloned.participantId));
+      const ruleVersion = state.risk && TRUSTED_RULE_VERSIONS.has(state.risk.ruleVersion) ? state.risk.ruleVersion : null;
+      const riskLevel = state.risk && RISK_LEVELS.has(state.risk.level) ? state.risk.level : null;
+      const riskCodes = state.risk && Array.isArray(state.risk.reasons)
+        ? [...new Set(state.risk.reasons.map(reason => reason && reason.code).filter(code => TRUSTED_RISK_CODES.has(code)))] : [];
+      let planSummary = null, validationResult = 'not_applicable';
+      if (state.plan) {
+        const weeks = Array.isArray(state.plan.weeks) ? state.plan.weeks.slice(0, 4) : [];
+        const sessions = weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions.slice(0, 7) : []);
+        const actionCount = sessions.reduce((total, session) => total + (session && Array.isArray(session.actions) ? Math.min(session.actions.length, 32) : 0), 0);
+        planSummary = Object.freeze({
+          status: ['pending_review', 'active', 'stale'].includes(state.plan.status) ? state.plan.status : null,
+          planVersion: TRUSTED_PLAN_VERSIONS.has(state.plan.planVersion) ? state.plan.planVersion : null,
+          weekCount: weeks.length,
+          sessionCount: sessions.length,
+          actionCount
+        });
+        validationResult = trustedPlanValidationResult(state.plan, state);
+      }
+      return Object.freeze({
+        participantId: normalizeParticipantId(state.participantId),
+        ruleVersion,
+        riskLevel,
+        riskCodes: Object.freeze(riskCodes),
+        planSummary,
+        validationResult
+      });
     }
 
     function exportReviewSummary() {
-      const state = loadState();
-      const cleanRuleVersion = state.risk && sanitizeMachineId(state.risk.ruleVersion);
-      const risk = state.risk && RISK_LEVELS.has(state.risk.level) && cleanRuleVersion ? {
-        level: state.risk.level,
-        reasonCodes: Array.isArray(state.risk.reasons)
-          ? state.risk.reasons.map(reason => sanitizeMachineId(reason && reason.code)).filter(Boolean)
-          : [],
-        ruleVersion: cleanRuleVersion
-      } : null;
-      const plan = state.plan ? {
-        status: ['pending_review', 'active', 'stale'].includes(state.plan.status) ? state.plan.status : null,
-        planVersion: sanitizeMachineId(state.plan.planVersion),
-        intakeRevision: Number.isSafeInteger(state.plan.intakeRevision) ? state.plan.intakeRevision : null
-      } : null;
-      return {
-        schemaVersion: SCHEMA_VERSION,
-        participantId: state.participantId,
-        intakeRevision: state.intakeRevision,
-        risk,
-        plan,
-        logCount: Object.keys(state.logs).length,
-        weeklyReviewCount: state.weeklyReviews.length,
-        consent: { accepted: state.consent.acceptedAt !== null, version: state.consent.version }
-      };
+      return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, savePlan, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, savePlan, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
-  const defaultStore = createLocalStore();
+  function createLocalParticipantId() {
+    try {
+      if (!root.document || !root.crypto || typeof root.crypto.getRandomValues !== 'function') return 'pilot-local';
+      const bytes = new Uint8Array(4); root.crypto.getRandomValues(bytes);
+      return `pilot-${[...bytes].map(value => value.toString(16).padStart(2, '0')).join('')}`;
+    } catch (_error) { return 'pilot-local'; }
+  }
+
+  const defaultStore = createLocalStore({ participantId: createLocalParticipantId() });
   return Object.freeze({
     STORAGE_KEY,
     SCHEMA_VERSION,
     CONSENT_VERSION,
     OWNED_KEYS,
+    ONBOARDING_DRAFT_KEY,
     RUNTIME_STOP_REASON_CODES,
     createLocalStore,
     migrateState,
@@ -768,6 +839,8 @@
     recordWeeklyReview: defaultStore.recordWeeklyReview,
     resolveWeeklyReview: defaultStore.resolveWeeklyReview,
     clearAll: defaultStore.clearAll,
+    clearAllDetailed: defaultStore.clearAllDetailed,
+    buildReviewSummary: defaultStore.buildReviewSummary,
     exportReviewSummary: defaultStore.exportReviewSummary
   });
 });

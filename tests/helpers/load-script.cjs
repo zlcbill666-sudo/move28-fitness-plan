@@ -17,12 +17,14 @@ const modules = Object.freeze({
   workoutGuide: path.join(projectRoot, 'src', 'ui', 'workout-guide.js'),
   onboarding: path.join(projectRoot, 'src', 'ui', 'onboarding.js'),
   weeklyReview: path.join(projectRoot, 'src', 'ui', 'weekly-review.js'),
+  privacyTools: path.join(projectRoot, 'src', 'ui', 'privacy-tools.js'),
   app: path.join(projectRoot, 'src', 'app.js'),
 });
 
 function clearMove28ModuleCache() {
   const dependencySafeOrder = [
     modules.app,
+    modules.privacyTools,
     modules.weeklyReview,
     modules.workoutGuide,
     modules.onboarding,

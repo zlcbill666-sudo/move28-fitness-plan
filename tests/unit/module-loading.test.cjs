@@ -125,6 +125,11 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.createWeeklyReview, 'function');
   });
 
+  await t.test('privacy tools export local-only controls without a DOM',()=>{
+    clearMove28ModuleCache();const api=require(modules.privacyTools);
+    assert.equal(typeof api.createPrivacyTools,'function');assert.equal(typeof api.downloadReviewSummary,'function');
+  });
+
   await t.test('app exports init without initializing the DOM', () => {
     clearMove28ModuleCache();
     const api = require(modules.app);

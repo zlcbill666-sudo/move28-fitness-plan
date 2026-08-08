@@ -18,6 +18,8 @@ test('风险边界 fixtures 逐项得到精确等级、版本和有序理由', a
   for (const fixture of fixtures) {
     await t.test(fixture.name, () => {
       const result = evaluate(fixture.intake);
+      const api=loadScript('riskEngine');
+      assert.ok(result.reasons.every(reason=>api.REASON_CODES.includes(reason.code)));
       assert.equal(result.level, fixture.expectedLevel);
       assert.equal(result.ruleVersion, 'pilot-v2');
       assert.deepEqual(result.reasons.map(reason => reason.code), fixture.expectedReasonCodes);

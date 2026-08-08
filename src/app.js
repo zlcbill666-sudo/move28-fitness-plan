@@ -3,7 +3,7 @@ const isCommonJS=typeof module==='object'&&module.exports;
 const Move28=isCommonJS?require('./namespace.js'):(root.Move28=root.Move28||{});
 if(isCommonJS){
   Move28.data=Move28.data||{};Move28.domain=Move28.domain||{};Move28.storage=Move28.storage||{};
-  Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};
+  Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};Move28.privacy=Move28.privacy||{};
   Object.assign(Move28.data,require('./data/exercise-catalog.js'),require('./data/legacy-demo-plan.js'),require('./data/tracker-fields.js'));
   Object.assign(Move28.domain,require('./domain/risk-engine.js'),require('./domain/movement-matcher.js'),require('./domain/plan-validator.js'),require('./domain/plan-generator.js'),require('./domain/weekly-adaptation.js'));
   Object.assign(Move28.storage,require('./storage/local-store.js'));
@@ -11,6 +11,7 @@ if(isCommonJS){
   Object.assign(Move28.guide,require('./ui/workout-guide.js'));
   Object.assign(Move28.onboarding,require('./ui/onboarding.js'));
   Move28.weeklyReview=require('./ui/weekly-review.js');
+  Move28.privacy=require('./ui/privacy-tools.js');
 }
 const api=factory(root,Move28);Move28.init=api.init;if(isCommonJS)module.exports=api;else api.init();
 })(globalThis,function(root,Move28){
@@ -20,10 +21,13 @@ const nativeStructuredClone=typeof root.structuredClone==='function'?root.struct
 const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
 const functionToString=Function.prototype.toString,nativeObjectSource=functionToString.call(Object);
 const trustedValidatePlan=typeof Move28.domain.validatePlan==='function'?Move28.domain.validatePlan:null;
+const trustedDeriveRiskIntake=typeof Move28.domain.deriveRiskIntake==='function'?Move28.domain.deriveRiskIntake:null;
+const trustedEvaluateRisk=typeof Move28.domain.evaluateRisk==='function'?Move28.domain.evaluateRisk:null;
 const trustedCatalog=Array.isArray(Move28.data.exerciseCatalog)?Move28.data.exerciseCatalog:null;
 const trustedRecordWorkoutStop=typeof Move28.storage.recordWorkoutStop==='function'?Move28.storage.recordWorkoutStop:null;
 const trustedRecordWeeklyReview=typeof Move28.storage.recordWeeklyReview==='function'?Move28.storage.recordWeeklyReview:null;
 const trustedResolveWeeklyReview=typeof Move28.storage.resolveWeeklyReview==='function'?Move28.storage.resolveWeeklyReview:null;
+const trustedCreatePrivacyTools=Move28.privacy&&typeof Move28.privacy.createPrivacyTools==='function'?Move28.privacy.createPrivacyTools:null;
 const RESCREEN_STEP_BY_REASON=Object.freeze({sudden_severe_pain:6,unable_to_bear_weight:6,joint_pain_persisted_or_worsened:6,chest_pain_or_pressure:7,near_faint_or_faint:7,abnormal_shortness_of_breath:7,neurologic_or_consciousness_change:7});
 function rescreenStepForReason(reasonCode){return RESCREEN_STEP_BY_REASON[reasonCode]??7}
 function plainRecord(value){
@@ -40,6 +44,9 @@ function clonePureData(value){
     return nativeStructuredClone(value);
   }catch(_error){return null}
 }
+function trustedRiskForIntake(intake){try{if(!trustedDeriveRiskIntake||!trustedEvaluateRisk)return null;const derived=clonePureData(trustedDeriveRiskIntake(intake));if(!derived)return null;return clonePureData(trustedEvaluateRisk(derived))}catch(_error){return null}}
+function risksMatch(left,right){return Boolean(left&&right&&left.level===right.level&&left.ruleVersion===right.ruleVersion&&Array.isArray(left.reasons)&&Array.isArray(right.reasons)&&left.reasons.length===right.reasons.length&&left.reasons.every((reason,index)=>{const other=right.reasons[index];return reason&&other&&reason.code===other.code&&reason.field===other.field&&reason.message===other.message}))}
+function validationPassed(value){const validation=clonePureData(value);return Boolean(validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0)}
 function validationCandidate(plan){
   const candidate=clonePureData(plan);if(!candidate)return null;
   delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated';return candidate;
@@ -50,7 +57,10 @@ function contextFromState(inputState){
   const state=clonePureData(inputState);
   if(!state)return{mode:'invalid',plan:null,logs:{},message:'本机计划无法安全读取，请重新生成。'};
   if(!state.intake)return{mode:'demo',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
-  if(!state.risk||['stop','manual_review'].includes(state.risk.level))return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
+  const recomputedRisk=trustedRiskForIntake(state.intake);
+  if(!recomputedRisk)return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机风险结果无法安全复核，请重新完成问卷。'};
+  if(!risksMatch(state.risk,recomputedRisk))return{mode:['stop','manual_review'].includes(recomputedRisk.level)?'blocked':'invalid',plan:null,logs:state.logs||{},message:'本机风险结果与当前问卷不一致，请重新完成筛查。'};
+  if(['stop','manual_review'].includes(recomputedRisk.level))return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
   if(!state.plan)return{mode:'review',plan:null,logs:state.logs||{},message:'档案已保存，但没有通过安全硬门槛的完整计划。'};
   const hasCurrentSafetyEvent=state.logs&&Object.values(state.logs).some(record=>record&&record.status==='safety_stopped'&&record.planId===state.plan.id);
   if(hasCurrentSafetyEvent)return{mode:'stale',plan:null,logs:state.logs||{},message:'训练中已记录安全停止事件，旧计划已失效，请重新完成安全筛查。'};
@@ -61,8 +71,8 @@ function contextFromState(inputState){
   if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或人工复核凭据无效，请等待重新复核。'};
   const candidate=validationCandidate(state.plan);
   if(!candidate)return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划无法安全读取，请重新生成。'};
-  let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:state.risk,catalog:trustedCatalog})}catch(_error){validation=null}
-  return validation&&validation.ok===true&&Array.isArray(validation.errors)&&validation.errors.length===0?{mode:'generated',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
+  let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,catalog:trustedCatalog})}catch(_error){validation=null}
+  return validationPassed(validation)?{mode:'generated',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
 }
 function weeklyPlanLineage(reviews,currentPlanId){const lineage=new Set([currentPlanId]);let changed=true;while(changed&&lineage.size<=17){changed=false;for(const item of reviews)if(item&&item.decision==='accepted'&&lineage.has(item.resultPlanId)&&!lineage.has(item.planId)){lineage.add(item.planId);changed=true}}return lineage}
 function weeklyReviewTarget(state,context){
@@ -150,9 +160,11 @@ function init(){
     Move28.weeklyReviewController=Move28.weeklyReview.createWeeklyReview({rootElement:weeklyRoot,onSubmit:handleWeeklySubmit,onResolve:handleWeeklyResolve,onRescreen:openWeeklyRescreen});
     root.document.addEventListener('keydown',event=>{if(event.key==='Escape')Move28.weeklyReviewController.close()});
   }
+  const privacyRoot=$('#privacyTools');
+  if(privacyRoot&&trustedCreatePrivacyTools)Move28.privacyController=trustedCreatePrivacyTools({rootElement:privacyRoot});
   activatePlanView(Move28.storage.loadState());
   ui.renderExercises();ui.renderDayList();ui.renderForm();ui.renderOverview();ui.renderSafety();ui.reveal();
   return Move28;
 }
-return{init,contextFromState,handleOnboardingComplete,openGeneratedWorkout,rescreenStepForReason};
+return{init,contextFromState,handleOnboardingComplete,openGeneratedWorkout,rescreenStepForReason,validationPassed};
 });

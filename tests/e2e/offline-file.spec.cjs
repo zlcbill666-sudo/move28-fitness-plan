@@ -62,6 +62,7 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/ui/dashboard.js',
     'src/ui/workout-guide.js',
     'src/ui/weekly-review.js',
+    'src/ui/privacy-tools.js',
     'src/app.js'
   ]);
 

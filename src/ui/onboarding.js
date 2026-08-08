@@ -9,6 +9,8 @@
   'use strict';
 
   const DRAFT_KEY = 'move28-onboarding-draft-v1';
+  const trustedDeriveActivityStatus = typeof riskApi.deriveActivityStatus === 'function' ? riskApi.deriveActivityStatus : null;
+  const trustedDeriveRiskIntake = typeof riskApi.deriveRiskIntake === 'function' ? riskApi.deriveRiskIntake : null;
   const TRI = Object.freeze(['no', 'yes', 'unsure']);
   const EQUIPMENT = Object.freeze({
     gym: ['stable_chair', 'exercise_mat', 'leg_press_machine', 'leg_curl_machine', 'chest_press_machine', 'seated_row_machine', 'resistance_band', 'cable_machine', 'elliptical_trainer', 'treadmill'],
@@ -173,19 +175,10 @@
   }
 
   function deriveActivityStatus(intake) {
-    if (!intake || !ENUMS.trainingBreak.includes(intake.trainingBreak) || !ENUMS.activityDays.includes(intake.activityDays) || !ENUMS.strengthExperience.includes(intake.strengthExperience)) return 'unknown';
-    if (intake.trainingBreak === 'unsure') return 'returning';
-    if (intake.trainingBreak === 'yes') return intake.activityDays === '0' ? 'inactive_long_term' : 'returning';
-    if (intake.activityDays === '0') return 'inactive_long_term';
-    return 'active';
+    return trustedDeriveActivityStatus ? trustedDeriveActivityStatus(intake) : 'unknown';
   }
   function deriveRiskIntake(intake) {
-    const fields = ['age','pregnancyPostpartum','acuteInjury','unableToBearWeight','visibleSwelling','dailyActivityLimited','chairStand','walkTenMinutes','chestSymptoms','exertionalDizziness','unexplainedFainting','restingShortnessOfBreath','unresolvedConcussion','doctorRestriction','recentSurgery','complexCondition','uncontrolledBloodPressure'];
-    const output = {};
-    fields.forEach(field => { if (own(intake, field)) output[field] = intake[field]; });
-    output.stablePain = own(intake, 'painTrend') ? intake.painTrend : undefined;
-    output.activityStatus = deriveActivityStatus(intake || {});
-    return output;
+    return trustedDeriveRiskIntake ? trustedDeriveRiskIntake(intake) : null;
   }
   function evaluateOnboarding(intake, evaluator) {
     const evaluate = evaluator || riskApi.evaluateRisk;

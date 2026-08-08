@@ -63,6 +63,16 @@
     ...FUNCTIONAL_REVIEW_FIELDS
   ]);
 
+  const REASON_CODES = Object.freeze([
+    'intake_unreadable','age_invalid_or_missing','age_out_of_range','age_below_16','red_flags_reported','red_flags_invalid','incomplete_safety_screen',
+    ...STOP_FIELD_DEFINITIONS.flatMap(item => [`${item.stem}_reported`,`${item.stem}_uncertain`,`${item.stem}_invalid`]),
+    'doctor_restriction_clear_modification','doctor_restriction_unclear','doctor_restriction_prohibited','doctor_restriction_uncertain','doctor_restriction_invalid',
+    ...MANUAL_FIELD_DEFINITIONS.flatMap(item => [`${item.stem}_reported`,`${item.stem}_uncertain`,`${item.stem}_invalid`]),
+    ...FUNCTIONAL_REVIEW_DEFINITIONS.flatMap(item => [`${item.field}_${item.triggerCode}`,`${item.field}_uncertain`,`${item.field}_invalid`]),
+    'stable_pain_mild','stable_pain_uncertain','stable_pain_acute_or_worsening','stable_pain_invalid',
+    'activity_returning','activity_inactive_long_term','activity_status_invalid'
+  ]);
+
   function deepFreeze(value) {
     if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
     for (const nested of Object.values(value)) deepFreeze(nested);
@@ -106,6 +116,30 @@
     } catch (_error) {
       return false;
     }
+  }
+
+  function deriveActivityStatus(intake) {
+    if (!intake || !['no','yes','unsure'].includes(intake.trainingBreak)
+      || !['0','1','2','3','4plus'].includes(intake.activityDays)
+      || !['none','some','regular_under_6m','experienced'].includes(intake.strengthExperience)) return 'unknown';
+    if (intake.trainingBreak === 'unsure') return 'returning';
+    if (intake.trainingBreak === 'yes') return intake.activityDays === '0' ? 'inactive_long_term' : 'returning';
+    if (intake.activityDays === '0') return 'inactive_long_term';
+    return 'active';
+  }
+
+  function deriveRiskIntake(intake) {
+    try {
+      if (!nativeStructuredClone || !isCanonicalCloneGraph(intake)) return null;
+      const source = nativeStructuredClone(intake);
+      if (!source || typeof source !== 'object' || Array.isArray(source)) return null;
+      const fields = ['age','pregnancyPostpartum','acuteInjury','unableToBearWeight','visibleSwelling','dailyActivityLimited','chairStand','walkTenMinutes','chestSymptoms','exertionalDizziness','unexplainedFainting','restingShortnessOfBreath','unresolvedConcussion','doctorRestriction','recentSurgery','complexCondition','uncontrolledBloodPressure'];
+      const output = {};
+      for (const field of fields) if (Object.prototype.hasOwnProperty.call(source, field)) output[field] = source[field];
+      output.stablePain = Object.prototype.hasOwnProperty.call(source, 'painTrend') ? source.painTrend : undefined;
+      output.activityStatus = deriveActivityStatus(source);
+      return deepFreeze(output);
+    } catch (_error) { return null; }
   }
 
   function evaluateRisk(intake) {
@@ -291,8 +325,11 @@
 
   return Object.freeze({
     evaluateRisk,
+    deriveRiskIntake,
+    deriveActivityStatus,
     PRIORITY,
     RULE_VERSION,
+    REASON_CODES,
     MIN_AGE,
     MAX_AGE,
     RISK_LEVELS,

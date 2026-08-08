@@ -39,7 +39,7 @@ const DEFAULT_STATE = {
   consent: { acceptedAt: null, version: 'pilot-v1' }
 };
 
-const VALID_INTAKE = Object.freeze({age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no',allowSettingSwap:'no'});
+const VALID_INTAKE = Object.freeze({boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true});
 const VALID_RISK = Object.freeze({level:'normal',ruleVersion:'pilot-v2',reasons:[]});
 function generateValidPlan(revision){
   clearMove28ModuleCache();
@@ -62,7 +62,7 @@ test('空存储返回完整默认状态、独立副本且只使用唯一自有 k
   first.logs.changed = true;
   first.consent.version = 'changed';
   assert.deepEqual(store.loadState(), DEFAULT_STATE);
-  assert.deepEqual(moduleApi.OWNED_KEYS, ['move28-pilot-v1']);
+  assert.deepEqual(moduleApi.OWNED_KEYS, ['move28-pilot-v1','move28-tracker-v1','move28-current-day','move28-music-enabled','move28-music-volume']);
   assert.ok(storage.calls.every(([, key]) => key === moduleApi.STORAGE_KEY));
   assert.equal(storage.length, 0);
 });
@@ -89,23 +89,17 @@ test('完成记录只绑定人工复核后的active计划和已知session，刷�
 test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失效', () => {
   const storage = memoryStorage();
   const store = api().createLocalStore({ storage, participantId: 'pilot-a', now: () => '2030-01-02T03:04:05.000Z' });
-  const intake = { age: 30, goals: ['mobility'] };
-  const risk = {
-    level: 'conservative',
-    reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '公开理由', rawPain: 'secret' }],
-    ruleVersion: 'pilot-v1',
-    rawHeight: 188
-  };
+  const forgedRisk = { level: 'conservative', reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '伪造理由' }], ruleVersion: 'pilot-v1' };
+  assert.throws(() => store.saveIntake(structuredClone(VALID_INTAKE), forgedRisk), TypeError);
+  assert.equal(storage.raw('move28-pilot-v1'), undefined);
+  const intake = structuredClone(VALID_INTAKE);
+  const risk = structuredClone(VALID_RISK);
   const first = store.saveIntake(intake, risk);
   intake.age = 99;
-  risk.reasons[0].code = 'changed';
-  first.intake.goals.push('mutated-return');
+  risk.level = 'stop';
+  first.intake.avoidMovements.push('mutated-return');
   assert.equal(store.loadState().intake.age, 30);
-  assert.deepEqual(store.loadState().risk, {
-    level: 'conservative',
-    reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '公开理由' }],
-    ruleVersion: 'pilot-v1'
-  });
+  assert.deepEqual(store.loadState().risk, VALID_RISK);
   assert.equal(store.loadState().intakeRevision, 1);
 
   const validState=store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
@@ -155,8 +149,22 @@ test('load/migrate 对非法、未来和污染状态 fail closed，并只重建�
   assert.equal(migrated.height, undefined);
   assert.deepEqual(migrated.logs, {});
   assert.deepEqual(migrated.weeklyReviews, []);
-  assert.deepEqual(migrated.risk, { level: 'stop', reasons: [{ code: 'x', field: 'pain', message: 'safe' }], ruleVersion: 'r' });
-  assert.equal(migrated.risk.height, undefined);
+  assert.equal(migrated.risk.level, 'manual_review');
+  assert.equal(migrated.risk.ruleVersion, 'pilot-v2');
+  assert.equal(migrated.risk.reasons.some(reason => reason.code === 'x'), false);
+  assert.equal(migrated.plan, null);
+});
+
+test('持久化风险结论必须由可信引擎重算，停止条件不能伪造成normal',()=>{
+  const moduleApi=api(),dangerousIntake={...structuredClone(VALID_INTAKE),chestSymptoms:'yes'};
+  const forged={...DEFAULT_STATE,participantId:'pilot-a',intake:dangerousIntake,intakeRevision:1,risk:structuredClone(VALID_RISK),plan:generateValidPlan(1)};
+  const migrated=moduleApi.migrateState(forged,'pilot-newvalue');
+  assert.equal(migrated.participantId,'pilot-a');
+  assert.equal(migrated.risk.level,'stop');
+  assert.ok(migrated.risk.reasons.some(reason=>reason.code==='chest_symptoms_reported'));
+  assert.equal(migrated.plan,null);
+  const summary=moduleApi.buildReviewSummary(forged);
+  assert.equal(summary.riskLevel,'stop');assert.equal(summary.planSummary,null);assert.equal(summary.validationResult,'not_applicable');
 });
 
 test('损坏字段逐字段恢复，不让继承属性或 getter 进入状态', () => {
@@ -181,10 +189,10 @@ test('审核摘要严格最小化，不含问卷、理由文本、日志、自�
     [moduleApi.STORAGE_KEY]: JSON.stringify({
       schemaVersion: 1,
       participantId: 'pilot-a',
-      intake: { height: 188, weight: 90, pain: secret, freeText: secret },
+      intake: { ...VALID_INTAKE, height: 188, weight: 90, pain: secret, freeText: secret },
       intakeRevision: 4,
-      risk: { level: 'manual_review', reasons: [{ code: 'review', field: 'pain', message: secret }], ruleVersion: 'pilot-v1' },
-      plan: { status: 'stale', planVersion: 'plan-v2', intakeRevision: 3, notes: secret },
+      risk: VALID_RISK,
+      plan: { status: 'stale', planVersion: 'pilot-v2', intakeRevision: 3, notes: secret },
       logs: { d1: { exercises: secret }, healthAnswer: 'SECRET_LOG' },
       weeklyReviews: [{ note: secret, healthAnswer: 'SECRET_LOG' }],
       consent: { acceptedAt: '2029-02-03T00:00:00.000Z', version: 'pilot-v1' }
@@ -192,14 +200,12 @@ test('审核摘要严格最小化，不含问卷、理由文本、日志、自�
   });
   const summary = moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).exportReviewSummary();
   assert.deepEqual(summary, {
-    schemaVersion: 1,
     participantId: 'pilot-a',
-    intakeRevision: 4,
-    risk: { level: 'manual_review', reasonCodes: ['review'], ruleVersion: 'pilot-v1' },
-    plan: { status: 'stale', planVersion: 'plan-v2', intakeRevision: 3 },
-    logCount: 0,
-    weeklyReviewCount: 0,
-    consent: { accepted: true, version: 'pilot-v1' }
+    ruleVersion: 'pilot-v2',
+    riskLevel: 'normal',
+    riskCodes: [],
+    planSummary: { status: 'stale', planVersion: 'pilot-v2', weekCount: 0, sessionCount: 0, actionCount: 0 },
+    validationResult: 'failed'
   });
   const serialized = JSON.stringify(summary);
   for (const forbidden of [secret, 'height', 'weight', 'pain', 'freeText', 'message', 'field', 'acceptedAt', 'exercises']) {
@@ -208,8 +214,8 @@ test('审核摘要严格最小化，不含问卷、理由文本、日志、自�
   const loaded = moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).loadState();
   assert.equal(JSON.stringify(loaded).includes('healthAnswer'), false);
   assert.equal(JSON.stringify(loaded).includes('SECRET_LOG'), false);
-  summary.risk.reasonCodes.push('changed');
-  assert.deepEqual(moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).exportReviewSummary().risk.reasonCodes, ['review']);
+  assert.throws(() => summary.riskCodes.push('changed'), TypeError);
+  assert.deepEqual(moduleApi.createLocalStore({ storage, participantId: 'pilot-a' }).exportReviewSummary().riskCodes, []);
 });
 
 test('审核摘要只导出严格机器标识符，恶意持久化元数据无法夹带自由文本', () => {
@@ -234,49 +240,59 @@ test('审核摘要只导出严格机器标识符，恶意持久化元数据无�
   const maliciousLoaded = maliciousStore.loadState();
   assert.equal(JSON.stringify(maliciousLoaded.logs).includes(marker), false);
   assert.equal(JSON.stringify(maliciousLoaded.weeklyReviews).includes(marker), false);
+  const versionLeakSummary = moduleApi.buildReviewSummary({ ...DEFAULT_STATE, intake: structuredClone(VALID_INTAKE), intakeRevision: 2, risk: structuredClone(VALID_RISK), plan: { status:'stale', planVersion:marker, intakeRevision:2 } });
+  assert.equal(versionLeakSummary.planSummary.planVersion, null);
+  assert.equal(JSON.stringify(versionLeakSummary).includes(marker), false);
 
+  const conservativeIntake = { ...VALID_INTAKE, trainingBreak: 'yes' };
+  const riskEngine = loadScript('riskEngine');
+  const conservativeRisk = riskEngine.evaluateRisk(riskEngine.deriveRiskIntake(conservativeIntake));
   const validStorage = memoryStorage({
     [moduleApi.STORAGE_KEY]: JSON.stringify({
       schemaVersion: 1,
-      risk: {
-        level: 'conservative',
-        reasons: [{ code: 'stable_pain_mild', field: 'stablePain', message: '仅本地' }],
-        ruleVersion: 'pilot-v1'
-      },
-      plan: { status: 'active', planVersion: 'plan-v1', intakeRevision: 0 }
+      intake: conservativeIntake,
+      intakeRevision: 2,
+      risk: conservativeRisk,
+      plan: { status: 'active', planVersion: 'pilot-v2', intakeRevision: 2 }
     })
   });
   assert.deepEqual(moduleApi.createLocalStore({ storage: validStorage }).exportReviewSummary(), {
-    schemaVersion: 1,
     participantId: 'pilot-local',
-    intakeRevision: 0,
-    risk: { level: 'conservative', reasonCodes: ['stable_pain_mild'], ruleVersion: 'pilot-v1' },
-    plan: { status: 'active', planVersion: 'plan-v1', intakeRevision: 0 },
-    logCount: 0,
-    weeklyReviewCount: 0,
-    consent: { accepted: false, version: 'pilot-v1' }
+    ruleVersion: 'pilot-v2',
+    riskLevel: 'conservative',
+    riskCodes: ['activity_returning'],
+    planSummary: { status: 'active', planVersion: 'pilot-v2', weekCount: 0, sessionCount: 0, actionCount: 0 },
+    validationResult: 'failed'
   });
 });
 
-test('clearAll 只删除 OWNED_KEYS，失败不报告成功', () => {
+test('审核摘要对有效计划重新执行可信validator并给出准确规模',()=>{const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,participantId:'pilot-a'});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));const plan=generateValidPlan(1);store.savePlan(plan);const summary=store.exportReviewSummary(),sessions=plan.weeks.flatMap(week=>week.sessions);assert.equal(summary.validationResult,'passed');assert.equal(summary.planSummary.weekCount,4);assert.equal(summary.planSummary.sessionCount,sessions.length);assert.equal(summary.planSummary.actionCount,sessions.reduce((total,session)=>total+session.actions.length,0));assert.deepEqual(Object.keys(summary).sort(),['participantId','planSummary','riskCodes','riskLevel','ruleVersion','validationResult'])});
+
+test('clearAll删除全部Move28本地key、保留无关key，失败时完整尝试且不报告成功', () => {
   const moduleApi = api();
   const storage = memoryStorage({
     [moduleApi.STORAGE_KEY]: JSON.stringify({ ...DEFAULT_STATE, participantId: 'pilot-a' }),
     'move28-tracker-v1': '{"keep":true}',
+    'move28-current-day': '9',
     'move28-music-enabled': '0',
-    'move28-music-volume': '20'
+    'move28-music-volume': '20',
+    'unrelated-site-key': 'keep'
   });
   const store = moduleApi.createLocalStore({ storage, participantId: 'pilot-a' });
-  assert.equal(store.clearAll(), true);
-  assert.equal(storage.raw(moduleApi.STORAGE_KEY), undefined);
-  assert.equal(storage.raw('move28-tracker-v1'), '{"keep":true}');
-  assert.equal(storage.raw('move28-music-enabled'), '0');
-  assert.equal(storage.raw('move28-music-volume'), '20');
+  assert.deepEqual(store.clearAllDetailed(), {ok:true,status:'deleted',failedScopes:[]});
+  for(const key of moduleApi.OWNED_KEYS)assert.equal(storage.raw(key),undefined,key);
+  assert.equal(storage.raw('unrelated-site-key'),'keep');
   assert.deepEqual(store.loadState(), { ...DEFAULT_STATE, participantId: 'pilot-a' });
 
-  const failing = moduleApi.createLocalStore({ storage: { getItem: () => null, setItem: () => {}, removeItem: () => { throw new Error(secretText()); } } });
-  assert.equal(failing.clearAll(), false);
-  function secretText() { return 'private storage failure'; }
+  const removed=[];
+  const failingStorage={getItem:key=>key==='move28-tracker-v1'?'still-there':null,setItem:()=>{},removeItem:key=>{removed.push(key);if(key===moduleApi.STORAGE_KEY)throw new Error('private storage failure')}};
+  const failing = moduleApi.createLocalStore({ storage:failingStorage });
+  const result=failing.clearAllDetailed();
+  assert.equal(result.ok,false);assert.equal(result.status,'partial_failure');
+  assert.deepEqual(removed,moduleApi.OWNED_KEYS);
+  assert.deepEqual([...result.failedScopes].sort(),['local.pilot','local.tracker']);
+  assert.equal(JSON.stringify(result).includes('private storage failure'),false);
+  assert.equal(failing.clearAll(),false);
 });
 
 test('恶意保存值零 getter 执行且 Proxy/BigInt/function/cycle 均拒绝，存储不变', () => {
@@ -425,6 +441,10 @@ test('participantId 仅接受短 pilot 编号，非法值回退 pilot-local', ()
   for (const invalid of ['Alice', '13800138000', 'pilot_a', 'pilot-', 'pilot-a-very-long-identifier', '', null, {}, 'pilot-中文']) {
     assert.equal(moduleApi.createDefaultState(invalid).participantId, 'pilot-local');
   }
+  const persisted = moduleApi.migrateState({ ...DEFAULT_STATE, participantId: 'pilot-deadbeef' }, 'pilot-newvalue');
+  assert.equal(persisted.participantId, 'pilot-deadbeef');
+  const invalidPersisted = moduleApi.migrateState({ ...DEFAULT_STATE, participantId: 'email-user' }, 'pilot-newvalue');
+  assert.equal(invalidPersisted.participantId, 'pilot-newvalue');
 });
 
 test('默认实例在 localStorage getter 被禁止时加载不崩且写入明确失败', () => {
@@ -489,10 +509,11 @@ test('默认实例在可读存储的 removeItem 失败时不伪称清除成功',
 });
 
 test('classic-script UMD 在无 DOM/localStorage 的 VM 中安全加载并挂载 Move28.storage', () => {
+  const riskSource = fs.readFileSync(path.join(projectRoot, 'src', 'domain', 'risk-engine.js'), 'utf8');
   const source = fs.readFileSync(path.join(projectRoot, 'src', 'storage', 'local-store.js'), 'utf8');
   const context = { structuredClone };
   vm.createContext(context);
-  assert.doesNotThrow(() => vm.runInContext(source, context));
+  assert.doesNotThrow(() => vm.runInContext(`${riskSource}\n${source}`, context));
   assert.equal(typeof context.Move28.storage.createLocalStore, 'function');
   assert.throws(() => vm.runInContext('Move28.storage.saveIntake({age: 22})', context), error=>error.name==='StorageError');
   const state=vm.runInContext('Move28.storage.loadState()',context);

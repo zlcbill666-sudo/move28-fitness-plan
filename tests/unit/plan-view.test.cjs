@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const test=require('node:test');
 const {clearMove28ModuleCache}=require('../helpers/load-script.cjs');
 const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
-const intake={age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:gymEquipment,avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no',allowSettingSwap:'no'};
+const intake={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:gymEquipment,allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true};
 const risk={level:'normal',ruleVersion:'pilot-v2',reasons:[]};
 function setup(){
   clearMove28ModuleCache();
@@ -36,6 +36,11 @@ test('plan-view active计划必须与当前intake revision一致并再次通过�
   let tagReads=0;const tagged={};Object.defineProperty(tagged,Symbol.toStringTag,{get(){tagReads+=1;return'Object'}});
   assert.equal(app.contextFromState(tagged).mode,'invalid');assert.equal(tagReads,0);
   assert.equal(app.contextFromState(new Proxy({},{ownKeys(){throw new Error('SECRET')}})).mode,'invalid');
+  const forgedRiskContext=app.contextFromState({intake:{...intake,chestSymptoms:'yes'},intakeRevision:1,risk,plan:active,logs:{}});
+  assert.equal(forgedRiskContext.mode,'blocked');
+  let validationReads=0;const hostileValidation={errors:[]};Object.defineProperty(hostileValidation,'ok',{enumerable:true,get(){validationReads+=1;throw new Error('VALIDATOR_RESULT_GETTER')}});
+  assert.doesNotThrow(()=>assert.equal(app.validationPassed(hostileValidation),false));assert.equal(validationReads,0);
+  const validationProxy=new Proxy({ok:true,errors:[]},{ownKeys(){throw new Error('SECRET')}});assert.equal(app.validationPassed(validationProxy),false);
 });
 test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配或提供任选项',()=>{
   const {catalog,guide,plan}=setup();
