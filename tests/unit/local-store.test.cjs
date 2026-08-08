@@ -713,3 +713,43 @@ test('classic-script 在模块加载时绑定可信能力引擎，不信任后�
   const status=vm.runInContext(`(()=>{let raw=null;const storage={getItem:()=>raw,setItem:(_key,value)=>{raw=String(value)},removeItem:()=>{raw=null}};const store=Move28.storage.createLocalStore({storage});Move28.domain.evaluateCapabilityProfile=()=>({status:'stop',difficultyCap:1,exclusions:[],variants:{knee_dominant:'standard',horizontal_push:'standard'},cardioStartMinutes:0,reasonCodes:['FORGED']});return store.saveCapabilityProfile(${profile}).capabilityResult.status})()`,context);
   assert.equal(status,'normal');
 });
+
+test('classic-script 加载后篡改描述符内建函数不能执行能力getter或写入',()=>{
+  const riskSource=fs.readFileSync(path.join(projectRoot,'src','domain','risk-engine.js'),'utf8');
+  const capabilitySource=fs.readFileSync(path.join(projectRoot,'src','domain','capability-engine.js'),'utf8');
+  const storeSource=fs.readFileSync(path.join(projectRoot,'src','storage','local-store.js'),'utf8');
+  const initialRaw=JSON.stringify(DEFAULT_STATE);
+  const context={structuredClone,initialRaw};vm.createContext(context);vm.runInContext(`${riskSource}\n${capabilitySource}\n${storeSource}`,context);
+  const result=vm.runInContext(`(()=>{
+    let raw=initialRaw,setCalls=0,getterCalls=0;
+    const storage={getItem:()=>raw,setItem:(_key,value)=>{setCalls+=1;raw=String(value)},removeItem:()=>{raw=null}};
+    const store=Move28.storage.createLocalStore({storage});
+    const profile=${JSON.stringify(VALID_CAPABILITY_PROFILE)};
+    Object.defineProperty(profile,'chairRise',{enumerable:true,configurable:true,get(){getterCalls+=1;return 'independent_controlled'}});
+    Object.getOwnPropertyDescriptor=(object,key)=>({value:object[key],enumerable:true,configurable:true,writable:true});
+    let errorName=null;
+    try{store.saveCapabilityProfile(profile)}catch(error){errorName=error.name}
+    return {errorName,getterCalls,setCalls,raw};
+  })()`,context);
+  assert.ok(['TypeError','StorageError'].includes(result.errorName));
+  assert.equal(result.getterCalls,0);
+  assert.equal(result.setCalls,0);
+  assert.equal(result.raw,initialRaw);
+});
+
+test('classic-script 捕获内建函数后正常能力档案仍持久化为normal',()=>{
+  const riskSource=fs.readFileSync(path.join(projectRoot,'src','domain','risk-engine.js'),'utf8');
+  const capabilitySource=fs.readFileSync(path.join(projectRoot,'src','domain','capability-engine.js'),'utf8');
+  const storeSource=fs.readFileSync(path.join(projectRoot,'src','storage','local-store.js'),'utf8');
+  const context={structuredClone};vm.createContext(context);vm.runInContext(`${riskSource}\n${capabilitySource}\n${storeSource}`,context);
+  const result=vm.runInContext(`(()=>{
+    let raw=null,setCalls=0;
+    const storage={getItem:()=>raw,setItem:(_key,value)=>{setCalls+=1;raw=String(value)},removeItem:()=>{raw=null}};
+    const saved=Move28.storage.createLocalStore({storage}).saveCapabilityProfile(${JSON.stringify(VALID_CAPABILITY_PROFILE)});
+    return {status:saved.capabilityResult.status,revision:saved.capabilityRevision,setCalls,persistedStatus:JSON.parse(raw).capabilityResult.status};
+  })()`,context);
+  assert.equal(result.status,'normal');
+  assert.equal(result.revision,1);
+  assert.equal(result.setCalls,1);
+  assert.equal(result.persistedStatus,'normal');
+});

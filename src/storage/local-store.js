@@ -15,6 +15,26 @@
 })(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi, capabilityApi) {
   'use strict';
 
+  // Hostile classic-script peers can replace realm intrinsics after this script loads.
+  // Capture every intrinsic used by the plain-data inspection/cloning boundary once.
+  const safeArrayIsArray = Array.isArray;
+  const safeGetPrototypeOf = Object.getPrototypeOf;
+  const safeGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+  const safeOwnKeys = Reflect.ownKeys;
+  const safeDefineProperty = Object.defineProperty;
+  const safeHasOwn = Function.prototype.call.bind(Object.prototype.hasOwnProperty);
+  const safeFunctionToString = Function.prototype.call.bind(Function.prototype.toString);
+  const safeArrayPush = Function.prototype.call.bind(Array.prototype.push);
+  const safeArrayPop = Function.prototype.call.bind(Array.prototype.pop);
+  const safeArraySort = Function.prototype.call.bind(Array.prototype.sort);
+  const SafeWeakSet = WeakSet;
+  const safeWeakSetAdd = Function.prototype.call.bind(WeakSet.prototype.add);
+  const safeWeakSetDelete = Function.prototype.call.bind(WeakSet.prototype.delete);
+  const safeWeakSetHas = Function.prototype.call.bind(WeakSet.prototype.has);
+  const SafeWeakMap = WeakMap;
+  const safeWeakMapGet = Function.prototype.call.bind(WeakMap.prototype.get);
+  const safeWeakMapSet = Function.prototype.call.bind(WeakMap.prototype.set);
+
   const STORAGE_KEY = 'move28-pilot-v1';
   const SCHEMA_VERSION = 1;
   const CONSENT_VERSION = 'pilot-v1';
@@ -32,8 +52,7 @@
   const RUNTIME_STOP_REASON_CODES = Object.freeze(['chest_pain_or_pressure','near_faint_or_faint','abnormal_shortness_of_breath','sudden_severe_pain','unable_to_bear_weight','neurologic_or_consciousness_change','joint_pain_persisted_or_worsened']);
   const RUNTIME_STOP_REASON_SET = new Set(RUNTIME_STOP_REASON_CODES);
   const MAX_LOCAL_REASON_MESSAGE_LENGTH = 512;
-  const functionToString = Function.prototype.toString;
-  const nativeObjectSource = functionToString.call(Object);
+  const nativeObjectSource = safeFunctionToString(Object);
   const trustedValidatePlan = typeof validatorApi.validatePlan === 'function' ? validatorApi.validatePlan : null;
   const trustedExerciseCatalog = Array.isArray(catalogApi.exerciseCatalog) ? catalogApi.exerciseCatalog : null;
   const trustedProposeWeeklyChange = typeof adaptationApi.proposeWeeklyChange === 'function' ? adaptationApi.proposeWeeklyChange : null;
@@ -96,55 +115,57 @@
   }
 
   function inspectPlainObject(value) {
-    const isArray = Array.isArray(value);
-    const prototype = Object.getPrototypeOf(value);
+    const isArray = safeArrayIsArray(value);
+    const prototype = safeGetPrototypeOf(value);
     if (!isArray && prototype !== null) {
-      const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+      const constructorDescriptor = safeGetOwnPropertyDescriptor(prototype, 'constructor');
       const constructorPrototype = constructorDescriptor
-        && Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')
+        && safeHasOwn(constructorDescriptor, 'value')
         && typeof constructorDescriptor.value === 'function'
-        ? Object.getOwnPropertyDescriptor(constructorDescriptor.value, 'prototype')
+        ? safeGetOwnPropertyDescriptor(constructorDescriptor.value, 'prototype')
         : null;
-      if (Object.getPrototypeOf(prototype) !== null
+      if (safeGetPrototypeOf(prototype) !== null
         || !constructorPrototype
-        || !Object.prototype.hasOwnProperty.call(constructorPrototype, 'value')
+        || !safeHasOwn(constructorPrototype, 'value')
         || constructorPrototype.value !== prototype
-        || functionToString.call(constructorDescriptor.value) !== nativeObjectSource) {
+        || safeFunctionToString(constructorDescriptor.value) !== nativeObjectSource) {
         throw invalidPlainData();
       }
     }
 
-    const keys = Reflect.ownKeys(value);
+    const keys = safeOwnKeys(value);
     const entries = [];
     if (isArray) {
-      const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
-      if (!lengthDescriptor || !Object.prototype.hasOwnProperty.call(lengthDescriptor, 'value')) {
+      const lengthDescriptor = safeGetOwnPropertyDescriptor(value, 'length');
+      if (!lengthDescriptor || !safeHasOwn(lengthDescriptor, 'value')) {
         throw invalidPlainData();
       }
       const length = lengthDescriptor.value;
-      for (const key of keys) {
+      for (let keyIndex = 0; keyIndex < keys.length; keyIndex += 1) {
+        const key = keys[keyIndex];
         if (key === 'length') continue;
         if (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key) || Number(key) >= length) {
           throw invalidPlainData();
         }
-        const descriptor = Object.getOwnPropertyDescriptor(value, key);
-        if (!descriptor || !descriptor.enumerable || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        const descriptor = safeGetOwnPropertyDescriptor(value, key);
+        if (!descriptor || !descriptor.enumerable || !safeHasOwn(descriptor, 'value')) {
           throw invalidPlainData();
         }
-        entries.push([key, descriptor.value]);
+        safeArrayPush(entries, [key, descriptor.value]);
       }
       if (entries.length !== length) throw invalidPlainData();
-      entries.sort((a, b) => Number(a[0]) - Number(b[0]));
+      safeArraySort(entries, (a, b) => Number(a[0]) - Number(b[0]));
       return { isArray, entries };
     }
 
-    for (const key of keys) {
+    for (let keyIndex = 0; keyIndex < keys.length; keyIndex += 1) {
+      const key = keys[keyIndex];
       if (typeof key !== 'string') throw invalidPlainData();
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (!descriptor || !descriptor.enumerable || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+      const descriptor = safeGetOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !safeHasOwn(descriptor, 'value')) {
         throw invalidPlainData();
       }
-      entries.push([key, descriptor.value]);
+      safeArrayPush(entries, [key, descriptor.value]);
     }
     return { isArray, entries };
   }
@@ -156,13 +177,13 @@
   }
 
   function validatePlainGraph(value) {
-    const active = new WeakSet();
-    const validated = new WeakSet();
+    const active = new SafeWeakSet();
+    const validated = new SafeWeakSet();
     const stack = [{ value, leaving: false }];
     let nodeCount = 0;
 
     while (stack.length > 0) {
-      const frame = stack.pop();
+      const frame = safeArrayPop(stack);
       const current = frame.value;
       if (!frame.leaving) {
         nodeCount += 1;
@@ -173,17 +194,17 @@
         continue;
       }
       if (frame.leaving) {
-        active.delete(current);
-        validated.add(current);
+        safeWeakSetDelete(active, current);
+        safeWeakSetAdd(validated, current);
         continue;
       }
-      if (active.has(current)) throw invalidPlainData();
-      if (validated.has(current)) continue;
-      active.add(current);
+      if (safeWeakSetHas(active, current)) throw invalidPlainData();
+      if (safeWeakSetHas(validated, current)) continue;
+      safeWeakSetAdd(active, current);
       const inspected = inspectPlainObject(current);
-      stack.push({ value: current, leaving: true });
+      safeArrayPush(stack, { value: current, leaving: true });
       for (let index = inspected.entries.length - 1; index >= 0; index -= 1) {
-        stack.push({ value: inspected.entries[index][1], leaving: false });
+        safeArrayPush(stack, { value: inspected.entries[index][1], leaving: false });
       }
     }
   }
@@ -201,27 +222,30 @@
 
       const rootInspection = inspectPlainObject(value);
       const output = rootInspection.isArray ? [] : {};
-      const clones = new WeakMap([[value, output]]);
+      const clones = new SafeWeakMap();
+      safeWeakMapSet(clones, value, output);
       const stack = [{ output, entries: rootInspection.entries, index: 0 }];
       while (stack.length > 0) {
         const frame = stack[stack.length - 1];
         if (frame.index >= frame.entries.length) {
-          stack.pop();
+          safeArrayPop(stack);
           continue;
         }
-        const [key, child] = frame.entries[frame.index];
+        const entry = frame.entries[frame.index];
+        const key = entry[0];
+        const child = entry[1];
         frame.index += 1;
         let childClone = child;
         if (child !== null && typeof child === 'object') {
-          childClone = clones.get(child);
+          childClone = safeWeakMapGet(clones, child);
           if (childClone === undefined) {
             const childInspection = inspectPlainObject(child);
             childClone = childInspection.isArray ? [] : {};
-            clones.set(child, childClone);
-            stack.push({ output: childClone, entries: childInspection.entries, index: 0 });
+            safeWeakMapSet(clones, child, childClone);
+            safeArrayPush(stack, { output: childClone, entries: childInspection.entries, index: 0 });
           }
         }
-        Object.defineProperty(frame.output, key, {
+        safeDefineProperty(frame.output, key, {
           value: childClone, enumerable: true, configurable: true, writable: true
         });
       }
@@ -233,8 +257,8 @@
 
   function ownDataValue(object, key) {
     try {
-      const descriptor = Object.getOwnPropertyDescriptor(object, key);
-      return descriptor && Object.prototype.hasOwnProperty.call(descriptor, 'value')
+      const descriptor = safeGetOwnPropertyDescriptor(object, key);
+      return descriptor && safeHasOwn(descriptor, 'value')
         ? { present: true, value: descriptor.value }
         : { present: false, value: undefined };
     } catch (_error) {
@@ -246,7 +270,7 @@
     try {
       const cloned = clonePlainData(value);
       const isObject = cloned !== null && typeof cloned === 'object';
-      if (!isObject || Array.isArray(cloned) !== requireArray) return fallback;
+      if (!isObject || safeArrayIsArray(cloned) !== requireArray) return fallback;
       return cloned;
     } catch (_error) {
       return fallback;
