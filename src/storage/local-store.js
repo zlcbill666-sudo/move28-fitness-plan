@@ -766,7 +766,7 @@
         : [];
       if (!planId || !trustedRisk || !risksEqual(state.risk, trustedRisk)
         || !['pending_review', 'active'].includes(plan.status)
-        || !hasCurrentCapabilityBinding(plan, state, { requireReview: false })
+        || !hasCurrentCapabilityBinding(plan, state, { requireReview: plan.status === 'active' })
         || !passesTrustedPlanGate(plan, state)) throw createStorageError();
       const catalogById = new Map(trustedExerciseCatalog.map(exercise => [exercise.id, exercise]));
       const weeks = plan.weeks.map(week => Object.freeze({

@@ -227,7 +227,7 @@ test('统一能力绑定门逐入口拒绝缺失、0、错配和审核revision�
     assert.throws(()=>resolveCase.store.resolveWeeklyReview({reviewId:pending.weeklyReviews[0].id,decision:'accepted'}),error=>error.name==='StorageError');
   }
   const reviewOnly=boundPlanStore({active:true});mutateStoredPlan(reviewOnly.storage,reviewOnly.moduleApi,raw=>{raw.plan.review.capabilityRevision=2});
-  assert.equal(reviewOnly.store.buildDetailedReviewDossier().planId,reviewOnly.plan.id);
+  assert.throws(()=>reviewOnly.store.buildDetailedReviewDossier(),error=>error.name==='StorageError');
 });
 
 test('能力状态仅normal或conservative可保存计划',()=>{
