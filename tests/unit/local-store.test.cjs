@@ -76,13 +76,16 @@ test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活�
   assert.equal(dossier.participantId,'pilot-local');
   assert.equal(dossier.planId,plan.id);
   assert.equal(dossier.intakeRevision,1);
+  assert.equal(dossier.capabilityStatus,'normal');
+  assert.equal(dossier.capabilityRevision,1);
+  assert.deepEqual(dossier.constraintCodes,[]);
   assert.equal(dossier.riskLevel,'normal');
   assert.equal(dossier.validationResult,'passed');
   assert.deepEqual(dossier.availableWeekdays,['mon','thu']);
   assert.deepEqual(dossier.weeks.map(week=>week.number),[1,2,3,4]);
-  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.pattern&&action.gif&&action.dose))));
+  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.pattern&&action.gif&&action.dose&&Object.prototype.hasOwnProperty.call(action,'variant')))));
   const serialized=JSON.stringify(dossier);
-  for(const forbidden of ['chestSymptoms','age','equipmentBySetting','exclusions','RAW HEALTH'])assert.equal(serialized.includes(forbidden),false);
+  for(const forbidden of ['chestSymptoms','age','equipmentBySetting','exclusions','chairRise','wallPushup','wallHinge','floorAccess','walkTolerance','RAW HEALTH'])assert.equal(serialized.includes(forbidden),false);
   const approved=store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
   assert.equal(approved.plan.status,'active');
   assert.deepEqual(approved.plan.review,{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1});
@@ -405,6 +408,9 @@ test('审核摘要严格最小化，不含问卷、理由文本、日志、自�
     ruleVersion: 'pilot-v2',
     riskLevel: 'normal',
     riskCodes: [],
+    capabilityStatus: null,
+    capabilityRevision: null,
+    constraintCodes: [],
     planSummary: { status: 'stale', planVersion: 'pilot-v2', weekCount: 0, sessionCount: 0, actionCount: 0 },
     validationResult: 'failed'
   });
@@ -462,12 +468,15 @@ test('审核摘要只导出严格机器标识符，恶意持久化元数据无�
     ruleVersion: 'pilot-v2',
     riskLevel: 'conservative',
     riskCodes: ['activity_returning'],
+    capabilityStatus: null,
+    capabilityRevision: null,
+    constraintCodes: [],
     planSummary: { status: 'stale', planVersion: 'pilot-v2', weekCount: 0, sessionCount: 0, actionCount: 0 },
     validationResult: 'failed'
   });
 });
 
-test('审核摘要对有效计划重新执行可信validator并给出准确规模',()=>{const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,participantId:'pilot-a'});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);const plan=generateValidPlan(1);store.savePlan(plan);const summary=store.exportReviewSummary(),sessions=plan.weeks.flatMap(week=>week.sessions);assert.equal(summary.validationResult,'passed');assert.equal(summary.planSummary.weekCount,4);assert.equal(summary.planSummary.sessionCount,sessions.length);assert.equal(summary.planSummary.actionCount,sessions.reduce((total,session)=>total+session.actions.length,0));assert.deepEqual(Object.keys(summary).sort(),['participantId','planSummary','riskCodes','riskLevel','ruleVersion','validationResult'])});
+test('审核摘要对有效计划重新执行可信validator并给出准确规模',()=>{const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,participantId:'pilot-a'});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);const plan=generateValidPlan(1);store.savePlan(plan);const summary=store.exportReviewSummary(),sessions=plan.weeks.flatMap(week=>week.sessions);assert.equal(summary.validationResult,'passed');assert.equal(summary.capabilityStatus,'normal');assert.equal(summary.capabilityRevision,1);assert.deepEqual(summary.constraintCodes,[]);assert.equal(summary.planSummary.weekCount,4);assert.equal(summary.planSummary.sessionCount,sessions.length);assert.equal(summary.planSummary.actionCount,sessions.reduce((total,session)=>total+session.actions.length,0));assert.deepEqual(Object.keys(summary).sort(),['capabilityRevision','capabilityStatus','constraintCodes','participantId','planSummary','riskCodes','riskLevel','ruleVersion','validationResult'])});
 
 test('clearAll删除全部Move28本地key、保留无关key，失败时完整尝试且不报告成功', () => {
   const moduleApi = api();

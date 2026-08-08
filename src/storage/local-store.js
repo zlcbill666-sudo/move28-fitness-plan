@@ -419,6 +419,7 @@
       const variableValid = proposal && (proposal.variable === null || variable !== null);
       const reasonCode = proposal && sanitizeMachineId(proposal.reasonCode);
       if (!id || !planId || record.reviewVersion !== 1 || !Number.isSafeInteger(record.intakeRevision) || record.intakeRevision < 1
+        || !Number.isSafeInteger(record.capabilityRevision) || record.capabilityRevision < 1
         || !Number.isSafeInteger(record.weekNumber) || record.weekNumber < 1 || record.weekNumber > 4 || !submittedAt || !answers
         || !proposal || !WEEKLY_TYPES.has(proposal.type) || !reasonCode || !variableValid
         || !(proposal.targetWeekNumber === null || (Number.isSafeInteger(proposal.targetWeekNumber) && proposal.targetWeekNumber >= 2 && proposal.targetWeekNumber <= 4))
@@ -426,20 +427,21 @@
         || (record.decision === 'accepted') !== (resultPlanId !== null)
         || (record.decision === 'accepted' && resultPlanId !== expectedResultPlanId)
         || (resultPlanId !== null && resultPlanId === planId)) continue;
-      clean.push({ id, reviewVersion: 1, planId, resultPlanId, intakeRevision: record.intakeRevision, weekNumber: record.weekNumber,
+      clean.push({ id, reviewVersion: 1, planId, resultPlanId, intakeRevision: record.intakeRevision,
+        capabilityRevision: record.capabilityRevision, weekNumber: record.weekNumber,
         submittedAt, answers, proposal: { type: proposal.type, targetWeekNumber: proposal.targetWeekNumber,
           variable: variable || null, reasonCode }, decision: record.decision, decidedAt });
     }
     return clean;
   }
 
-  function weeklyPlanLineage(reviews, currentPlanId) {
+  function weeklyPlanLineage(reviews, currentPlanId, capabilityRevision) {
     const lineage = new Set([currentPlanId]);
     let changed = true;
     while (changed && lineage.size <= MAX_WEEKLY_REVIEWS + 1) {
       changed = false;
       for (const record of reviews) {
-        if (record && record.decision === 'accepted' && lineage.has(record.resultPlanId) && !lineage.has(record.planId)) {
+        if (record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted' && lineage.has(record.resultPlanId) && !lineage.has(record.planId)) {
           lineage.add(record.planId); changed = true;
         }
       }
@@ -811,6 +813,7 @@
               name: exercise.name,
               pattern: action.pattern,
               phase: action.phase,
+              variant: Object.prototype.hasOwnProperty.call(action, 'variant') ? action.variant : null,
               equipmentOptions: Object.freeze(exercise.equipmentOptions.map(option => Object.freeze([...option]))),
               contraindications: Object.freeze([...exercise.contraindications]),
               dose: Object.freeze(Object.fromEntries(['sets', 'reps', 'rpe', 'restSec', 'durationMin', 'holdSec']
@@ -825,6 +828,9 @@
         participantId: normalizeParticipantId(state.participantId),
         planId,
         intakeRevision: state.intakeRevision,
+        capabilityStatus: state.capabilityResult.status,
+        capabilityRevision: state.capabilityRevision,
+        constraintCodes: Object.freeze([...state.capabilityResult.reasonCodes]),
         availableWeekdays: Object.freeze([...availableWeekdays]),
         ruleVersion: trustedRisk.ruleVersion,
         riskLevel: trustedRisk.level,
@@ -919,9 +925,11 @@
 
     function proposeForState(state, review) {
       if (!trustedProposeWeeklyChange) return null;
+      const lineage = state.plan ? weeklyPlanLineage(state.weeklyReviews, state.plan.id, state.capabilityRevision) : new Set();
+      const previousReviews = state.weeklyReviews.filter(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId));
       let proposal;
       try { proposal = trustedProposeWeeklyChange({ plan: state.plan, review,
-        previousReviews: state.weeklyReviews, intake: state.intake, risk: state.risk,
+        previousReviews, intake: state.intake, risk: state.risk,
         capabilityResult: state.capabilityResult, capabilityRevision: state.capabilityRevision }); }
       catch (_error) { return null; }
       return proposal && proposal.status === 'ok' && WEEKLY_TYPES.has(proposal.type) ? proposal : null;
@@ -931,17 +939,17 @@
       const cleanReview = clonePlainData(review);
       if (!cleanReview || typeof cleanReview !== 'object' || Array.isArray(cleanReview)) throw invalidPlainData();
       const state = loadStateForWrite(), plan = state.plan;
-      const lineage = plan ? weeklyPlanLineage(state.weeklyReviews, plan.id) : new Set();
+      const lineage = plan ? weeklyPlanLineage(state.weeklyReviews, plan.id, state.capabilityRevision) : new Set();
       if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
         || !isPlanApprovedForState(plan, state) || !passesTrustedPlanGate(plan, state)
         || state.weeklyReviews.length >= MAX_WEEKLY_REVIEWS
-        || state.weeklyReviews.some(item => lineage.has(item.planId) && item.decision === 'pending')) throw createStorageError();
+        || state.weeklyReviews.some(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId) && item.decision === 'pending')) throw createStorageError();
       const weekNumber = cleanReview.weekNumber;
-      const reviewedWeeks = new Set(state.weeklyReviews.filter(item => lineage.has(item.planId)).map(item => item.weekNumber));
+      const reviewedWeeks = new Set(state.weeklyReviews.filter(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId)).map(item => item.weekNumber));
       const expectedWeekNumber = [1, 2, 3, 4].find(number => !reviewedWeeks.has(number));
       if (weekNumber !== expectedWeekNumber) throw createStorageError();
       const week = Number.isSafeInteger(weekNumber) && weekNumber >= 1 && weekNumber <= 4 ? plan.weeks[weekNumber - 1] : null;
-      if (!week || !Array.isArray(week.sessions) || state.weeklyReviews.some(item => lineage.has(item.planId) && item.weekNumber === weekNumber)) throw createStorageError();
+      if (!week || !Array.isArray(week.sessions) || state.weeklyReviews.some(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId) && item.weekNumber === weekNumber)) throw createStorageError();
       const proposal = proposeForState(state, cleanReview);
       if (!proposal) throw createStorageError();
       const submittedAt = String(now());
@@ -950,7 +958,7 @@
       if (!answers) throw invalidPlainData();
       const decision = proposal.type === 'rescreen' ? 'rescreen' : 'pending';
       const record = { id: `weekly.${plan.id}.w${weekNumber}`, reviewVersion: 1, planId: plan.id, resultPlanId: null,
-        intakeRevision: state.intakeRevision, weekNumber, submittedAt, answers,
+        intakeRevision: state.intakeRevision, capabilityRevision: state.capabilityRevision, weekNumber, submittedAt, answers,
         proposal: { type: proposal.type, targetWeekNumber: proposal.targetWeekNumber,
           variable: proposal.variable, reasonCode: proposal.reason },
         decision, decidedAt: decision === 'pending' ? null : submittedAt };
@@ -969,6 +977,7 @@
       const state = loadStateForWrite(), record = state.weeklyReviews.find(item => item.id === clean.reviewId);
       if (!record || record.decision !== 'pending' || !state.plan || state.plan.id !== record.planId
         || state.plan.status !== 'active' || state.plan.intakeRevision !== record.intakeRevision
+        || record.capabilityRevision !== state.capabilityRevision || state.plan.capabilityRevision !== record.capabilityRevision
         || !isPlanApprovedForState(state.plan, state) || !passesTrustedPlanGate(state.plan, state)) throw createStorageError();
       const decidedAt = String(now());
       if (!UTC_ISO_PATTERN.test(decidedAt)) throw createStorageError();
@@ -1023,6 +1032,11 @@
       const riskLevel = state.risk && RISK_LEVELS.has(state.risk.level) ? state.risk.level : null;
       const riskCodes = state.risk && Array.isArray(state.risk.reasons)
         ? [...new Set(state.risk.reasons.map(reason => reason && reason.code).filter(code => TRUSTED_RISK_CODES.has(code)))] : [];
+      const capabilityStatus = state.capabilityResult && ['normal', 'conservative', 'manual_review', 'stop'].includes(state.capabilityResult.status)
+        ? state.capabilityResult.status : null;
+      const capabilityRevision = Number.isSafeInteger(state.capabilityRevision) && state.capabilityRevision > 0 ? state.capabilityRevision : null;
+      const constraintCodes = state.capabilityResult && Array.isArray(state.capabilityResult.reasonCodes)
+        ? state.capabilityResult.reasonCodes.filter(code => typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,79}$/.test(code)) : [];
       let planSummary = null, validationResult = 'not_applicable';
       if (state.plan) {
         const weeks = Array.isArray(state.plan.weeks) ? state.plan.weeks.slice(0, 4) : [];
@@ -1042,6 +1056,9 @@
         ruleVersion,
         riskLevel,
         riskCodes: Object.freeze(riskCodes),
+        capabilityStatus,
+        capabilityRevision,
+        constraintCodes: Object.freeze([...constraintCodes]),
         planSummary,
         validationResult
       });
