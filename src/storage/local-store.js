@@ -538,6 +538,7 @@
       }
       try {
         storage.setItem(STORAGE_KEY, serialized);
+        if (storage.getItem(STORAGE_KEY) !== serialized) throw new Error('PERSISTENCE_MISMATCH');
       } catch (_error) {
         throw createStorageError();
       }
@@ -617,6 +618,76 @@
       delete cleanPlan.staleReason;
       delete cleanPlan.staleAt;
       state.plan = cleanPlan;
+      return persist(state);
+    }
+
+    function buildDetailedReviewDossier() {
+      const state = loadStateForWrite(), plan = state.plan;
+      const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
+      const planId = plan && sanitizeMachineId(plan.id);
+      const availableWeekdays = state.intake && Array.isArray(state.intake.weekdays)
+        ? state.intake.weekdays.filter(day => ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day))
+        : [];
+      if (!planId || !trustedRisk || !risksEqual(state.risk, trustedRisk)
+        || !['pending_review', 'active'].includes(plan.status) || !passesTrustedPlanGate(plan, state)) throw createStorageError();
+      const catalogById = new Map(trustedExerciseCatalog.map(exercise => [exercise.id, exercise]));
+      const weeks = plan.weeks.map(week => Object.freeze({
+        number: week.number,
+        sessions: Object.freeze(week.sessions.map(session => Object.freeze({
+          weekday: session.weekday,
+          intent: session.intent,
+          setting: session.setting,
+          estimatedMinutes: session.estimatedMinutes,
+          actions: Object.freeze(session.actions.map(action => {
+            const exercise = catalogById.get(action.exerciseId);
+            if (!exercise) throw createStorageError();
+            return Object.freeze({
+              id: exercise.id,
+              name: exercise.name,
+              pattern: action.pattern,
+              phase: action.phase,
+              equipmentOptions: Object.freeze(exercise.equipmentOptions.map(option => Object.freeze([...option]))),
+              contraindications: Object.freeze([...exercise.contraindications]),
+              dose: Object.freeze(Object.fromEntries(['sets', 'reps', 'rpe', 'restSec', 'durationMin', 'holdSec']
+                .filter(key => Object.prototype.hasOwnProperty.call(action, key)).map(key => [key, action[key]]))),
+              gif: exercise.gif,
+              cues: Object.freeze({ ...exercise.cues })
+            });
+          }))
+        })))
+      }));
+      return Object.freeze({
+        participantId: normalizeParticipantId(state.participantId),
+        planId,
+        intakeRevision: state.intakeRevision,
+        availableWeekdays: Object.freeze([...availableWeekdays]),
+        ruleVersion: trustedRisk.ruleVersion,
+        riskLevel: trustedRisk.level,
+        riskCodes: Object.freeze(trustedRisk.reasons.map(reason => reason.code)),
+        planVersion: TRUSTED_PLAN_VERSIONS.has(plan.planVersion) ? plan.planVersion : null,
+        validationResult: 'passed',
+        weeks: Object.freeze(weeks)
+      });
+    }
+
+    function approvePlanReview(input) {
+      const clean = clonePlainData(input);
+      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
+        || Object.keys(clean).length !== 3
+        || Object.keys(clean).some(key => !['reviewerId', 'planId', 'intakeRevision'].includes(key))) throw invalidPlainData();
+      const reviewerId = sanitizeMachineId(clean.reviewerId), planId = sanitizeMachineId(clean.planId);
+      if (!reviewerId || !planId || !Number.isSafeInteger(clean.intakeRevision) || clean.intakeRevision < 1) throw invalidPlainData();
+      const state = loadStateForWrite(), plan = state.plan;
+      const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
+      if (!plan || plan.status !== 'pending_review' || plan.id !== planId
+        || plan.intakeRevision !== state.intakeRevision || clean.intakeRevision !== state.intakeRevision
+        || !trustedRisk || !risksEqual(state.risk, trustedRisk)
+        || !['normal', 'conservative'].includes(trustedRisk.level)
+        || !passesTrustedPlanGate(plan, state)) throw createStorageError();
+      const reviewedAt = String(now());
+      if (!UTC_ISO_PATTERN.test(reviewedAt)) throw createStorageError();
+      plan.status = 'active';
+      plan.review = { status: 'approved', reviewerId, reviewedAt, planId, intakeRevision: state.intakeRevision };
       return persist(state);
     }
 
@@ -809,7 +880,7 @@
       return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, savePlan, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
   function createLocalParticipantId() {
@@ -834,6 +905,8 @@
     loadState: defaultStore.loadState,
     saveIntake: defaultStore.saveIntake,
     savePlan: defaultStore.savePlan,
+    buildDetailedReviewDossier: defaultStore.buildDetailedReviewDossier,
+    approvePlanReview: defaultStore.approvePlanReview,
     recordWorkoutCompletion: defaultStore.recordWorkoutCompletion,
     recordWorkoutStop: defaultStore.recordWorkoutStop,
     recordWeeklyReview: defaultStore.recordWeeklyReview,

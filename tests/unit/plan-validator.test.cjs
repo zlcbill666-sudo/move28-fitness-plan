@@ -59,6 +59,14 @@ test('有效生成计划通过硬门槛且结果确定、深冻结、不修改�
   assert.ok(Object.isFrozen(first)&&Object.isFrozen(first.errors));
 });
 
+test('训练日必须属于用户明确选择的可用星期',()=>{
+  const apis=loadApis(),baseline=generated(apis.generator),plan=structuredClone(baseline.plan);
+  plan.weeks[0].sessions[0].weekday='tue';
+  const result=apis.validator.validatePlan({...baseline,plan,catalog:apis.catalog});
+  assert.equal(result.ok,false);
+  assert.ok(result.errors.some(error=>error.code==='SESSION_WEEKDAY_UNAVAILABLE'&&error.path==='weeks[0].sessions[0].weekday'));
+});
+
 test('invalid-plans fixtures逐类返回稳定错误码和路径',()=>{
   const apis=loadApis();
   for(const item of fixtures){

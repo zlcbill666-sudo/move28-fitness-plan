@@ -79,11 +79,8 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
   expect(state.plan.status).toBe('pending_review');
 
   await page.evaluate(() => {
-    const key = 'move28-pilot-v1';
-    const saved = JSON.parse(localStorage.getItem(key));
-    saved.plan.status = 'active';
-    saved.plan.review = { status: 'approved', reviewerId: 'pilot-reviewer', reviewedAt: '2030-01-02T03:04:05.000Z', planId: saved.plan.id, intakeRevision: saved.intakeRevision };
-    localStorage.setItem(key, JSON.stringify(saved));
+    const saved = window.Move28.storage.loadState();
+    window.Move28.storage.approvePlanReview({ reviewerId: 'pilot-reviewer', planId: saved.plan.id, intakeRevision: saved.intakeRevision });
   });
   await page.getByRole('button', { name: '完成，返回首页' }).click();
   await page.evaluate(() => {

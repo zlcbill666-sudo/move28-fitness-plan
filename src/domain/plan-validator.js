@@ -35,7 +35,8 @@ const MESSAGES=Object.freeze({
   MULTIPLE_PROGRESSIONS:'同一周同时增加了多个主要变量。',
   PROGRESSION_JUMP:'周进阶幅度超过首周期允许范围。',
   EMPTY_ACTION_QUEUE:'训练没有确定的动作队列。',
-  EQUIPMENT_UNAVAILABLE:'当前场景器械不能满足动作要求。'
+  EQUIPMENT_UNAVAILABLE:'当前场景器械不能满足动作要求。',
+  SESSION_WEEKDAY_UNAVAILABLE:'训练日不在用户可用星期内。'
 });
 
 function deepFreeze(value,seen=new Set()){
@@ -172,8 +173,9 @@ function validatePlan(rawInput){
   const errors=[];
   const sessionMinutesValid=typeof intake.sessionMinutes==='string'&&['20','30','45','60','75'].includes(intake.sessionMinutes);
   const intakeExclusionsValid=stringArray(intake.avoidMovements,{max:32});
+  const intakeWeekdaysValid=stringArray(intake.weekdays,{max:7})&&intake.weekdays.length>0&&intake.weekdays.every(day=>WEEKDAYS.includes(day));
   const riskValid=['normal','conservative'].includes(risk.level)&&risk.ruleVersion===RULE_VERSION;
-  if(!sessionMinutesValid||!intakeExclusionsValid||!riskValid){add(errors,'INVALID_PLAN_SCHEMA','input');return result(errors)}
+  if(!sessionMinutesValid||!intakeExclusionsValid||!intakeWeekdaysValid||!riskValid){add(errors,'INVALID_PLAN_SCHEMA','input');return result(errors)}
   const catalogById=buildCatalogIndex(catalog,errors);
   if(plan.status!=='generated'||plan.schemaVersion!==1||plan.ruleVersion!==RULE_VERSION||plan.planVersion!==RULE_VERSION||plan.ruleVersion!==risk.ruleVersion||plan.riskLevel!==risk.level||!safeInteger(plan.intakeRevision,{min:1})||!denseArray(plan.weeks,{min:4,max:4})){
     add(errors,'INVALID_PLAN_SCHEMA','plan');
@@ -181,6 +183,7 @@ function validatePlan(rawInput){
   }
   const sessionLimit=Number(intake.sessionMinutes);
   const intakeExclusions=stringArray(intake.avoidMovements,{max:32})?intake.avoidMovements:[];
+  const availableWeekdays=new Set(intakeWeekdaysValid?intake.weekdays:[]);
   const strengthDays=[];
   const seenSessionIds=new Set();
   for(let weekIndex=0;weekIndex<plan.weeks.length;weekIndex+=1){
@@ -193,6 +196,7 @@ function validatePlan(rawInput){
         add(errors,'INVALID_PLAN_SCHEMA',sessionPath);continue;
       }
       seenSessionIds.add(session.id);weekdays.add(session.weekday);
+      if(!availableWeekdays.has(session.weekday))add(errors,'SESSION_WEEKDAY_UNAVAILABLE',`${sessionPath}.weekday`);
       if(!Number.isFinite(sessionLimit)||session.estimatedMinutes>sessionLimit)add(errors,'SESSION_DURATION_EXCEEDED',`${sessionPath}.estimatedMinutes`);
       if(session.actions.length===0){add(errors,'EMPTY_ACTION_QUEUE',`${sessionPath}.actions`);continue}
       if(!denseArray(session.actions,{min:1,max:16})){add(errors,'INVALID_PLAN_SCHEMA',`${sessionPath}.actions`);continue}

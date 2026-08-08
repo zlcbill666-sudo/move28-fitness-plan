@@ -48,10 +48,61 @@ function generateValidPlan(revision){
 }
 function approveStoredPlan(storage,moduleApi,reviewedAt='2030-01-02T03:04:05.000Z'){
   const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));
-  raw.plan.status='active';
-  raw.plan.review={status:'approved',reviewerId:'pilot-reviewer',reviewedAt,planId:raw.plan.id,intakeRevision:raw.intakeRevision};
-  storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));
+  const store=moduleApi.createLocalStore({storage,now:()=>reviewedAt});
+  return store.approvePlanReview({reviewerId:'pilot-reviewer',planId:raw.plan.id,intakeRevision:raw.intakeRevision});
 }
+
+test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活计划',()=>{
+  const storage=memoryStorage(),moduleApi=api();
+  const store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  const plan=generateValidPlan(1);store.savePlan(plan);
+  const dossier=store.buildDetailedReviewDossier();
+  assert.equal(dossier.participantId,'pilot-local');
+  assert.equal(dossier.planId,plan.id);
+  assert.equal(dossier.intakeRevision,1);
+  assert.equal(dossier.riskLevel,'normal');
+  assert.equal(dossier.validationResult,'passed');
+  assert.deepEqual(dossier.availableWeekdays,['mon','thu']);
+  assert.deepEqual(dossier.weeks.map(week=>week.number),[1,2,3,4]);
+  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.pattern&&action.gif&&action.dose))));
+  const serialized=JSON.stringify(dossier);
+  for(const forbidden of ['chestSymptoms','age','equipmentBySetting','exclusions','RAW HEALTH'])assert.equal(serialized.includes(forbidden),false);
+  const approved=store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
+  assert.equal(approved.plan.status,'active');
+  assert.deepEqual(approved.plan.review,{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1});
+});
+
+test('脱敏复核材料不会导出持久化计划中的任意自由文本',()=>{
+  const storage=memoryStorage(),moduleApi=api();
+  const store=moduleApi.createLocalStore({storage});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  store.savePlan(generateValidPlan(1));
+  const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY)),session=raw.plan.weeks[0].sessions[0];
+  session.id='RAW HEALTH SESSION';
+  session.exclusions.push('RAW HEALTH EXCLUSION');
+  session.equipmentBySetting[session.setting].push('RAW HEALTH EQUIPMENT');
+  storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));
+  const dossier=store.buildDetailedReviewDossier(),serialized=JSON.stringify(dossier);
+  assert.equal(serialized.includes('RAW HEALTH'),false);
+  assert.equal(Object.prototype.hasOwnProperty.call(dossier.weeks[0].sessions[0],'id'),false);
+  assert.equal(Object.prototype.hasOwnProperty.call(dossier.weeks[0].sessions[0],'exclusions'),false);
+  assert.equal(Object.prototype.hasOwnProperty.call(dossier.weeks[0].sessions[0],'equipment'),false);
+});
+
+test('正式复核API拒绝错误计划、revision、复核人和非pending计划',()=>{
+  const storage=memoryStorage(),moduleApi=api();
+  const store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));
+  const plan=generateValidPlan(1);store.savePlan(plan);
+  for(const input of [
+    {reviewerId:'Bad Reviewer',planId:plan.id,intakeRevision:1},
+    {reviewerId:'pilot-reviewer',planId:'other-plan',intakeRevision:1},
+    {reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:2}
+  ])assert.throws(()=>store.approvePlanReview(input),error=>error.name==='StorageError'||error.name==='TypeError');
+  store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
+  assert.throws(()=>store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1}),error=>error.name==='StorageError');
+});
 
 test('空存储返回完整默认状态、独立副本且只使用唯一自有 key', () => {
   const storage = memoryStorage();
@@ -431,6 +482,13 @@ test('setItem 失败抛固定 StorageError 且不伪称成功', () => {
     storage: { getItem: () => null, setItem: () => { throw new Error('secret health data'); }, removeItem: () => {} }
   });
   assert.throws(() => store.saveIntake({ age: 20 }), error => error.name === 'StorageError' && error.message === 'Unable to save local participant state');
+});
+
+test('静默丢弃写入也必须检测并报告 StorageError', () => {
+  const store = api().createLocalStore({
+    storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+  });
+  assert.throws(() => store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK)), error => error.name === 'StorageError');
 });
 
 test('participantId 仅接受短 pilot 编号，非法值回退 pilot-local', () => {

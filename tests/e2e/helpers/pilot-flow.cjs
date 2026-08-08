@@ -71,18 +71,13 @@ async function completeOnboarding(page, overrides = {}) {
 
 async function approvePendingPlan(page) {
   await page.evaluate(() => {
-    const key = 'move28-pilot-v1';
-    const state = JSON.parse(localStorage.getItem(key));
+    const state = window.Move28.storage.loadState();
     if (!state?.plan || state.plan.status !== 'pending_review') throw new Error('NO_PENDING_PLAN');
-    state.plan.status = 'active';
-    state.plan.review = {
-      status: 'approved',
+    window.Move28.storage.approvePlanReview({
       reviewerId: 'pilot-reviewer',
-      reviewedAt: '2030-01-02T03:04:05.000Z',
       planId: state.plan.id,
       intakeRevision: state.intakeRevision
-    };
-    localStorage.setItem(key, JSON.stringify(state));
+    });
   });
   await page.reload();
 }

@@ -292,7 +292,7 @@ function generatePlan(rawInput){
   try{
     validation=safeValidationResult(validatorApi.validatePlan({
       plan:candidate,
-      intake:{sessionMinutes:String(input.sessionMinutes),avoidMovements:[...input.avoidMovements]},
+      intake:{sessionMinutes:String(input.sessionMinutes),avoidMovements:[...input.avoidMovements],weekdays:[...input.weekdays]},
       risk:{level:input.riskLevel,ruleVersion:RULE_VERSION},
       catalog:input.catalog
     }));
