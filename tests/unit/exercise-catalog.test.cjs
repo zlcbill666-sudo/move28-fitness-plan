@@ -9,16 +9,17 @@ const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/
 const EXPECTED_NAMES = [
   '坐姿抬腿', '脚踝绕环', '坐姿腿举', '坐姿腿弯举', '臀桥', '墙触髋铰链', '推胸机',
   '站姿弹力带推胸', '坐姿划船', '弹力带划船', '抗旋转推压', '高位坐姿起立', '坐姿腿屈伸',
-  '坐姿徒手伸膝', '髋外展机', '墙壁俯卧撑', '死虫式', '椭圆机／交叉训练机', '平地慢走',
-  '大腿后侧拉伸', '小腿拉伸'
+  '坐姿徒手伸膝', '扶椅提踵', '髋外展机', '墙壁俯卧撑', '死虫式', '仰卧脚跟滑动',
+  '四点支撑单肢滑动', '椭圆机／交叉训练机', '平地慢走', '扶椅原地踏步', '大腿后侧拉伸', '小腿拉伸'
 ];
 const EXPECTED_GIFS = [
   'assets/gifs/02_坐姿抬腿.gif', 'assets/gifs/03_脚踝绕环.gif', 'assets/gifs/04_坐姿腿举.gif',
   'assets/gifs/05_坐姿腿弯举.gif', 'assets/gifs/06_臀桥.gif', 'assets/gifs/20_墙触髋铰链.gif', 'assets/gifs/07_推胸机.gif',
   'assets/gifs/21_站姿弹力带推胸.gif', 'assets/gifs/08_坐姿划船.gif', 'assets/gifs/19_弹力带划船.gif',
   'assets/gifs/09_抗旋转推压.gif', 'assets/gifs/10_高位坐姿起立.gif', 'assets/gifs/11_坐姿腿屈伸.gif',
-  'assets/gifs/22_坐姿徒手伸膝.gif', 'assets/gifs/12_髋外展机.gif', 'assets/gifs/13_墙壁俯卧撑.gif',
-  'assets/gifs/14_死虫式.gif', 'assets/gifs/15_椭圆机.gif', 'assets/gifs/16_平地慢走.gif',
+  'assets/gifs/22_坐姿徒手伸膝.gif', 'assets/gifs/23_扶椅提踵.gif', 'assets/gifs/12_髋外展机.gif', 'assets/gifs/13_墙壁俯卧撑.gif',
+  'assets/gifs/14_死虫式.gif', 'assets/gifs/25_仰卧脚跟滑动.gif', 'assets/gifs/26_四点支撑单肢滑动.gif',
+  'assets/gifs/15_椭圆机.gif', 'assets/gifs/16_平地慢走.gif', 'assets/gifs/24_扶椅原地踏步.gif',
   'assets/gifs/17_大腿后侧拉伸.gif', 'assets/gifs/18_小腿拉伸.gif'
 ];
 const REQUIRED_FIELDS = [
@@ -139,11 +140,15 @@ test('关系图精确锁定，不允许目录隐式新增关系', () => {
     { id: 'high-seat-sit-to-stand', regressionIds: [], progressionIds: ['seated-leg-press'] },
     { id: 'seated-leg-extension', regressionIds: ['seated-knee-extension-unloaded'], progressionIds: [] },
     { id: 'seated-knee-extension-unloaded', regressionIds: [], progressionIds: ['seated-leg-extension'] },
+    { id: 'supported-calf-raise', regressionIds: [], progressionIds: [] },
     { id: 'hip-abduction-machine', regressionIds: [], progressionIds: [] },
     { id: 'wall-push-up', regressionIds: [], progressionIds: ['chest-press-machine'] },
-    { id: 'dead-bug', regressionIds: [], progressionIds: [] },
+    { id: 'dead-bug', regressionIds: ['heel-slide', 'bird-dog-regression'], progressionIds: [] },
+    { id: 'heel-slide', regressionIds: [], progressionIds: ['dead-bug'] },
+    { id: 'bird-dog-regression', regressionIds: [], progressionIds: ['dead-bug'] },
     { id: 'elliptical-trainer', regressionIds: ['flat-walk'], progressionIds: [] },
-    { id: 'flat-walk', regressionIds: [], progressionIds: [] },
+    { id: 'flat-walk', regressionIds: ['supported-standing-march'], progressionIds: [] },
+    { id: 'supported-standing-march', regressionIds: [], progressionIds: ['flat-walk'] },
     { id: 'hamstring-stretch', regressionIds: [], progressionIds: [] },
     { id: 'calf-stretch', regressionIds: [], progressionIds: [] }
   ]);
@@ -157,7 +162,9 @@ test('排除标签来自固定审核枚举并精确标注当前动作', () => {
     'seated-leg-press':['deep_knee_bend'],
     'glute-bridge':['floor'],
     'wall-hip-hinge':['hinge'],
-    'dead-bug':['floor']
+    'dead-bug':['floor'],
+    'heel-slide':['floor'],
+    'bird-dog-regression':['floor']
   });
   for (const contraindications of [['unknown'],['floor','floor']]) {
     const invalid = exerciseCatalog.map(item => ({...item,contraindications:[...item.contraindications]}));
@@ -267,6 +274,34 @@ test('Task6第一组动作元数据、关系与原创媒体契约精确锁定', 
     assert.deepEqual(item.equipmentOptions, [[contract.equipment]]);
     assert.equal(item.difficulty, 1);
     assert.deepEqual(item.dose, { sets:[2,3], reps:[8,12], rpe:[5,6], restSec:[60,90] });
+    assert.deepEqual(item.contraindications, contract.contraindications);
+    assert.deepEqual(item.progressionIds, contract.progressionIds);
+    assert.equal(item.reviewStatus, 'approved');
+    assert.deepEqual(Object.keys(item.cues), ['setup','movement','breathing','pain']);
+    assert.ok(Object.values(item.cues).every(value => typeof value === 'string' && value.length > 0));
+    assertOriginalGif(contract.gif, contract.hash, `${contract.name}GIF`);
+  }
+});
+
+test('Task6第二组动作元数据、关系与原创媒体契约精确锁定', () => {
+  const { exerciseCatalog } = loadCatalogAndPlan();
+  const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
+  const strengthDose = { sets:[2,3], reps:[8,12], rpe:[5,6], restSec:[60,90] };
+  const expected = {
+    'supported-calf-raise': { name:'扶椅提踵', pattern:'mobility', equipment:'stable_chair', dose:strengthDose, contraindications:[], progressionIds:[], gif:'23_扶椅提踵.gif', hash:'c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872' },
+    'supported-standing-march': { name:'扶椅原地踏步', pattern:'locomotion', equipment:'stable_chair', dose:{sets:[1,1],reps:[1,1],rpe:[2,4],restSec:[0,60],durationMin:[2,10]}, contraindications:[], progressionIds:['flat-walk'], gif:'24_扶椅原地踏步.gif', hash:'75d3d667dd9f22f94aa6c3b3993ec0a473b341426d39738b19989cbb4e464a5e' },
+    'heel-slide': { name:'仰卧脚跟滑动', pattern:'anti_extension', equipment:'exercise_mat', dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'25_仰卧脚跟滑动.gif', hash:'91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93' },
+    'bird-dog-regression': { name:'四点支撑单肢滑动', pattern:'anti_extension', equipment:'exercise_mat', dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'26_四点支撑单肢滑动.gif', hash:'496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49' }
+  };
+  for (const [id, contract] of Object.entries(expected)) {
+    const item = byId[id];
+    assert.ok(item, `${id}不存在`);
+    assert.equal(item.name, contract.name);
+    assert.equal(item.pattern, contract.pattern);
+    assert.deepEqual(item.settings, ['home','gym']);
+    assert.deepEqual(item.equipmentOptions, [[contract.equipment]]);
+    assert.equal(item.difficulty, 1);
+    assert.deepEqual(item.dose, contract.dose);
     assert.deepEqual(item.contraindications, contract.contraindications);
     assert.deepEqual(item.progressionIds, contract.progressionIds);
     assert.equal(item.reviewStatus, 'approved');

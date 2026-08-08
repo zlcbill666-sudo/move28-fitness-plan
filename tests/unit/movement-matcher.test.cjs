@@ -112,6 +112,21 @@ test('有弹力带的居家水平拉匹配approved band-row，无弹力带返回
   assert.deepEqual(noBand.error.requiredOptions, [['resistance_band']]);
 });
 
+test('居家低冲击有氧优先平地慢走，缺少路线时回退扶椅原地踏步', () => {
+  const api = loadMatcher();
+  const route = match(api, 'low_impact_cardio', 'home', ['stable_chair','flat_walking_route']);
+  assert.equal(route.ok, true);
+  assert.equal(route.exerciseId, 'flat-walk');
+  const supported = match(api, 'low_impact_cardio', 'home', ['stable_chair']);
+  assert.equal(supported.ok, true);
+  assert.equal(supported.exerciseId, 'supported-standing-march');
+  assert.deepEqual(supported.matchedEquipment, ['stable_chair']);
+  const unavailable = match(api, 'low_impact_cardio', 'home', []);
+  assert.equal(unavailable.ok, false);
+  assert.equal(unavailable.error.code, 'INSUFFICIENT_EQUIPMENT');
+  assert.deepEqual(unavailable.error.requiredOptions, [['treadmill'],['flat_walking_route'],['stable_chair']]);
+});
+
 test('匹配结果不会冻结或改写调用方提供的自定义目录', () => {
   const api = loadMatcher();
   const customExercise = {...api.exerciseCatalog.find(item => item.id === 'wall-push-up')};

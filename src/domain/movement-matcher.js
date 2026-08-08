@@ -16,7 +16,7 @@ const MATCH_PRIORITIES=Object.freeze({
   horizontal_push:Object.freeze({gym:Object.freeze(['chest-press-machine','wall-push-up']),home:Object.freeze(['wall-push-up'])}),
   horizontal_pull:Object.freeze({gym:Object.freeze(['seated-row']),home:Object.freeze(['band-row'])}),
   core_stability:Object.freeze({gym:Object.freeze(['pallof-press','dead-bug']),home:Object.freeze(['dead-bug','pallof-press'])}),
-  low_impact_cardio:Object.freeze({gym:Object.freeze(['elliptical-trainer','flat-walk']),home:Object.freeze(['flat-walk'])})
+  low_impact_cardio:Object.freeze({gym:Object.freeze(['elliptical-trainer','flat-walk']),home:Object.freeze(['flat-walk','supported-standing-march'])})
 });
 const CATALOG_PATTERN_TO_INTENT=Object.freeze({
   knee_dominant:'knee_dominant',knee_flexion:'posterior_chain',hip_extension:'posterior_chain',hinge:'posterior_chain',
