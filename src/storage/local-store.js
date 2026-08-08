@@ -4,14 +4,15 @@
   const catalogApi = isCommonJS ? require('../data/exercise-catalog.js') : root.Move28 && root.Move28.data;
   const adaptationApi = isCommonJS ? require('../domain/weekly-adaptation.js') : root.Move28 && root.Move28.domain;
   const riskApi = isCommonJS ? require('../domain/risk-engine.js') : root.Move28 && root.Move28.domain;
-  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {});
+  const capabilityApi = isCommonJS ? require('../domain/capability-engine.js') : root.Move28 && root.Move28.domain;
+  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {}, capabilityApi || {});
   if (isCommonJS) {
     module.exports = api;
   } else {
     const Move28 = root.Move28 = root.Move28 || {};
     Move28.storage = api;
   }
-})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi) {
+})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi, capabilityApi) {
   'use strict';
 
   const STORAGE_KEY = 'move28-pilot-v1';
@@ -38,6 +39,8 @@
   const trustedProposeWeeklyChange = typeof adaptationApi.proposeWeeklyChange === 'function' ? adaptationApi.proposeWeeklyChange : null;
   const trustedDeriveRiskIntake = typeof riskApi.deriveRiskIntake === 'function' ? riskApi.deriveRiskIntake : null;
   const trustedEvaluateRisk = typeof riskApi.evaluateRisk === 'function' ? riskApi.evaluateRisk : null;
+  const trustedEvaluateCapabilityProfile = typeof capabilityApi.evaluateCapabilityProfile === 'function'
+    ? capabilityApi.evaluateCapabilityProfile : null;
   const TRUSTED_RISK_CODES = new Set(Array.isArray(riskApi.REASON_CODES) ? riskApi.REASON_CODES : []);
   const TRUSTED_RULE_VERSIONS = new Set(['pilot-v1', typeof riskApi.RULE_VERSION === 'string' ? riskApi.RULE_VERSION : 'pilot-v2']);
   const TRUSTED_PLAN_VERSIONS = new Set(TRUSTED_RULE_VERSIONS);
@@ -78,6 +81,9 @@
       intake: null,
       intakeRevision: 0,
       risk: null,
+      capabilityProfile: null,
+      capabilityResult: null,
+      capabilityRevision: 0,
       plan: null,
       logs: {},
       weeklyReviews: [],
@@ -275,6 +281,35 @@
     } catch (_error) { return null; }
   }
 
+  function recomputeTrustedCapability(profile) {
+    try {
+      if (!trustedEvaluateCapabilityProfile) return null;
+      const result = clonePlainData(trustedEvaluateCapabilityProfile(profile));
+      if (!result || typeof result !== 'object' || Array.isArray(result)
+        || !RISK_LEVELS.has(result.status)
+        || !Number.isSafeInteger(result.difficultyCap) || result.difficultyCap < 1 || result.difficultyCap > 2
+        || !Array.isArray(result.exclusions) || result.exclusions.some(value => !['floor', 'hinge'].includes(value))
+        || !result.variants || typeof result.variants !== 'object' || Array.isArray(result.variants)
+        || !['standard', 'high_seat'].includes(result.variants.knee_dominant)
+        || !['standard', 'close_wall'].includes(result.variants.horizontal_push)
+        || !Number.isSafeInteger(result.cardioStartMinutes) || result.cardioStartMinutes < 0
+        || !Array.isArray(result.reasonCodes)
+        || result.reasonCodes.some(code => typeof code !== 'string' || !/^[A-Z][A-Z0-9_]{0,63}$/.test(code))
+        || result.reasonCodes.includes('INVALID_INPUT')) return null;
+      return {
+        status: result.status,
+        difficultyCap: result.difficultyCap,
+        exclusions: [...result.exclusions],
+        variants: {
+          knee_dominant: result.variants.knee_dominant,
+          horizontal_push: result.variants.horizontal_push
+        },
+        cardioStartMinutes: result.cardioStartMinutes,
+        reasonCodes: [...result.reasonCodes]
+      };
+    } catch (_error) { return null; }
+  }
+
   function risksEqual(left, right) {
     if (!left || !right || left.level !== right.level || left.ruleVersion !== right.ruleVersion
       || left.reasons.length !== right.reasons.length) return false;
@@ -407,8 +442,36 @@
     const riskMismatch = Boolean(defaults.intake && (!storedRisk || !recomputedRisk || !risksEqual(storedRisk, recomputedRisk)));
     defaults.risk = recomputedRisk;
 
+    const capabilityProfile = ownDataValue(raw, 'capabilityProfile');
+    const capabilityResult = ownDataValue(raw, 'capabilityResult');
+    const capabilityRevision = ownDataValue(raw, 'capabilityRevision');
+    const capabilityFieldsDeclared = capabilityProfile.present && capabilityRevision.present;
+    let capabilityValid = false;
+    if (capabilityFieldsDeclared && Number.isSafeInteger(capabilityRevision.value) && capabilityRevision.value >= 1
+      && capabilityProfile.value !== null) {
+      const cleanProfile = cloneObjectOr(capabilityProfile.value, null, false);
+      const trustedResult = cleanProfile && recomputeTrustedCapability(cleanProfile);
+      if (cleanProfile && trustedResult) {
+        defaults.capabilityProfile = cleanProfile;
+        defaults.capabilityResult = trustedResult;
+        defaults.capabilityRevision = capabilityRevision.value;
+        capabilityValid = true;
+      }
+    }
+    const explicitCompatibilityState = capabilityFieldsDeclared && capabilityProfile.value === null
+      && capabilityResult.value === null && capabilityRevision.value === 0;
+
     const plan = ownDataValue(raw, 'plan');
     if (!riskMismatch && plan.present && plan.value !== null) defaults.plan = cloneObjectOr(plan.value, null, false);
+    if (defaults.plan && !capabilityValid && !explicitCompatibilityState) {
+      defaults.plan.status = 'stale';
+      defaults.plan.staleReason = 'capability_required';
+      defaults.plan.staleAt = '1970-01-01T00:00:00.000Z';
+    } else if (defaults.plan && capabilityValid && defaults.plan.capabilityRevision !== defaults.capabilityRevision) {
+      defaults.plan.status = 'stale';
+      defaults.plan.staleReason = 'capability_revision_mismatch';
+      defaults.plan.staleAt = '1970-01-01T00:00:00.000Z';
+    }
 
     const logs = ownDataValue(raw, 'logs');
     if (logs.present) defaults.logs = sanitizeWorkoutLogs(logs.value);
@@ -568,12 +631,30 @@
       return persist(state);
     }
 
+    function saveCapabilityProfile(profile) {
+      const cleanProfile = clonePlainData(profile);
+      if (!cleanProfile || typeof cleanProfile !== 'object' || Array.isArray(cleanProfile)) throw invalidPlainData();
+      const trustedResult = recomputeTrustedCapability(cleanProfile);
+      if (!trustedResult) throw invalidPlainData();
+      const state = loadStateForWrite();
+      state.capabilityProfile = cleanProfile;
+      state.capabilityResult = trustedResult;
+      state.capabilityRevision += 1;
+      if (state.plan) {
+        state.plan.status = 'stale';
+        state.plan.staleReason = 'capability_changed';
+        state.plan.staleAt = String(now());
+      }
+      return persist(state);
+    }
+
     function candidateForValidation(plan) {
       const candidate = clonePlainData(plan);
       if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
       delete candidate.review;
       delete candidate.staleReason;
       delete candidate.staleAt;
+      delete candidate.capabilityRevision;
       candidate.status = 'generated';
       return candidate;
     }
@@ -595,12 +676,14 @@
       return trustedPlanValidationResult(plan, state) === 'passed';
     }
 
-    function hasReviewApproval(plan, state) {
+    function isPlanApprovedForState(plan, state) {
       const review = plan && plan.review;
       return Boolean(review && review.status === 'approved'
         && sanitizeMachineId(review.reviewerId)
         && review.planId === plan.id
         && review.intakeRevision === state.intakeRevision
+        && (state.capabilityRevision === 0 || (plan.capabilityRevision === state.capabilityRevision
+          && review.capabilityRevision === state.capabilityRevision))
         && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review.reviewedAt));
     }
 
@@ -611,9 +694,11 @@
       }
       const state = loadStateForWrite();
       if (cleanPlan.status !== 'generated' || cleanPlan.intakeRevision !== state.intakeRevision
+        || (state.capabilityRevision > 0 && cleanPlan.capabilityRevision !== state.capabilityRevision)
         || !passesTrustedPlanGate(cleanPlan, state)) throw createStorageError();
       cleanPlan.status = 'pending_review';
       cleanPlan.intakeRevision = state.intakeRevision;
+      if (state.capabilityRevision > 0) cleanPlan.capabilityRevision = state.capabilityRevision;
       cleanPlan.review = null;
       delete cleanPlan.staleReason;
       delete cleanPlan.staleAt;
@@ -681,6 +766,7 @@
       const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
       if (!plan || plan.status !== 'pending_review' || plan.id !== planId
         || plan.intakeRevision !== state.intakeRevision || clean.intakeRevision !== state.intakeRevision
+        || (state.capabilityRevision > 0 && plan.capabilityRevision !== state.capabilityRevision)
         || !trustedRisk || !risksEqual(state.risk, trustedRisk)
         || !['normal', 'conservative'].includes(trustedRisk.level)
         || !passesTrustedPlanGate(plan, state)) throw createStorageError();
@@ -688,6 +774,7 @@
       if (!UTC_ISO_PATTERN.test(reviewedAt)) throw createStorageError();
       plan.status = 'active';
       plan.review = { status: 'approved', reviewerId, reviewedAt, planId, intakeRevision: state.intakeRevision };
+      if (state.capabilityRevision > 0) plan.review.capabilityRevision = state.capabilityRevision;
       return persist(state);
     }
 
@@ -705,7 +792,7 @@
         : [];
       if (!plan || plan.status !== 'active' || plan.id !== planId
         || plan.intakeRevision !== state.intakeRevision
-        || !hasReviewApproval(plan, state)
+        || !isPlanApprovedForState(plan, state)
         || !passesTrustedPlanGate(plan, state)
         || !sessions.some(session => session && session.id === sessionId)) throw createStorageError();
       const completedAt = String(now());
@@ -732,7 +819,7 @@
         : [];
       const session = sessions.find(item => item && item.id === sessionId);
       if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
-        || !hasReviewApproval(plan, state) || !passesTrustedPlanGate(plan, state)
+        || !isPlanApprovedForState(plan, state) || !passesTrustedPlanGate(plan, state)
         || !session || !Array.isArray(session.actions) || clean.actionIndex >= session.actions.length) throw createStorageError();
       const event = { planId: plan.id, sessionId, status: 'safety_stopped', reasonCode, actionIndex: clean.actionIndex, occurredAt: clean.occurredAt };
       state.logs[`safety.${plan.id}.${sessionId}`] = event;
@@ -765,7 +852,7 @@
       const state = loadStateForWrite(), plan = state.plan;
       const lineage = plan ? weeklyPlanLineage(state.weeklyReviews, plan.id) : new Set();
       if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
-        || !hasReviewApproval(plan, state) || !passesTrustedPlanGate(plan, state)
+        || !isPlanApprovedForState(plan, state) || !passesTrustedPlanGate(plan, state)
         || state.weeklyReviews.length >= MAX_WEEKLY_REVIEWS
         || state.weeklyReviews.some(item => lineage.has(item.planId) && item.decision === 'pending')) throw createStorageError();
       const weekNumber = cleanReview.weekNumber;
@@ -801,7 +888,7 @@
       const state = loadStateForWrite(), record = state.weeklyReviews.find(item => item.id === clean.reviewId);
       if (!record || record.decision !== 'pending' || !state.plan || state.plan.id !== record.planId
         || state.plan.status !== 'active' || state.plan.intakeRevision !== record.intakeRevision
-        || !hasReviewApproval(state.plan, state) || !passesTrustedPlanGate(state.plan, state)) throw createStorageError();
+        || !isPlanApprovedForState(state.plan, state) || !passesTrustedPlanGate(state.plan, state)) throw createStorageError();
       const decidedAt = String(now());
       if (!UTC_ISO_PATTERN.test(decidedAt)) throw createStorageError();
       if (clean.decision === 'accepted') {
@@ -880,7 +967,7 @@
       return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
   function createLocalParticipantId() {
@@ -904,6 +991,7 @@
     createDefaultState,
     loadState: defaultStore.loadState,
     saveIntake: defaultStore.saveIntake,
+    saveCapabilityProfile: defaultStore.saveCapabilityProfile,
     savePlan: defaultStore.savePlan,
     buildDetailedReviewDossier: defaultStore.buildDetailedReviewDossier,
     approvePlanReview: defaultStore.approvePlanReview,

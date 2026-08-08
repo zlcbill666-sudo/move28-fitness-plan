@@ -33,6 +33,9 @@ const DEFAULT_STATE = {
   intake: null,
   intakeRevision: 0,
   risk: null,
+  capabilityProfile: null,
+  capabilityResult: null,
+  capabilityRevision: 0,
   plan: null,
   logs: {},
   weeklyReviews: [],
@@ -41,6 +44,7 @@ const DEFAULT_STATE = {
 
 const VALID_INTAKE = Object.freeze({boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true});
 const VALID_RISK = Object.freeze({level:'normal',ruleVersion:'pilot-v2',reasons:[]});
+const VALID_CAPABILITY_PROFILE = Object.freeze({version:1,completed:true,chairRise:'independent_controlled',wallPushup:'controlled',wallHinge:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'});
 function generateValidPlan(revision){
   clearMove28ModuleCache();
   const generator=loadScript('planGenerator'),catalog=loadScript('exerciseCatalog');
@@ -116,6 +120,72 @@ test('空存储返回完整默认状态、独立副本且只使用唯一自有 k
   assert.deepEqual(moduleApi.OWNED_KEYS, ['move28-pilot-v1','move28-tracker-v1','move28-current-day','move28-music-enabled','move28-music-volume']);
   assert.ok(storage.calls.every(([, key]) => key === moduleApi.STORAGE_KEY));
   assert.equal(storage.length, 0);
+});
+
+test('能力档案只保存可信重算结果，支持全部有效状态并递增revision',()=>{
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage});
+  const cases=[[VALID_CAPABILITY_PROFILE,'normal'],[{...VALID_CAPABILITY_PROFILE,chairRise:'hands_supported'},'conservative'],[{...VALID_CAPABILITY_PROFILE,chairRise:'unable_or_painful'},'manual_review'],[{...VALID_CAPABILITY_PROFILE,walkTolerance:'warning_symptom'},'stop']];
+  cases.forEach(([profile,status],index)=>{
+    const input=structuredClone(profile);
+    const saved=store.saveCapabilityProfile(input,{status:'normal',reasonCodes:['FORGED']});
+    assert.equal(saved.capabilityRevision,index+1);assert.equal(saved.capabilityResult.status,status);assert.equal(saved.capabilityResult.reasonCodes.includes('FORGED'),false);
+    input.chairRise='unable_or_painful';saved.capabilityProfile.chairRise='unable_or_painful';saved.capabilityResult.reasonCodes.push('MUTATED_RETURN');
+    const loaded=store.loadState();assert.deepEqual(loaded.capabilityProfile,profile);assert.equal(loaded.capabilityResult.reasonCodes.includes('MUTATED_RETURN'),false);
+  });
+});
+
+test('能力档案INVALID_INPUT、getter、Proxy与危险键全部fail closed且不落盘',()=>{
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage});store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));
+  const before=storage.raw(moduleApi.STORAGE_KEY);let getterCalls=0;const accessor={...VALID_CAPABILITY_PROFILE};
+  Object.defineProperty(accessor,'secret',{enumerable:true,get(){getterCalls+=1;return 'secret'}});
+  const dangerous=JSON.parse(JSON.stringify(VALID_CAPABILITY_PROFILE));Object.defineProperty(dangerous,'__proto__',{value:{polluted:true},enumerable:true});
+  for(const value of [{...VALID_CAPABILITY_PROFILE,completed:false},accessor,new Proxy(structuredClone(VALID_CAPABILITY_PROFILE),{}),dangerous]){
+    assert.throws(()=>store.saveCapabilityProfile(value),TypeError);assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  }
+  assert.equal(getterCalls,0);assert.equal(Object.prototype.polluted,undefined);
+});
+
+test('保存能力档案使旧计划失效，且写后回读失败不伪称成功',()=>{
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));store.savePlan(generateValidPlan(1));
+  const changed=store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));
+  assert.equal(changed.plan.status,'stale');assert.equal(changed.plan.staleReason,'capability_changed');assert.equal(changed.plan.staleAt,'2030-01-02T03:04:05.000Z');
+  let raw=null;const dropping={getItem:()=>raw,setItem(_key,value){raw=String(value);},removeItem(){}};const failing=moduleApi.createLocalStore({storage:dropping});dropping.setItem=()=>{};
+  assert.throws(()=>failing.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE)),error=>error.name==='StorageError');
+});
+
+test('迁移时重算能力结果、覆盖伪造结果，并对非法档案fail closed',()=>{
+  const moduleApi=api();const forged={...DEFAULT_STATE,capabilityProfile:structuredClone(VALID_CAPABILITY_PROFILE),capabilityResult:{status:'stop',reasonCodes:['FORGED']},capabilityRevision:2};
+  const migrated=moduleApi.migrateState(forged,'pilot-a');assert.equal(migrated.capabilityRevision,2);assert.equal(migrated.capabilityResult.status,'normal');assert.deepEqual(migrated.capabilityResult.reasonCodes,[]);
+  const withoutStoredResult={...forged};delete withoutStoredResult.capabilityResult;
+  assert.equal(moduleApi.migrateState(withoutStoredResult,'pilot-a').capabilityResult.status,'normal');
+  let getterCalls=0;const accessorResult={...withoutStoredResult};Object.defineProperty(accessorResult,'capabilityResult',{enumerable:true,get(){getterCalls+=1;throw new Error('forged')}});
+  assert.equal(moduleApi.migrateState(accessorResult,'pilot-a').capabilityResult.status,'normal');assert.equal(getterCalls,0);
+  for(const raw of [{...forged,capabilityProfile:{...VALID_CAPABILITY_PROFILE,completed:false}},{...forged,capabilityRevision:0.5},{...forged,capabilityRevision:-1}]){
+    const clean=moduleApi.migrateState(raw,'pilot-a');assert.equal(clean.capabilityProfile,null);assert.equal(clean.capabilityResult,null);assert.equal(clean.capabilityRevision,0);
+  }
+});
+
+test('缺失能力字段的旧持久化计划迁移后固定标记capability_required，显式revision 0路径兼容',()=>{
+  const moduleApi=api(),legacy={schemaVersion:1,participantId:'pilot-a',intake:structuredClone(VALID_INTAKE),intakeRevision:1,risk:structuredClone(VALID_RISK),plan:{...generateValidPlan(1),status:'active'},logs:{},weeklyReviews:[],consent:{acceptedAt:null,version:'pilot-v1'}};
+  const migrated=moduleApi.migrateState(legacy,'pilot-a');assert.equal(migrated.plan.status,'stale');assert.equal(migrated.plan.staleReason,'capability_required');assert.ok(migrated.plan.staleAt);
+  const storage=memoryStorage(),store=moduleApi.createLocalStore({storage});store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));assert.equal(store.savePlan(generateValidPlan(1)).plan.status,'pending_review');
+});
+
+test('能力revision硬门拒绝错配计划、批准和完成，匹配时记录revision并正常完成',()=>{
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
+  store.saveIntake(structuredClone(VALID_INTAKE),structuredClone(VALID_RISK));store.saveCapabilityProfile(structuredClone(VALID_CAPABILITY_PROFILE));
+  const wrong={...generateValidPlan(1),capabilityRevision:0};assert.throws(()=>store.savePlan(wrong),error=>error.name==='StorageError');
+  const plan={...generateValidPlan(1),capabilityRevision:1};store.savePlan(plan);
+  let raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));raw.plan.capabilityRevision=2;storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));
+  assert.throws(()=>store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1}),error=>error.name==='StorageError');
+  raw.plan.capabilityRevision=1;storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));const approved=store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});assert.equal(approved.plan.review.capabilityRevision,1);
+  raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));raw.plan.capabilityRevision=2;storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));
+  assert.throws(()=>store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id}),error=>error.name==='StorageError');
+  raw.plan.capabilityRevision=1;raw.plan.review.capabilityRevision=1;storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));const completed=store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id});assert.equal(Object.keys(completed.logs).length,1);
+  const changed=store.saveCapabilityProfile({...VALID_CAPABILITY_PROFILE,chairRise:'hands_supported'});assert.equal(changed.plan.status,'stale');assert.equal(changed.capabilityRevision,2);
+  assert.throws(()=>store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1}),error=>error.name==='StorageError');
+  assert.throws(()=>store.recordWorkoutCompletion({planId:plan.id,sessionId:plan.weeks[0].sessions[0].id}),error=>error.name==='StorageError');
 });
 
 test('完成记录只绑定人工复核后的active计划和已知session，刷新后仍可恢复', () => {
@@ -312,7 +382,7 @@ test('审核摘要只导出严格机器标识符，恶意持久化元数据无�
     ruleVersion: 'pilot-v2',
     riskLevel: 'conservative',
     riskCodes: ['activity_returning'],
-    planSummary: { status: 'active', planVersion: 'pilot-v2', weekCount: 0, sessionCount: 0, actionCount: 0 },
+    planSummary: { status: 'stale', planVersion: 'pilot-v2', weekCount: 0, sessionCount: 0, actionCount: 0 },
     validationResult: 'failed'
   });
 });
@@ -573,8 +643,21 @@ test('classic-script UMD 在无 DOM/localStorage 的 VM 中安全加载并挂载
   vm.createContext(context);
   assert.doesNotThrow(() => vm.runInContext(`${riskSource}\n${source}`, context));
   assert.equal(typeof context.Move28.storage.createLocalStore, 'function');
+  assert.throws(() => vm.runInContext('Move28.storage.saveCapabilityProfile({})', context), error=>error.name==='TypeError');
   assert.throws(() => vm.runInContext('Move28.storage.saveIntake({age: 22})', context), error=>error.name==='StorageError');
   const state=vm.runInContext('Move28.storage.loadState()',context);
   assert.equal(state.intake, null);
+  const unavailable=vm.runInContext(`Move28.storage.migrateState({schemaVersion:1,capabilityProfile:${JSON.stringify(VALID_CAPABILITY_PROFILE)},capabilityRevision:1},'pilot-a')`,context);
+  assert.equal(unavailable.capabilityProfile,null);assert.equal(unavailable.capabilityResult,null);assert.equal(unavailable.capabilityRevision,0);
   assert.equal(context.document, undefined);
+});
+
+test('classic-script 在模块加载时绑定可信能力引擎，不信任后续全局篡改',()=>{
+  const riskSource=fs.readFileSync(path.join(projectRoot,'src','domain','risk-engine.js'),'utf8');
+  const capabilitySource=fs.readFileSync(path.join(projectRoot,'src','domain','capability-engine.js'),'utf8');
+  const storeSource=fs.readFileSync(path.join(projectRoot,'src','storage','local-store.js'),'utf8');
+  const context={structuredClone};vm.createContext(context);vm.runInContext(`${riskSource}\n${capabilitySource}\n${storeSource}`,context);
+  const profile=JSON.stringify(VALID_CAPABILITY_PROFILE);
+  const status=vm.runInContext(`(()=>{let raw=null;const storage={getItem:()=>raw,setItem:(_key,value)=>{raw=String(value)},removeItem:()=>{raw=null}};const store=Move28.storage.createLocalStore({storage});Move28.domain.evaluateCapabilityProfile=()=>({status:'stop',difficultyCap:1,exclusions:[],variants:{knee_dominant:'standard',horizontal_push:'standard'},cardioStartMinutes:0,reasonCodes:['FORGED']});return store.saveCapabilityProfile(${profile}).capabilityResult.status})()`,context);
+  assert.equal(status,'normal');
 });
