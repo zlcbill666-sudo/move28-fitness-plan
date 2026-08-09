@@ -8,58 +8,62 @@ const storageApi=isCommonJS?require('../storage/local-store.js'):Move28.storage;
 const readinessApi=isCommonJS?require('./session-readiness.js'):Move28.sessionReadiness;
 const trustedValidatePlan=validatorApi&&typeof validatorApi.validatePlan==='function'?validatorApi.validatePlan:null;
 const trustedLoadState=storageApi&&typeof storageApi.loadState==='function'?storageApi.loadState:null;
+const trustedRecordWorkoutCompletion=storageApi&&typeof storageApi.recordWorkoutCompletion==='function'?storageApi.recordWorkoutCompletion:null;
+const trustedRecordWorkoutStop=storageApi&&typeof storageApi.recordWorkoutStop==='function'?storageApi.recordWorkoutStop:null;
 const trustedLoadConfirmedAdaptation=readinessApi&&typeof readinessApi.loadConfirmedAdaptation==='function'?readinessApi.loadConfirmedAdaptation:null;
-const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedLoadConfirmedAdaptation);
+const trustedRevokeConfirmedAdaptation=readinessApi&&typeof readinessApi.revokeConfirmedAdaptation==='function'?readinessApi.revokeConfirmedAdaptation:null;
+const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedLoadConfirmedAdaptation){
+})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation){
 'use strict';
 const state=Move28.state;
 const {$,esc,storage}=Move28.utils;
 const MUSIC={warmup:{src:'assets/audio/warmup-rising-forest.mp3',title:'Rising Forest',author:'Diego Nava · 热身'},strength:{src:'assets/audio/strength-deep-urban.mp3',title:'Deep Urban',author:'Eugenio Mininni · 力量'},cardio:{src:'assets/audio/cardio-techno-fest-vibes.mp3',title:'Techno Fest Vibes',author:'Alejandro Magaña (A. M.) · 有氧'},recovery:{src:'assets/audio/recovery-summer-dream.mp3',title:'Summer Dream',author:'Eugenio Mininni · 放松'}};
+let activeAdaptation=null;
 const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
 function sessionIntentLabel(intent){return intent==='full_body_strength'?'全身力量':intent==='low_impact_cardio'?'低冲击有氧':intent==='recovery'?'恢复训练':'计划受限'}
 const STOP_REASONS=Object.freeze([['chest_pain_or_pressure','胸部不适或压迫感'],['near_faint_or_faint','明显晕厥感或已经晕厥'],['abnormal_shortness_of_breath','异常气短'],['sudden_severe_pain','突发剧痛'],['unable_to_bear_weight','无法承重'],['neurologic_or_consciousness_change','意识或神经异常']].map(Object.freeze));
 const SAFETY_RULE='胸部不适、晕厥感、异常气短、突发剧痛、无法承重、意识或神经异常时应立即停止，并按情况联系急救或合适的专业人员。';
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
-const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
-const functionToString=Function.prototype.toString,nativeObjectSource=functionToString.call(Object);
+const safeArrayIsArray=Array.isArray,safeGetPrototypeOf=Object.getPrototypeOf,safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor,safeObjectKeys=Object.keys,safeOwnKeys=Reflect.ownKeys;
+const safeHasOwn=Function.prototype.call.bind(Object.prototype.hasOwnProperty),safeArraySome=Function.prototype.call.bind(Array.prototype.some),safeArrayEvery=Function.prototype.call.bind(Array.prototype.every),safeArrayIncludes=Function.prototype.call.bind(Array.prototype.includes),safeArrayMap=Function.prototype.call.bind(Array.prototype.map),safeArrayJoin=Function.prototype.call.bind(Array.prototype.join),safeArrayFind=Function.prototype.call.bind(Array.prototype.find),safeArrayPush=Function.prototype.call.bind(Array.prototype.push),safeArrayPop=Function.prototype.call.bind(Array.prototype.pop),safeSetHas=Function.prototype.call.bind(Set.prototype.has),safeMapGet=Function.prototype.call.bind(Map.prototype.get),safeMapSet=Function.prototype.call.bind(Map.prototype.set),safeWeakSetHas=Function.prototype.call.bind(WeakSet.prototype.has),safeWeakSetAdd=Function.prototype.call.bind(WeakSet.prototype.add),safeRegexTest=Function.prototype.call.bind(RegExp.prototype.test),safeDateToISOString=Function.prototype.call.bind(Date.prototype.toISOString);
+const safeNumberIsFinite=Number.isFinite,safeNumberIsSafeInteger=Number.isSafeInteger,safeObjectIs=Object.is,SafeSet=Set,SafeWeakSet=WeakSet,SafeMap=Map,SafeDate=Date,SafeString=String,nativeObjectPrototype=Object.prototype;
+const DANGEROUS_KEYS=new SafeSet(['__proto__','prototype','constructor']),UTC_ISO=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 function plainRecord(value){
-  if(!value||typeof value!=='object')return false;
-  const proto=Object.getPrototypeOf(value);if(proto===null)return true;if(Object.getPrototypeOf(proto)!==null)return false;
-  const descriptor=Object.getOwnPropertyDescriptor(proto,'constructor');
-  return Boolean(descriptor&&'value'in descriptor&&typeof descriptor.value==='function'&&functionToString.call(descriptor.value)===nativeObjectSource);
+  if(!value||typeof value!=='object'||safeArrayIsArray(value))return false;
+  const proto=safeGetPrototypeOf(value);return proto===nativeObjectPrototype||proto===null;
 }
 function clonePureData(value){
   if(!nativeStructuredClone)return null;
   try{
-    const stack=[{value,depth:0}],seen=new WeakSet();let nodes=0;
+    const stack=[{value,depth:0}],seen=new SafeWeakSet();let nodes=0;
     while(stack.length){
-      const current=stack.pop(),item=current.value;nodes+=1;
+      const current=safeArrayPop(stack),item=current.value;nodes+=1;
       if(nodes>4096||current.depth>32)return null;
-      if(item===null||['string','boolean'].includes(typeof item))continue;
-      if(typeof item==='number'){if(!Number.isFinite(item))return null;continue}
-      if(typeof item!=='object'||seen.has(item))return null;
-      seen.add(item);
-      const isArray=Array.isArray(item);if(!isArray&&!plainRecord(item))return null;
-      const keys=Reflect.ownKeys(item);if(keys.some(key=>typeof key!=='string'||DANGEROUS_KEYS.has(key)))return null;
+      if(item===null||typeof item==='string'||typeof item==='boolean')continue;
+      if(typeof item==='number'){if(!safeNumberIsFinite(item)||safeObjectIs(item,-0))return null;continue}
+      if(typeof item!=='object'||safeWeakSetHas(seen,item))return null;
+      safeWeakSetAdd(seen,item);
+      const isArray=safeArrayIsArray(item);if(!isArray&&!plainRecord(item))return null;
+      const keys=safeOwnKeys(item);if(safeArraySome(keys,key=>typeof key!=='string'||safeSetHas(DANGEROUS_KEYS,key)))return null;
       if(isArray){
-        const lengthDescriptor=Object.getOwnPropertyDescriptor(item,'length');
-        if(!lengthDescriptor||lengthDescriptor.get||!Number.isSafeInteger(lengthDescriptor.value)||lengthDescriptor.value>256)return null;
-        const dataKeys=keys.filter(key=>key!=='length');
-        if(dataKeys.length!==lengthDescriptor.value||dataKeys.some((key,index)=>key!==String(index)))return null;
+        const lengthDescriptor=safeGetOwnPropertyDescriptor(item,'length');
+        if(!lengthDescriptor||!safeHasOwn(lengthDescriptor,'value')||!safeNumberIsSafeInteger(lengthDescriptor.value)||lengthDescriptor.value<0||lengthDescriptor.value>256)return null;
+        if(keys.length!==lengthDescriptor.value+1)return null;
+        for(let index=0;index<lengthDescriptor.value;index+=1)if(keys[index]!==SafeString(index))return null;
       }
-      for(const key of keys){
-        if(key==='length'&&isArray)continue;
-        const descriptor=Object.getOwnPropertyDescriptor(item,key);
-        if(!descriptor||descriptor.get||descriptor.set||!Object.prototype.hasOwnProperty.call(descriptor,'value'))return null;
-        stack.push({value:descriptor.value,depth:current.depth+1});
+      for(let index=0;index<keys.length;index+=1){
+        const key=keys[index];if(key==='length'&&isArray)continue;
+        const descriptor=safeGetOwnPropertyDescriptor(item,key);
+        if(!descriptor||!safeHasOwn(descriptor,'value'))return null;
+        safeArrayPush(stack,{value:descriptor.value,depth:current.depth+1});
       }
     }
     return nativeStructuredClone(value);
   }catch(_error){return null}
 }
 function ownData(object,key){
-  try{const descriptor=Object.getOwnPropertyDescriptor(object,key);return descriptor&&!descriptor.get&&!descriptor.set&&Object.prototype.hasOwnProperty.call(descriptor,'value')?descriptor.value:undefined}catch(_error){return undefined}
+  try{const descriptor=safeGetOwnPropertyDescriptor(object,key);return descriptor&&safeHasOwn(descriptor,'value')?descriptor.value:undefined}catch(_error){return undefined}
 }
 function doseText(action){
   return action.phase==='main'
@@ -68,29 +72,30 @@ function doseText(action){
 }
 function trustedVariantGuidance(action,exercise){
   const controlled=action.pattern==='knee_dominant'||action.pattern==='horizontal_push';
-  if(!controlled)return Object.prototype.hasOwnProperty.call(action,'variant')?undefined:null;
+  if(!controlled)return safeHasOwn(action,'variant')?undefined:null;
   if(exercise.pattern!==action.pattern||typeof action.variant!=='string')return undefined;
-  if(action.variant==='standard')return Object.prototype.hasOwnProperty.call(exercise,'variantGuidance')?undefined:null;
+  if(action.variant==='standard')return safeHasOwn(exercise,'variantGuidance')?undefined:null;
   const guidance=exercise.variantGuidance;
-  if(!guidance||typeof guidance!=='object'||Array.isArray(guidance)||!Object.prototype.hasOwnProperty.call(guidance,action.variant))return undefined;
-  const entry=guidance[action.variant];
-  if(!entry||typeof entry!=='object'||Array.isArray(entry)||Object.keys(entry).length!==3||!['label','setup','range'].every(key=>typeof entry[key]==='string'&&entry[key]))return undefined;
+  if(!guidance||typeof guidance!=='object'||safeArrayIsArray(guidance)||!safeHasOwn(guidance,action.variant))return undefined;
+  const entry=guidance[action.variant],required=['label','setup','range'];
+  if(!entry||typeof entry!=='object'||safeArrayIsArray(entry)||safeObjectKeys(entry).length!==required.length||!safeArrayEvery(required,key=>typeof entry[key]==='string'&&entry[key]))return undefined;
   return entry;
 }
 function buildWorkoutSteps(session,catalog){
   if(catalog!==trustedCatalog)return null;
   const safeSession=clonePureData(session),safeCatalog=clonePureData(trustedCatalog);
-  if(!safeSession||!Array.isArray(safeSession.actions)||safeSession.actions.length===0||!Array.isArray(safeCatalog))return null;
-  const exercises=new Map(safeCatalog.filter(item=>item&&item.reviewStatus==='approved').map(item=>[item.id,item]));
+  if(!safeSession||!safeArrayIsArray(safeSession.actions)||safeSession.actions.length===0||!safeArrayIsArray(safeCatalog))return null;
+  const exercises=new SafeMap();
+  for(let index=0;index<safeCatalog.length;index+=1){const item=safeCatalog[index];if(item&&item.reviewStatus==='approved')safeMapSet(exercises,item.id,item)}
   const steps=[];
-  for(const action of safeSession.actions){
-    const exercise=action&&exercises.get(action.exerciseId);
+  for(let index=0;index<safeSession.actions.length;index+=1){
+    const action=safeSession.actions[index],exercise=action&&safeMapGet(exercises,action.exerciseId);
     if(!exercise||!exercise.cues||typeof exercise.gif!=='string')return null;
     const variantGuidance=trustedVariantGuidance(action,exercise);if(variantGuidance===undefined)return null;
     const strength=action.phase==='main';
-    if(strength&&![action.sets,action.reps,action.rpe,action.restSec].every(Number.isFinite))return null;
-    if(!strength&&![action.durationMin,action.rpe,action.restSec].every(Number.isFinite))return null;
-    steps.push({action,exercise,variantGuidance,music:strength?'strength':'cardio',sessionId:safeSession.id,weekday:safeSession.weekday,intent:safeSession.intent});
+    if(strength&&!safeArrayEvery([action.sets,action.reps,action.rpe,action.restSec],safeNumberIsFinite))return null;
+    if(!strength&&!safeArrayEvery([action.durationMin,action.rpe,action.restSec],safeNumberIsFinite))return null;
+    safeArrayPush(steps,{action,exercise,variantGuidance,music:strength?'strength':'cardio',sessionId:safeSession.id,weekday:safeSession.weekday,intent:safeSession.intent});
   }
   return steps;
 }
@@ -146,7 +151,7 @@ function renderExitConfirm(){
 }
 function renderSafetySelect(){
   getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='SAFETY FIRST';$('#guideTitle').textContent='因不适暂停';
-  $('#guideBody').innerHTML=`<section class="guide-state"><h3>选择最符合当前情况的一项</h3><p>不记录自由文本。严重信号会终止当前训练并使旧计划失效。</p><div class="guide-reasons">${STOP_REASONS.map(([code,label])=>`<button type="button" onclick="selectSafetyReason('${code}')">${esc(label)}</button>`).join('')}<button type="button" onclick="selectSafetyReason('joint_pain')">新发关节不适</button></div></section>`;
+  $('#guideBody').innerHTML=`<section class="guide-state"><h3>选择最符合当前情况的一项</h3><p>不记录自由文本。严重信号会终止当前训练并使旧计划失效。</p><div class="guide-reasons">${safeArrayJoin(safeArrayMap(STOP_REASONS,entry=>`<button type="button" onclick="selectSafetyReason('${entry[0]}')">${esc(entry[1])}</button>`),'')}<button type="button" onclick="selectSafetyReason('joint_pain')">新发关节不适</button></div></section>`;
   setGuideFoot({label:'返回训练'},{label:'',hidden:true});
 }
 function renderPainPause(){
@@ -156,7 +161,7 @@ function renderPainPause(){
 }
 function renderSafetyConfirm(){
   $('#guideEyebrow').textContent='STOP CONFIRMATION';$('#guideTitle').textContent='安全停止';
-  $('#guideBody').innerHTML=`<section class="guide-state guide-danger"><h3>确认因不适停止</h3><p>确认后会保存固定理由码、当前动作进度和时间，并立即使旧计划失效。不会保存自由文本症状描述。</p><b>${esc(STOP_REASONS.find(([code])=>code===state.guideStopReason)?.[1]||'关节不适仍持续或加重')}</b></section>`;
+  $('#guideBody').innerHTML=`<section class="guide-state guide-danger"><h3>确认因不适停止</h3><p>确认后会保存固定理由码、当前动作进度和时间，并立即使旧计划失效。不会保存自由文本症状描述。</p><b>${esc(safeArrayFind(STOP_REASONS,entry=>entry[0]===state.guideStopReason)?.[1]||'关节不适仍持续或加重')}</b></section>`;
   setGuideFoot({label:'',hidden:true},{label:'确认停止并保存'});
 }
 function renderSafetyResult(){
@@ -171,7 +176,7 @@ function renderGuide(){
 }
 function sameData(left,right){
   const stack=[[left,right]];
-  while(stack.length){const [a,b]=stack.pop();if(Object.is(a,b))continue;if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;if(Array.isArray(a)){if(a.length!==b.length)return false;for(let index=0;index<a.length;index+=1)stack.push([a[index],b[index]]);continue}const aKeys=Object.keys(a).sort(),bKeys=Object.keys(b).sort();if(aKeys.length!==bKeys.length||aKeys.some((key,index)=>key!==bKeys[index]))return false;for(const key of aKeys)stack.push([a[key],b[key]])}
+  while(stack.length){const pair=safeArrayPop(stack),a=pair[0],b=pair[1];if(safeObjectIs(a,b))continue;if(!a||!b||typeof a!=='object'||typeof b!=='object'||safeArrayIsArray(a)!==safeArrayIsArray(b))return false;const aKeys=safeObjectKeys(a),bKeys=safeObjectKeys(b);if(aKeys.length!==bKeys.length||safeArraySome(aKeys,(key,index)=>key!==bKeys[index]))return false;for(let index=0;index<aKeys.length;index+=1)safeArrayPush(stack,[a[aKeys[index]],b[bKeys[index]]])}
   return true;
 }
 function prepareReviewedSession(requestedSession,catalog){
@@ -180,28 +185,30 @@ function prepareReviewedSession(requestedSession,catalog){
   try{safeState=clonePureData(trustedLoadState())}catch(_error){return null}
   if(!safeRequested||!safeState?.intake||!safeState?.risk||!safeState?.plan)return null;
   const safePlan=safeState.plan,review=safePlan.review;
-  if(safePlan.status!=='active'||safePlan.intakeRevision!==safeState.intakeRevision||safePlan.intakeRevision!==review?.intakeRevision||safePlan.capabilityRevision!==safeState.capabilityRevision||safePlan.capabilityRevision!==review?.capabilityRevision||review?.status!=='approved'||review?.planId!==safePlan.id||!/^[a-z][a-z0-9._-]{0,63}$/.test(review?.reviewerId||'')||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review?.reviewedAt||''))return null;
+  if(safePlan.status!=='active'||safePlan.intakeRevision!==safeState.intakeRevision||safePlan.intakeRevision!==review?.intakeRevision||safePlan.capabilityRevision!==safeState.capabilityRevision||safePlan.capabilityRevision!==review?.capabilityRevision||review?.status!=='approved'||review?.planId!==safePlan.id||!safeRegexTest(/^[a-z][a-z0-9._-]{0,63}$/,review?.reviewerId||'')||!safeRegexTest(UTC_ISO,review?.reviewedAt||''))return null;
   const candidate=clonePureData(safePlan);if(!candidate)return null;delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated';
-  let validation;try{validation=trustedValidatePlan({plan:candidate,intake:safeState.intake,risk:safeState.risk,capabilityResult:safeState.capabilityResult,capabilityRevision:safeState.capabilityRevision,catalog:trustedCatalog})}catch(_error){return null}
-  if(!validation||validation.ok!==true||!Array.isArray(validation.errors)||validation.errors.length!==0)return null;
-  const stored=safePlan.weeks.flatMap(week=>week.sessions).find(item=>item.id===safeRequested.id);
+  let validation;try{validation=clonePureData(trustedValidatePlan({plan:candidate,intake:safeState.intake,risk:safeState.risk,capabilityResult:safeState.capabilityResult,capabilityRevision:safeState.capabilityRevision,catalog:trustedCatalog}))}catch(_error){return null}
+  if(!validation||validation.ok!==true||!safeArrayIsArray(validation.errors)||validation.errors.length!==0)return null;
+  let stored=null;if(!safeArrayIsArray(safePlan.weeks))return null;
+  for(let weekIndex=0;weekIndex<safePlan.weeks.length;weekIndex+=1){const sessions=safePlan.weeks[weekIndex]&&safePlan.weeks[weekIndex].sessions;if(!safeArrayIsArray(sessions))return null;for(let sessionIndex=0;sessionIndex<sessions.length;sessionIndex+=1)if(sessions[sessionIndex]&&sessions[sessionIndex].id===safeRequested.id){if(stored)return null;stored=sessions[sessionIndex]}}
   return stored&&sameData(stored,safeRequested)?stored:null;
 }
 function openWorkout(options){
   if(state.guideMode&&state.guideMode!=='closed')return false;
   const settings=options&&typeof options==='object'?options:{};
   const requestedSession=ownData(settings,'session'),adaptationId=ownData(settings,'adaptationId'),catalog=ownData(settings,'catalog');
-  let session=null,guideAdaptationId=null;
+  let session=null,guideAdaptation=null;
   if(typeof adaptationId==='string'&&requestedSession===undefined&&catalog===trustedCatalog&&trustedLoadConfirmedAdaptation){
     let loaded=null;try{loaded=trustedLoadConfirmedAdaptation(adaptationId)}catch(_error){loaded=null}
     const safeLoaded=clonePureData(loaded);
-    if(safeLoaded&&safeLoaded.adaptationId===adaptationId&&safeLoaded.sourceSessionId===safeLoaded.session?.id){session=safeLoaded.session;guideAdaptationId=adaptationId}
+    if(safeLoaded&&safeLoaded.adaptationId===adaptationId&&safeLoaded.sourceSessionId===safeLoaded.session?.id){session=safeLoaded.session;guideAdaptation=safeLoaded}
   }else if(adaptationId===undefined&&requestedSession!==undefined){
     session=prepareReviewedSession(requestedSession,catalog);
   }
   const steps=session&&buildWorkoutSteps(session,trustedCatalog);
   if(!steps){Move28.ui.showToast('该训练节无法安全打开，请重新生成计划');return false}
-  state.guideSession={id:steps[0].sessionId,weekday:steps[0].weekday,intent:steps[0].intent,adaptationId:guideAdaptationId};state.guideStep=0;state.guideSteps=steps;
+  activeAdaptation=guideAdaptation;
+  state.guideSession={id:steps[0].sessionId,weekday:steps[0].weekday,intent:steps[0].intent,adaptationId:guideAdaptation&&guideAdaptation.adaptationId};state.guideStep=0;state.guideSteps=steps;
   const onComplete=ownData(settings,'onComplete'),onStop=ownData(settings,'onStop');
   state.guideOnComplete=typeof onComplete==='function'?onComplete:()=>{};
   state.guideOnStop=typeof onStop==='function'?onStop:()=>{};
@@ -211,22 +218,52 @@ function openWorkout(options){
 }
 function hardCloseGuide(){
   $('#guideModal').classList.remove('open');$('#guideModal').setAttribute('aria-hidden','true');root.document.body.classList.remove('body-guide-open');
-  getWorkoutAudio().pause();updateMusicUI();state.guideFinishing=false;state.guideMode='closed';
+  getWorkoutAudio().pause();updateMusicUI();state.guideFinishing=false;state.guideMode='closed';activeAdaptation=null;
+}
+function exactKeys(value,expected){const keys=plainRecord(value)&&safeObjectKeys(value);return !!(keys&&keys.length===expected.length&&safeArrayEvery(expected,key=>safeHasOwn(value,key)))}
+function validatedCompletionState(value,adaptation){
+  const safe=clonePureData(value),key=`${adaptation.planId}.${adaptation.sourceSessionId}`,record=safe&&plainRecord(safe.logs)&&safe.logs[key];
+  if(!safe||!plainRecord(safe.plan)||safe.plan.id!==adaptation.planId||safe.plan.status!=='active'||!exactKeys(record,['planId','sessionId','adaptationId','status','completedAt'])||record.planId!==adaptation.planId||record.sessionId!==adaptation.sourceSessionId||record.adaptationId!==adaptation.adaptationId||record.status!=='completed'||typeof record.completedAt!=='string'||!safeRegexTest(UTC_ISO,record.completedAt))return null;
+  return safe;
+}
+function validatedStopState(value,adaptation,event){
+  const safe=clonePureData(value),key=`safety.${adaptation.planId}.${event.sessionId}`,record=safe&&plainRecord(safe.logs)&&safe.logs[key];
+  if(!safe||!plainRecord(safe.plan)||safe.plan.id!==adaptation.planId||safe.plan.status!=='stale'||safe.plan.staleReason!=='runtime-safety-event'||!exactKeys(record,['planId','sessionId','status','reasonCode','actionIndex','occurredAt'])||record.planId!==adaptation.planId||record.sessionId!==event.sessionId||record.status!=='safety_stopped'||record.reasonCode!==event.reasonCode||record.actionIndex!==event.actionIndex||record.occurredAt!==event.occurredAt)return null;
+  return safe;
+}
+function revokeActiveAdaptation(){
+  const adaptationId=activeAdaptation&&activeAdaptation.adaptationId;
+  if(typeof adaptationId!=='string'||!trustedRevokeConfirmedAdaptation)return false;
+  try{return trustedRevokeConfirmedAdaptation(adaptationId)}catch(_error){return false}
+}
+function persistAdaptedCompletion(){
+  if(!activeAdaptation||!trustedLoadConfirmedAdaptation||!trustedRecordWorkoutCompletion)throw new Error('Adapted completion unavailable');
+  const adaptationId=activeAdaptation.adaptationId;let current=null;
+  try{current=clonePureData(trustedLoadConfirmedAdaptation(adaptationId))}catch(_error){current=null}
+  if(!current||current.adaptationId!==adaptationId||current.planId!==activeAdaptation.planId||current.sourceSessionId!==activeAdaptation.sourceSessionId||!sameData(current.manifest,activeAdaptation.manifest))throw new Error('Adapted completion invalid');
+  const updated=validatedCompletionState(trustedRecordWorkoutCompletion({planId:current.planId,sessionId:current.sourceSessionId,adaptationId:current.adaptationId,manifest:current.manifest}),current);
+  if(!updated)throw new Error('Adapted completion invalid');
+  revokeActiveAdaptation();return updated;
+}
+function persistAdaptedStop(event){
+  if(!activeAdaptation||!trustedRecordWorkoutStop)throw new Error('Adapted stop unavailable');
+  try{const updated=validatedStopState(trustedRecordWorkoutStop({sessionId:event.sessionId,reasonCode:event.reasonCode,actionIndex:event.actionIndex,occurredAt:event.occurredAt}),activeAdaptation,event);if(!updated)throw new Error('Adapted stop invalid');return updated}
+  finally{revokeActiveAdaptation()}
 }
 Move28.requestGuideExit=()=>{
-  if(['pain_pause','safety_confirm','safety_persisting','safety_stopped','safety_save_failed','closed'].includes(state.guideMode))return false;
+  if(safeArrayIncludes(['pain_pause','safety_confirm','safety_persisting','safety_stopped','safety_save_failed','closed'],state.guideMode))return false;
   if(state.guideMode!=='exit_confirm')state.guideResumeMode=state.guideMode;
   state.guideMode='exit_confirm';renderGuide();return true;
 };
 Move28.closeGuide=Move28.requestGuideExit;
 Move28.requestSafetyStop=()=>{
-  if(!['ready','action'].includes(state.guideMode))return false;
+  if(!safeArrayIncludes(['ready','action'],state.guideMode))return false;
   state.guideResumeMode=state.guideMode;state.guideMode='safety_select';renderGuide();return true;
 };
 Move28.selectSafetyReason=reason=>{
   if(state.guideMode!=='safety_select')return false;
   if(reason==='joint_pain'){state.guideMode='pain_pause';renderGuide();return true}
-  if(!STOP_REASONS.some(([code])=>code===reason))return false;
+  if(!safeArraySome(STOP_REASONS,entry=>entry[0]===reason))return false;
   state.guideStopReason=reason;state.guideMode='safety_confirm';renderGuide();return true;
 };
 Move28.resolveGuidePain=relieved=>{
@@ -235,10 +272,12 @@ Move28.resolveGuidePain=relieved=>{
   state.guideStopReason='joint_pain_persisted_or_worsened';state.guideMode='safety_confirm';renderGuide();return true;
 };
 function persistGuideStop(){
-  if(!['safety_confirm','safety_save_failed'].includes(state.guideMode))return false;
+  if(!safeArrayIncludes(['safety_confirm','safety_save_failed'],state.guideMode))return false;
   state.guideMode='safety_persisting';getWorkoutAudio().pause();updateMusicUI();$('#guideNext').disabled=true;
   try{
-    state.guideOnStop({type:'safety_stop',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,reasonCode:state.guideStopReason,actionIndex:state.guideStep,occurredAt:new Date().toISOString()});
+    const event={type:'safety_stop',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,reasonCode:state.guideStopReason,actionIndex:state.guideStep,occurredAt:safeDateToISOString(new SafeDate())};
+    if(activeAdaptation){const persistedState=persistAdaptedStop(event);try{state.guideOnStop({...event,type:'safety_persisted',persistedState})}catch(_error){}}
+    else state.guideOnStop(event);
     state.guideMode='safety_stopped';renderGuide();return true;
   }catch(_error){state.guideMode='safety_save_failed';renderGuide();return false}
 }
@@ -255,13 +294,14 @@ Move28.guideBack=()=>{
 };
 Move28.guideNext=()=>{
   if(state.guideMode==='ready'){state.guideMode='action';renderGuide();return}
-  if(state.guideMode==='exit_confirm'){state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,actionIndex:state.guideStep});hardCloseGuide();return}
-  if(['safety_confirm','safety_save_failed'].includes(state.guideMode)){persistGuideStop();return}
+  if(state.guideMode==='exit_confirm'){if(activeAdaptation)revokeActiveAdaptation();try{state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,actionIndex:state.guideStep})}catch(_error){}hardCloseGuide();return}
+  if(safeArrayIncludes(['safety_confirm','safety_save_failed'],state.guideMode)){persistGuideStop();return}
   if(state.guideMode!=='action'||state.guideFinishing)return;
   if(state.guideStep<state.guideSteps.length-1){state.guideStep++;renderGuide();return}
   state.guideFinishing=true;$('#guideNext').disabled=true;
   try{
-    state.guideOnComplete({sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId});
+    if(activeAdaptation){const persistedState=persistAdaptedCompletion();try{state.guideOnComplete({type:'adapted_completed',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,persistedState})}catch(_error){}}
+    else state.guideOnComplete({sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId});
     hardCloseGuide();
     Move28.ui.showToast('本节训练已完成并保存到本机');
   }catch(_error){state.guideFinishing=false;$('#guideNext').disabled=false;Move28.ui.showToast('完成记录保存失败，请检查本机存储后重试')}

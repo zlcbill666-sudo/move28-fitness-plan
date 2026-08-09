@@ -114,6 +114,20 @@ test('plan-view加载后篡改遍历intrinsic仍保持零getter执行',()=>{
   }finally{Object.getOwnPropertyDescriptor=originalDescriptor;}
 });
 
+test('workout-guide加载后篡改安全边界intrinsic不会执行外部代码或改变步骤',()=>{
+  const {catalog,guide,plan}=setup();
+  const session=plan.weeks[0].sessions[0];
+  const before=guide.buildWorkoutSteps(session,catalog.exerciseCatalog);
+  assert.ok(before);
+  const originals={isArray:Array.isArray,iterator:Array.prototype[Symbol.iterator],getPrototypeOf:Object.getPrototypeOf,getDescriptor:Object.getOwnPropertyDescriptor,keys:Object.keys,ownKeys:Reflect.ownKeys,hasOwn:Object.prototype.hasOwnProperty,mapGet:Map.prototype.get,mapSet:Map.prototype.set,weakHas:WeakSet.prototype.has,weakAdd:WeakSet.prototype.add};
+  let calls=0;const poisoned=()=>{calls+=1;throw new Error('TAMPERED_INTRINSIC')};
+  Array.isArray=poisoned;Array.prototype[Symbol.iterator]=poisoned;Object.getPrototypeOf=poisoned;Object.getOwnPropertyDescriptor=poisoned;Object.keys=poisoned;Reflect.ownKeys=poisoned;Object.prototype.hasOwnProperty=poisoned;Map.prototype.get=poisoned;Map.prototype.set=poisoned;WeakSet.prototype.has=poisoned;WeakSet.prototype.add=poisoned;
+  let after;
+  try{after=guide.buildWorkoutSteps(session,catalog.exerciseCatalog)}
+  finally{Array.isArray=originals.isArray;Array.prototype[Symbol.iterator]=originals.iterator;Object.getPrototypeOf=originals.getPrototypeOf;Object.getOwnPropertyDescriptor=originals.getDescriptor;Object.keys=originals.keys;Reflect.ownKeys=originals.ownKeys;Object.prototype.hasOwnProperty=originals.hasOwn;Map.prototype.get=originals.mapGet;Map.prototype.set=originals.mapSet;WeakSet.prototype.has=originals.weakHas;WeakSet.prototype.add=originals.weakAdd}
+  assert.deepEqual(after,before);assert.equal(calls,0);
+});
+
 test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配或提供任选项',()=>{
   const {catalog,guide,plan}=setup();
   const session=plan.weeks[0].sessions[0];

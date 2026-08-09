@@ -127,7 +127,7 @@ function createSessionReadiness(options){
       if(!record||!rerun||!sameData(rerun.proposal.manifest,record.manifest)){pendingRecord=null;resultSlot.innerHTML='<section class="readiness-status warning"><h3>当前计划或能力档案已经变化</h3><p>候选已作废，请关闭后重新检查今天状态。</p></section>';return}
       const adaptationId=rerun.proposal.manifest.adaptationId,confirmed=clonePureData({...record,manifest:rerun.proposal.manifest});if(!ADAPTATION_ID.test(adaptationId)||!confirmed){resultSlot.innerHTML=blockedMarkup('unavailable');return}
       safeMapSet(confirmedById,adaptationId,deepFreeze(confirmed));const loaded=loadConfirmedAdaptation(adaptationId);if(!loaded){safeMapDelete(confirmedById,adaptationId);resultSlot.innerHTML=blockedMarkup('unavailable');return}
-      close();if(onAdapted({adaptationId})!==true)safeMapDelete(confirmedById,adaptationId);
+      close();let opened=false;try{opened=onAdapted({adaptationId})===true}catch(_error){opened=false}if(!opened)safeMapDelete(confirmedById,adaptationId);
     };
   }
   function check(){

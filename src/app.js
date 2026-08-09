@@ -186,7 +186,8 @@ function revokeAdaptation(adaptationId){
 }
 function handleGuideStop(event){
   if(!event||typeof event!=='object')return false;
-  if(event.type==='ordinary_exit'){revokeAdaptation(event.adaptationId);return true}
+  if(event.type==='ordinary_exit')return true;
+  if(event.type==='safety_persisted'){activatePlanView(event.persistedState);return true}
   if(event.type==='rescreen'){
     const controller=Move28.onboardingController;if(!controller)return false;
     controller.setField('finalConfirmed',false);controller.open();controller.goTo(rescreenStepForReason(event.reasonCode));return true;
@@ -210,16 +211,14 @@ function openAdaptedWorkout(adaptationId){
   const loader=Move28.sessionReadiness&&Move28.sessionReadiness.loadConfirmedAdaptation;
   const loaded=typeof loader==='function'?loader(adaptationId):null;
   if(!loaded){Move28.ui.showToast('当日适配已失效，请重新确认');return false}
-  const opened=Move28.guide.openWorkout({
-    adaptationId,catalog:trustedCatalog,
-    onComplete:()=>{
-      const current=loader(adaptationId);
-      if(!current)throw new Error('Confirmed adaptation unavailable');
-      const updated=Move28.storage.recordWorkoutCompletion({planId:current.planId,sessionId:current.sourceSessionId,adaptationId:current.adaptationId,manifest:current.manifest});
-      revokeAdaptation(adaptationId);activatePlanView(updated);
-    },
-    onStop:handleGuideStop
-  });
+  let opened=false;
+  try{
+    opened=Move28.guide.openWorkout({
+      adaptationId,catalog:trustedCatalog,
+      onComplete:event=>{if(event&&event.type==='adapted_completed')activatePlanView(event.persistedState)},
+      onStop:handleGuideStop
+    });
+  }catch(_error){opened=false}
   if(opened!==true)revokeAdaptation(adaptationId);return opened;
 }
 function openSessionReadiness(sessionId){

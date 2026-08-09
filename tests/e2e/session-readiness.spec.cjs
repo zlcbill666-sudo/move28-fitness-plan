@@ -29,6 +29,18 @@ async function previewBodyweight(page){
   await expect(page.locator('.readiness-comparison')).toBeVisible();
 }
 
+async function setupWithMalformedStorageResult(page,method){
+  await page.addInitScript(target=>{
+    const shell={};
+    Object.defineProperty(shell,'storage',{configurable:true,set(api){
+      const wrapped={...api,[target]:()=>undefined};
+      Object.defineProperty(shell,'storage',{value:Object.freeze(wrapped),writable:true,configurable:true});
+    }});
+    globalThis.Move28=shell;
+  },method);
+  await setup(page);
+}
+
 test.beforeEach(async({page})=>setup(page));
 
 test('默认保持原计划，只有显式检查后才开放原session跟练',async({page})=>{
@@ -152,5 +164,142 @@ test('适配授权在安全停止成功保存后撤销',async({page})=>{
   await page.getByRole('button',{name:/胸部不适或压迫感/}).click();
   await page.getByRole('button',{name:'确认停止并保存'}).click();
   await expect(page.getByRole('heading',{name:'训练已安全停止'})).toBeVisible();
+  expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).toBeNull();
+});
+
+test('公共适配入口不能用自定义回调绕过完成持久化和授权撤销',async({page})=>{
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.evaluate(()=>{
+    window.__move28TrustedOpenWorkout=Move28.guide.openWorkout;
+    Move28.guide.openWorkout=({adaptationId:id})=>{window.__move28CapturedAdaptationId=id;return true};
+  });
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
+  expect(await page.evaluate(()=>window.__move28CapturedAdaptationId)).toBe(adaptationId);
+  expect(await page.evaluate(id=>{
+    Move28.guide.openWorkout=window.__move28TrustedOpenWorkout;
+    return Move28.guide.openWorkout({adaptationId:id,catalog:Move28.data.exerciseCatalog,onComplete:()=>{throw new Error('caller completion failed')},onStop:()=>true});
+  },adaptationId)).toBe(true);
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
+  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  const result=await page.evaluate(id=>{
+    const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
+    return{record:Object.values(state.logs).find(item=>item.adaptationId===id)||null,authorized:Move28.sessionReadiness.loadConfirmedAdaptation(id)};
+  },adaptationId);
+  expect(result.record).toMatchObject({adaptationId,status:'completed'});
+  expect(result.authorized).toBeNull();
+});
+
+test('公共适配入口不能用自定义回调绕过严重停止持久化',async({page})=>{
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.evaluate(()=>{
+    window.__move28TrustedOpenWorkout=Move28.guide.openWorkout;
+    Move28.guide.openWorkout=({adaptationId:id})=>{window.__move28CapturedAdaptationId=id;return true};
+  });
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  expect(await page.evaluate(id=>{
+    Move28.guide.openWorkout=window.__move28TrustedOpenWorkout;
+    return Move28.guide.openWorkout({adaptationId:id,catalog:Move28.data.exerciseCatalog,onComplete:()=>true,onStop:()=>{throw new Error('caller stop failed')}});
+  },adaptationId)).toBe(true);
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  await page.getByRole('button',{name:'暂停 / 停止训练'}).click();
+  await page.getByRole('button',{name:/胸部不适或压迫感/}).click();
+  await page.getByRole('button',{name:'确认停止并保存'}).click();
+  await expect(page.getByRole('heading',{name:'训练已安全停止'})).toBeVisible();
+  const result=await page.evaluate(id=>{
+    const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
+    return{planStatus:state.plan.status,safetyLogs:Object.values(state.logs).filter(item=>item.status==='safety_stopped').length,authorized:Move28.sessionReadiness.loadConfirmedAdaptation(id)};
+  },adaptationId);
+  expect(result).toEqual({planStatus:'stale',safetyLogs:1,authorized:null});
+});
+
+test('适配安全停止保存失败仍撤销授权并保持可重试',async({page})=>{
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  await page.getByRole('button',{name:'暂停 / 停止训练'}).click();
+  await page.getByRole('button',{name:/胸部不适或压迫感/}).click();
+  await page.evaluate(()=>{window.__move28OriginalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=()=>{throw new Error('blocked')}});
+  await page.getByRole('button',{name:'确认停止并保存'}).click();
+  await expect(page.getByRole('heading',{name:'停止记录尚未保存'})).toBeVisible();
+  expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).toBeNull();
+  await page.evaluate(()=>{Storage.prototype.setItem=window.__move28OriginalSetItem;delete window.__move28OriginalSetItem});
+  await page.getByRole('button',{name:'重试保存'}).click();
+  await expect(page.getByRole('heading',{name:'训练已安全停止'})).toBeVisible();
+});
+
+test('适配训练启动抛异常时关闭授权且不开放跟练',async({page})=>{
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.evaluate(()=>{Move28.guide.openWorkout=()=>{throw new Error('blocked')}});
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
+  expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).toBeNull();
+});
+
+test('安全停止流程不依赖模块加载后的数组迭代器',async({page})=>{
+  await openReadiness(page);
+  await page.getByRole('button',{name:'检查今天状态'}).click();
+  await page.getByRole('button',{name:'按原计划继续'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const result=await page.evaluate(()=>{
+    const original=Array.prototype[Symbol.iterator];let calls=0;
+    Array.prototype[Symbol.iterator]=()=>{calls+=1;throw new Error('TAMPERED_ITERATOR')};
+    try{
+      const opened=Move28.requestSafetyStop();
+      const options=document.querySelector('#guideBody').textContent;
+      const selected=Move28.selectSafetyReason('chest_pain_or_pressure');
+      const confirmation=document.querySelector('#guideBody').textContent;
+      return{opened,selected,calls,hasOption:options.includes('胸部不适或压迫感'),hasConfirmation:confirmation.includes('确认因不适停止')};
+    }finally{Array.prototype[Symbol.iterator]=original}
+  });
+  expect(result).toEqual({opened:true,selected:true,calls:0,hasOption:true,hasConfirmation:true});
+});
+
+test('适配完成保存失败后保留授权且重试只写一条完成记录',async({page})=>{
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
+  await page.evaluate(()=>{window.__move28OriginalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=()=>{throw new Error('blocked')}});
+  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
+  await expect(page.locator('#toast')).toContainText('完成记录保存失败');
+  expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
+  await page.evaluate(()=>{Storage.prototype.setItem=window.__move28OriginalSetItem;delete window.__move28OriginalSetItem});
+  await page.locator('#guideNext').click();
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
+  expect(await page.evaluate(id=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).filter(item=>item.adaptationId===id).length,adaptationId)).toBe(1);
+});
+
+test('适配完成依赖返回畸形状态时不得伪称保存成功',async({page})=>{
+  await setupWithMalformedStorageResult(page,'recordWorkoutCompletion');
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
+  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
+  await expect(page.locator('#toast')).toContainText('完成记录保存失败');
+  expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
+});
+
+test('适配停止依赖返回畸形状态时不得进入安全停止成功页',async({page})=>{
+  await setupWithMalformedStorageResult(page,'recordWorkoutStop');
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  await page.getByRole('button',{name:'暂停 / 停止训练'}).click();
+  await page.getByRole('button',{name:/胸部不适或压迫感/}).click();
+  await page.getByRole('button',{name:'确认停止并保存'}).click();
+  await expect(page.getByRole('heading',{name:'停止记录尚未保存'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'训练已安全停止'})).toHaveCount(0);
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).toBeNull();
 });
