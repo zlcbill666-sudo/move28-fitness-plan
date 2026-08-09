@@ -26,6 +26,7 @@ const safeSetAdd=Function.prototype.call.bind(Set.prototype.add);
 const safeFreeze=Object.freeze;
 const safeNumberIsFinite=Number.isFinite;
 const safeNumberIsSafeInteger=Number.isSafeInteger;
+const safeString=String;
 const safeMathMin=Math.min;
 const safeMathMax=Math.max;
 const nativeObjectPrototype=Object.prototype;
@@ -102,7 +103,7 @@ function clonePureData(value){
         const lengthDescriptor=safeGetOwnPropertyDescriptor(current,'length');
         if(!lengthDescriptor||!safeHasOwn(lengthDescriptor,'value')||!safeNumberIsSafeInteger(lengthDescriptor.value)||lengthDescriptor.value>512)return null;
         let dataIndex=0;
-        for(let index=0;index<keys.length;index+=1){const key=keys[index];if(key==='length')continue;if(key!==String(dataIndex))return null;dataIndex+=1;}
+        for(let index=0;index<keys.length;index+=1){const key=keys[index];if(key==='length')continue;if(key!==safeString(dataIndex))return null;dataIndex+=1;}
         if(dataIndex!==lengthDescriptor.value)return null;
       }
       for(let index=0;index<keys.length;index+=1){

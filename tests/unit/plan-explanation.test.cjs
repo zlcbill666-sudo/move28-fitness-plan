@@ -188,11 +188,11 @@ test('Object.prototype污染不能执行getter或从继承字段伪造解释',()
   }
 });
 
-test('模块加载后篡改集合、数组、数值和Math内建仍生成相同可信解释',()=>{
+test('模块加载后篡改集合、数组、数值、String和Math内建仍生成相同可信解释',()=>{
   const {explanation,plan}=setup();
   const input={plan,capabilityResult:NORMAL_CAPABILITY_RESULT,capabilityRevision:3};
   const before=explanation.buildPlanExplanation(input);
-  const originals={setAdd:Set.prototype.add,arrayIncludes:Array.prototype.includes,arrayPush:Array.prototype.push,arrayPop:Array.prototype.pop,arrayIsArray:Array.isArray,weakAdd:WeakSet.prototype.add,weakHas:WeakSet.prototype.has,getPrototypeOf:Object.getPrototypeOf,ownKeys:Reflect.ownKeys,isSafeInteger:Number.isSafeInteger,min:Math.min,max:Math.max};
+  const originals={setAdd:Set.prototype.add,arrayIncludes:Array.prototype.includes,arrayPush:Array.prototype.push,arrayPop:Array.prototype.pop,arrayIsArray:Array.isArray,weakAdd:WeakSet.prototype.add,weakHas:WeakSet.prototype.has,getPrototypeOf:Object.getPrototypeOf,ownKeys:Reflect.ownKeys,isSafeInteger:Number.isSafeInteger,string:String,min:Math.min,max:Math.max};
   Set.prototype.add=()=>{throw new Error('TAMPERED_SET_ADD')};
   Array.prototype.includes=()=>{throw new Error('TAMPERED_ARRAY_INCLUDES')};
   Array.prototype.push=()=>{throw new Error('TAMPERED_ARRAY_PUSH')};
@@ -203,11 +203,13 @@ test('模块加载后篡改集合、数组、数值和Math内建仍生成相同�
   Object.getPrototypeOf=()=>{throw new Error('TAMPERED_GET_PROTOTYPE')};
   Reflect.ownKeys=()=>{throw new Error('TAMPERED_OWN_KEYS')};
   Number.isSafeInteger=()=>{throw new Error('TAMPERED_SAFE_INTEGER')};
+  let stringCalls=0;global.String=()=>{stringCalls+=1;throw new Error('TAMPERED_STRING')};
   Math.min=()=>{throw new Error('TAMPERED_MATH_MIN')};
   Math.max=()=>{throw new Error('TAMPERED_MATH_MAX')};
   let after;
   try{after=explanation.buildPlanExplanation(input)}finally{
-    Set.prototype.add=originals.setAdd;Array.prototype.includes=originals.arrayIncludes;Array.prototype.push=originals.arrayPush;Array.prototype.pop=originals.arrayPop;Array.isArray=originals.arrayIsArray;WeakSet.prototype.add=originals.weakAdd;WeakSet.prototype.has=originals.weakHas;Object.getPrototypeOf=originals.getPrototypeOf;Reflect.ownKeys=originals.ownKeys;Number.isSafeInteger=originals.isSafeInteger;Math.min=originals.min;Math.max=originals.max;
+    Set.prototype.add=originals.setAdd;Array.prototype.includes=originals.arrayIncludes;Array.prototype.push=originals.arrayPush;Array.prototype.pop=originals.arrayPop;Array.isArray=originals.arrayIsArray;WeakSet.prototype.add=originals.weakAdd;WeakSet.prototype.has=originals.weakHas;Object.getPrototypeOf=originals.getPrototypeOf;Reflect.ownKeys=originals.ownKeys;Number.isSafeInteger=originals.isSafeInteger;global.String=originals.string;Math.min=originals.min;Math.max=originals.max;
   }
   assert.deepEqual(after,before);
+  assert.equal(stringCalls,0);
 });
