@@ -5,7 +5,7 @@ if(isCommonJS){
   Move28.data=Move28.data||{};Move28.domain=Move28.domain||{};Move28.storage=Move28.storage||{};
   Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};Move28.capabilityAssessment=Move28.capabilityAssessment||{};Move28.privacy=Move28.privacy||{};Move28.sessionReadiness=Move28.sessionReadiness||{};
   Object.assign(Move28.data,require('./data/exercise-catalog.js'),require('./data/legacy-demo-plan.js'),require('./data/tracker-fields.js'));
-  Object.assign(Move28.domain,require('./domain/risk-engine.js'),require('./domain/capability-engine.js'),require('./domain/movement-matcher.js'),require('./domain/plan-validator.js'),require('./domain/plan-generator.js'),require('./domain/plan-explanation.js'),require('./domain/weekly-adaptation.js'),require('./domain/session-readiness.js'),require('./domain/daily-execution-validator.js'),require('./domain/session-adaptation.js'));
+  Object.assign(Move28.domain,require('./domain/risk-engine.js'),require('./domain/capability-engine.js'),require('./domain/movement-matcher.js'),require('./domain/plan-validator.js'),require('./domain/plan-generator.js'),require('./domain/plan-explanation.js'),require('./domain/weekly-adaptation.js'),require('./domain/schedule-shift.js'),require('./domain/session-readiness.js'),require('./domain/daily-execution-validator.js'),require('./domain/session-adaptation.js'));
   Object.assign(Move28.storage,require('./storage/local-store.js'));
   Object.assign(Move28.ui,require('./ui/dashboard.js'));
   Move28.sessionReadiness=require('./ui/session-readiness.js');
@@ -25,7 +25,14 @@ const safeArrayIsArray=Array.isArray;
 const safeGetPrototypeOf=Object.getPrototypeOf;
 const safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor;
 const safeOwnKeys=Reflect.ownKeys;
+const safeObjectValues=Object.values;
+const safeRegExpTest=Function.prototype.call.bind(RegExp.prototype.test);
 const safeSetHas=Function.prototype.call.bind(Set.prototype.has);
+const safeSetAdd=Function.prototype.call.bind(Set.prototype.add);
+const SafeSet=Set,SafeMap=Map;
+const safeMapHas=Function.prototype.call.bind(Map.prototype.has);
+const safeMapGet=Function.prototype.call.bind(Map.prototype.get);
+const safeMapSet=Function.prototype.call.bind(Map.prototype.set);
 const safeFunctionToString=Function.prototype.call.bind(Function.prototype.toString);
 const safeArrayPush=Function.prototype.call.bind(Array.prototype.push);
 const safeArrayPop=Function.prototype.call.bind(Array.prototype.pop);
@@ -77,16 +84,18 @@ function contextFromState(inputState){
   if(!state.intake)return{mode:'demo',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
   const recomputedRisk=trustedRiskForIntake(state.intake);
   if(!recomputedRisk)return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机风险结果无法安全复核，请重新完成问卷。'};
-  if(!risksMatch(state.risk,recomputedRisk))return{mode:['stop','manual_review'].includes(recomputedRisk.level)?'blocked':'invalid',plan:null,logs:state.logs||{},message:'本机风险结果与当前问卷不一致，请重新完成筛查。'};
-  if(['stop','manual_review'].includes(recomputedRisk.level))return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
+  if(!risksMatch(state.risk,recomputedRisk))return{mode:recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review'?'blocked':'invalid',plan:null,logs:state.logs||{},message:'本机风险结果与当前问卷不一致，请重新完成筛查。'};
+  if(recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review')return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
   if(!state.capabilityProfile||!state.capabilityResult||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1)return{mode:'review',plan:null,logs:state.logs||{},message:'请完成能力校准，再生成与你当前起点匹配的计划。'};
   const recomputedCapability=trustedCapabilityForProfile(state.capabilityProfile);
   if(!recomputedCapability||!capabilityResultsMatch(state.capabilityResult,recomputedCapability))return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机能力档案无法安全复核，请重新完成能力校准。'};
-  if(['stop','manual_review'].includes(recomputedCapability.status))return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前能力校准结果不开放自动训练，请先重新安全筛查或完成人工复核。'};
+  if(recomputedCapability.status==='stop'||recomputedCapability.status==='manual_review')return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前能力校准结果不开放自动训练，请先重新安全筛查或完成人工复核。'};
   if(!state.plan)return{mode:'review',plan:null,logs:state.logs||{},message:'档案已保存，但没有通过安全硬门槛的完整计划。'};
-  const hasCurrentSafetyEvent=state.logs&&Object.values(state.logs).some(record=>record&&record.status==='safety_stopped'&&record.planId===state.plan.id);
+  const logs=state.logs&&plainRecord(state.logs)?safeObjectValues(state.logs):[];let hasCurrentSafetyEvent=false;
+  for(let index=0;index<logs.length;index+=1){const record=logs[index];if(record&&record.status==='safety_stopped'&&record.planId===state.plan.id){hasCurrentSafetyEvent=true;break}}
   if(hasCurrentSafetyEvent)return{mode:'stale',plan:null,logs:state.logs||{},message:'训练中已记录安全停止事件，旧计划已失效，请重新完成安全筛查。'};
-  const hasWeeklyPainRescreen=Array.isArray(state.weeklyReviews)&&state.weeklyReviews.some(record=>record&&record.planId===state.plan.id&&record.decision==='rescreen');
+  let hasWeeklyPainRescreen=false;
+  if(safeArrayIsArray(state.weeklyReviews))for(let index=0;index<state.weeklyReviews.length;index+=1){const record=state.weeklyReviews[index];if(record&&record.planId===state.plan.id&&record.decision==='rescreen'){hasWeeklyPainRescreen=true;break}}
   if(hasWeeklyPainRescreen)return{mode:'stale',plan:null,logs:state.logs||{},message:'每周复盘发现需要重新筛查的疼痛变化，旧计划已失效。'};
   if(state.plan.status==='stale'||state.plan.intakeRevision!==state.intakeRevision||state.plan.capabilityRevision!==state.capabilityRevision)return{mode:'stale',plan:null,logs:state.logs||{},message:'档案已经变化，旧计划已失效，请重新确认问卷与能力校准后生成。'};
   if(state.plan.status==='pending_review')return{mode:'review',plan:null,logs:state.logs||{},message:'4周计划已生成，人工一致性复核完成前不会开放训练入口。'};
@@ -96,42 +105,45 @@ function contextFromState(inputState){
   let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,capabilityResult:state.capabilityResult,capabilityRevision:state.capabilityRevision,catalog:trustedCatalog})}catch(_error){validation=null}
   return validationPassed(validation)?{mode:'generated',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
 }
-function weeklyPlanLineage(reviews,currentPlanId,capabilityRevision){
-  const lineage=new Set([currentPlanId]);
-  const accepted=reviews.filter(item=>item&&item.decision==='accepted'&&item.capabilityRevision===capabilityRevision);
-  const incoming=new Map(),outgoing=new Map();
-  for(const item of accepted){
-    if(typeof item.planId!=='string'||typeof item.resultPlanId!=='string'||incoming.has(item.resultPlanId)||outgoing.has(item.planId))return lineage;
-    incoming.set(item.resultPlanId,item.planId);outgoing.set(item.planId,item.resultPlanId);
+const MACHINE_ID_PATTERN=/^[a-z][a-z0-9._-]{0,63}$/;
+function inspectWeeklyPlanLineage(reviews,currentPlanId,capabilityRevision){
+  const lineage=new SafeSet(),accepted=[];
+  const invalid=()=>({valid:false,lineage});
+  if(typeof currentPlanId!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,currentPlanId))return invalid();
+  safeSetAdd(lineage,currentPlanId);
+  for(let index=0;index<reviews.length;index+=1){const item=reviews[index];if(item&&item.decision==='accepted'&&item.capabilityRevision===capabilityRevision)safeArrayPush(accepted,item)}
+  const incoming=new SafeMap(),outgoing=new SafeMap();
+  for(let index=0;index<accepted.length;index+=1){
+    const item=accepted[index];
+    if(typeof item.planId!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,item.planId)||typeof item.resultPlanId!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,item.resultPlanId)||item.planId===item.resultPlanId||safeMapHas(incoming,item.resultPlanId)||safeMapHas(outgoing,item.planId))return invalid();
+    safeMapSet(incoming,item.resultPlanId,item.planId);safeMapSet(outgoing,item.planId,item.resultPlanId);
   }
-  const globallyVisited=new Set();
-  for(const start of outgoing.keys()){
-    if(globallyVisited.has(start))continue;
-    const path=new Set();let cursor=start;
-    while(outgoing.has(cursor)){
-      if(path.has(cursor))return new Set([currentPlanId]);
-      path.add(cursor);globallyVisited.add(cursor);cursor=outgoing.get(cursor);
+  const globallyVisited=new SafeSet();
+  for(let index=0;index<accepted.length;index+=1){
+    let cursor=accepted[index].planId;if(safeSetHas(globallyVisited,cursor))continue;const path=new SafeSet();
+    while(safeMapHas(outgoing,cursor)){
+      if(safeSetHas(path,cursor))return invalid();
+      safeSetAdd(path,cursor);safeSetAdd(globallyVisited,cursor);cursor=safeMapGet(outgoing,cursor);
     }
   }
   let cursor=currentPlanId;
-  while(incoming.has(cursor)){
-    const parent=incoming.get(cursor);
-    if(lineage.has(parent))return new Set([currentPlanId]);
-    lineage.add(parent);cursor=parent;
+  while(safeMapHas(incoming,cursor)){
+    const parent=safeMapGet(incoming,cursor);if(safeSetHas(lineage,parent))return invalid();safeSetAdd(lineage,parent);cursor=parent;
   }
-  for(const item of accepted)if(!lineage.has(item.planId)||!lineage.has(item.resultPlanId))return new Set([currentPlanId]);
-  return lineage;
+  for(let index=0;index<accepted.length;index+=1){const item=accepted[index];if(!safeSetHas(lineage,item.planId)||!safeSetHas(lineage,item.resultPlanId))return invalid()}
+  return{valid:true,lineage};
 }
-const WORKOUT_FEEDBACK_CODES=Object.freeze(['too_easy','appropriate','too_hard','pain']),UTC_ISO_PATTERN=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const UTC_ISO_PATTERN=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 function feedbackSummaryForWeek(state,plan,week){
-  const counts={too_easy:0,appropriate:0,too_hard:0,pain:0},sessionIds=new Set(week.sessions.map(session=>session.id)),recordedSessions=new Set();
-  const logs=state.logs&&plainRecord(state.logs)?Object.values(state.logs):[];
-  for(const record of logs){
+  const counts={too_easy:0,appropriate:0,too_hard:0,pain:0},sessionIds=new SafeSet(),recordedSessions=new SafeSet();
+  for(let index=0;index<week.sessions.length;index+=1)safeSetAdd(sessionIds,week.sessions[index].id);
+  const logs=state.logs&&plainRecord(state.logs)?safeObjectValues(state.logs):[];
+  for(let index=0;index<logs.length;index+=1){const record=logs[index];
     if(!record||record.status!=='completed'||record.planId!==plan.id||record.capabilityRevision!==state.capabilityRevision
-      ||!sessionIds.has(record.sessionId)||!WORKOUT_FEEDBACK_CODES.includes(record.feedbackCode)||recordedSessions.has(record.sessionId)
-      ||typeof record.completedAt!=='string'||!UTC_ISO_PATTERN.test(record.completedAt)
-      ||typeof record.feedbackAt!=='string'||!UTC_ISO_PATTERN.test(record.feedbackAt))continue;
-    recordedSessions.add(record.sessionId);counts[record.feedbackCode]+=1;
+      ||!safeSetHas(sessionIds,record.sessionId)||(record.feedbackCode!=='too_easy'&&record.feedbackCode!=='appropriate'&&record.feedbackCode!=='too_hard'&&record.feedbackCode!=='pain')||safeSetHas(recordedSessions,record.sessionId)
+      ||typeof record.completedAt!=='string'||!safeRegExpTest(UTC_ISO_PATTERN,record.completedAt)
+      ||typeof record.feedbackAt!=='string'||!safeRegExpTest(UTC_ISO_PATTERN,record.feedbackAt))continue;
+    safeSetAdd(recordedSessions,record.sessionId);counts[record.feedbackCode]+=1;
   }
   return{recorded:recordedSessions.size,total:week.sessions.length,counts};
 }
@@ -139,13 +151,28 @@ function weeklyReviewTarget(state,context){
   const trustedInput=clonePureData({state,context});
   if(!trustedInput)return null;
   state=trustedInput.state;context=trustedInput.context;
-  if(!state||!context||context.mode!=='generated'||!context.plan||!Array.isArray(state.weeklyReviews)||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1||context.plan.capabilityRevision!==state.capabilityRevision)return null;
-  const currentReviews=state.weeklyReviews.filter(item=>item&&item.capabilityRevision===state.capabilityRevision);
-  const lineage=weeklyPlanLineage(currentReviews,context.plan.id,state.capabilityRevision);
-  const pending=currentReviews.find(item=>lineage.has(item.planId)&&item.decision==='pending');
-  if(pending){const week=context.plan.weeks.find(item=>item.number===pending.weekNumber);return week?{weekNumber:pending.weekNumber,scheduledSessions:pending.answers.scheduledSessions,reviewId:pending.id,proposal:pending.proposal,feedbackSummary:feedbackSummaryForWeek(state,context.plan,week)}:null}
-  const reviewed=new Set(currentReviews.filter(item=>lineage.has(item.planId)).map(item=>item.weekNumber));
-  const week=context.plan.weeks.find(item=>!reviewed.has(item.number));
+  if(!state||!context||context.mode!=='generated'||!context.plan||!safeArrayIsArray(state.weeklyReviews)||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1||context.plan.capabilityRevision!==state.capabilityRevision||typeof context.plan.id!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,context.plan.id)||!safeArrayIsArray(context.plan.weeks))return null;
+  const weekNumbers=new SafeSet();
+  for(let weekIndex=0;weekIndex<context.plan.weeks.length;weekIndex+=1){const week=context.plan.weeks[weekIndex];
+    if(!plainRecord(week)||!Number.isSafeInteger(week.number)||week.number<1||week.number>4||safeSetHas(weekNumbers,week.number)||!safeArrayIsArray(week.sessions))return null;
+    safeSetAdd(weekNumbers,week.number);
+    for(let sessionIndex=0;sessionIndex<week.sessions.length;sessionIndex+=1){const session=week.sessions[sessionIndex];if(!plainRecord(session)||typeof session.id!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,session.id))return null}
+  }
+  const currentReviews=[];for(let index=0;index<state.weeklyReviews.length;index+=1){const item=state.weeklyReviews[index];if(item&&item.capabilityRevision===state.capabilityRevision){
+    const decision=item.decision;
+    if(!plainRecord(item)||typeof item.id!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,item.id)||typeof item.planId!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,item.planId)||!Number.isSafeInteger(item.weekNumber)||item.weekNumber<1||item.weekNumber>4||(decision!=='pending'&&decision!=='accepted'&&decision!=='rejected'&&decision!=='rescreen')||(decision==='accepted'?(typeof item.resultPlanId!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,item.resultPlanId)):item.resultPlanId!==null))return null;
+    const proposal=item.proposal;if(!plainRecord(proposal)||typeof proposal.reasonCode!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,proposal.reasonCode)||!(proposal.variable===null||(typeof proposal.variable==='string'&&safeRegExpTest(MACHINE_ID_PATTERN,proposal.variable))))return null;
+    safeArrayPush(currentReviews,item);
+  }}
+  const inspection=inspectWeeklyPlanLineage(currentReviews,context.plan.id,state.capabilityRevision);if(!inspection.valid)return null;const lineage=inspection.lineage;
+  let pending=null;for(let index=0;index<currentReviews.length;index+=1){const item=currentReviews[index];if(safeSetHas(lineage,item.planId)&&item.decision==='pending'){pending=item;break}}
+  if(pending){
+    if(typeof pending.id!=='string'||!safeRegExpTest(MACHINE_ID_PATTERN,pending.id)||!Number.isSafeInteger(pending.weekNumber)||!plainRecord(pending.answers)||!Number.isSafeInteger(pending.answers.scheduledSessions)||pending.answers.scheduledSessions<0)return null;
+    let week=null;for(let index=0;index<context.plan.weeks.length;index+=1)if(context.plan.weeks[index].number===pending.weekNumber){week=context.plan.weeks[index];break}
+    return week&&pending.answers.scheduledSessions===week.sessions.length?{weekNumber:pending.weekNumber,scheduledSessions:pending.answers.scheduledSessions,reviewId:pending.id,proposal:pending.proposal,feedbackSummary:feedbackSummaryForWeek(state,context.plan,week)}:null;
+  }
+  const reviewed=new SafeSet();for(let index=0;index<currentReviews.length;index+=1){const item=currentReviews[index];if(safeSetHas(lineage,item.planId))safeSetAdd(reviewed,item.weekNumber)}
+  let week=null;for(let index=0;index<context.plan.weeks.length;index+=1)if(!safeSetHas(reviewed,context.plan.weeks[index].number)){week=context.plan.weeks[index];break}
   return week?{weekNumber:week.number,scheduledSessions:week.sessions.length,feedbackSummary:feedbackSummaryForWeek(state,context.plan,week)}:null;
 }
 function renderWeeklyEntry(state,context){

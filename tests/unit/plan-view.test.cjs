@@ -69,19 +69,22 @@ test('应用层周复盘目标仅沿当前能力revision的完整多跳lineage�
   const {app,plan}=setup();
   const currentPlan={...structuredClone(plan),id:'plan-current',capabilityRevision:2};
   const context={mode:'generated',plan:currentPlan};
-  const accepted=(id,planId,resultPlanId,weekNumber,capabilityRevision=2)=>({id,planId,resultPlanId,weekNumber,capabilityRevision,decision:'accepted'});
+  const accepted=(id,planId,resultPlanId,weekNumber,capabilityRevision=2)=>({id,planId,resultPlanId,weekNumber,capabilityRevision,decision:'accepted',proposal:{type:'keep',targetWeekNumber:null,variable:null,reasonCode:'appropriate'}});
   const state={capabilityRevision:2,weeklyReviews:[accepted('r1','plan-origin','plan-middle',1),accepted('r2','plan-middle','plan-current',2)]};
   const refreshed=JSON.parse(JSON.stringify(state));
   const target=weekNumber=>({weekNumber,scheduledSessions:currentPlan.weeks[weekNumber-1].sessions.length,feedbackSummary:{recorded:0,total:currentPlan.weeks[weekNumber-1].sessions.length,counts:{too_easy:0,appropriate:0,too_hard:0,pain:0}}});
   assert.deepEqual(app.weeklyReviewTarget(refreshed,context),target(3));
+  const oldCapability=JSON.parse(JSON.stringify(state));oldCapability.weeklyReviews.forEach(item=>{item.capabilityRevision=1});assert.deepEqual(app.weeklyReviewTarget(oldCapability,context),target(1));
   const invalidCases=[
-    raw=>{raw.weeklyReviews.forEach(item=>{item.capabilityRevision=1})},
     raw=>{raw.weeklyReviews.push({...raw.weeklyReviews[0],id:'duplicate'})},
     raw=>{raw.weeklyReviews=[accepted('cycle-a','plan-origin','plan-middle',1),accepted('cycle-b','plan-middle','plan-origin',2)]},
     raw=>{raw.weeklyReviews.push(accepted('detached','detached-parent','detached-parent-w1-a',1))},
-    raw=>{raw.weeklyReviews[1].resultPlanId='broken-child'}
+    raw=>{raw.weeklyReviews[1].resultPlanId='broken-child'},
+    raw=>{raw.weeklyReviews[0].planId=''},
+    raw=>{raw.weeklyReviews[0].proposal.reasonCode='INVALID MACHINE ID'},
+    raw=>{raw.weeklyReviews[0].proposal.variable='INVALID MACHINE ID'}
   ];
-  for(const mutate of invalidCases){const raw=JSON.parse(JSON.stringify(state));mutate(raw);assert.deepEqual(app.weeklyReviewTarget(raw,context),target(1))}
+  for(const mutate of invalidCases){const raw=JSON.parse(JSON.stringify(state));mutate(raw);assert.equal(app.weeklyReviewTarget(raw,context),null)}
   const oldPending={id:'old-pending',planId:'plan-current',resultPlanId:null,weekNumber:4,capabilityRevision:1,decision:'pending',answers:{scheduledSessions:99},proposal:{type:'keep'}};
   assert.deepEqual(app.weeklyReviewTarget({...state,weeklyReviews:[...state.weeklyReviews,oldPending]},context),target(3));
   assert.equal(app.weeklyReviewTarget({...state,capabilityRevision:1},context),null);
@@ -94,6 +97,35 @@ test('应用层反馈摘要只统计语义完整且绑定当前session的完成�
   assert.deepEqual(target.feedbackSummary,{recorded:1,total:plan.weeks[0].sessions.length,counts:{too_easy:0,appropriate:1,too_hard:0,pain:0}});
   const mutations=[item=>{item.status='safety_stopped'},item=>{delete item.completedAt},item=>{item.completedAt='invalid'},item=>{delete item.feedbackAt},item=>{item.feedbackAt='invalid'},item=>{item.sessionId='forged'},item=>{item.planId='forged'},item=>{item.capabilityRevision=2}];
   for(const mutate of mutations){const item=structuredClone(record);mutate(item);assert.equal(app.weeklyReviewTarget({...base,logs:{invalid:item}},context).feedbackSummary.recorded,0)}
+});
+
+test('应用层反馈摘要不执行加载后替换的Set与Object.values',()=>{
+  const {app,plan}=setup(),session=plan.weeks[0].sessions[0],at='2030-01-02T03:04:05.000Z',context={mode:'generated',plan};
+  const state={capabilityRevision:1,weeklyReviews:[],logs:{valid:{planId:plan.id,sessionId:session.id,status:'completed',completedAt:at,capabilityRevision:1,feedbackCode:'appropriate',feedbackAt:at}}};
+  const before=app.weeklyReviewTarget(state,context),OriginalSet=global.Set,originalHas=OriginalSet.prototype.has,originalAdd=OriginalSet.prototype.add,originalValues=Object.values;
+  let calls=0;const poisoned=()=>{calls+=1;throw new Error('TAMPERED_INTRINSIC')};let after;
+  global.Set=poisoned;OriginalSet.prototype.has=poisoned;OriginalSet.prototype.add=poisoned;Object.values=poisoned;
+  try{after=app.weeklyReviewTarget(state,context)}finally{global.Set=OriginalSet;OriginalSet.prototype.has=originalHas;OriginalSet.prototype.add=originalAdd;Object.values=originalValues}
+  assert.deepEqual(after,before);assert.equal(calls,0);
+});
+
+test('实际plan context不执行加载后替换的Object.values',()=>{
+  const {app,plan,capabilityResult}=setup(),active={...structuredClone(plan),status:'active',review:{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1}};
+  const state={intake,intakeRevision:1,risk,capabilityProfile,capabilityResult,capabilityRevision:1,plan:active,logs:{}};
+  const before=app.contextFromState(state),originalValues=Object.values;let calls=0,after;Object.values=()=>{calls+=1;throw new Error('TAMPERED_VALUES')};
+  try{after=app.contextFromState(state)}finally{Object.values=originalValues}
+  assert.deepEqual(after,before);assert.equal(after.mode,'generated');assert.equal(calls,0);
+});
+
+test('周复盘目标对普通畸形pending和plan固定返回null',()=>{
+  const {app,plan}=setup(),context={mode:'generated',plan},pending={id:'weekly-pending',planId:plan.id,weekNumber:1,capabilityRevision:1,decision:'pending'};
+  assert.doesNotThrow(()=>assert.equal(app.weeklyReviewTarget({capabilityRevision:1,weeklyReviews:[pending]},context),null));
+  const noWeeks=structuredClone(plan);delete noWeeks.weeks;
+  const noSessions=structuredClone(plan);delete noSessions.weeks[0].sessions;
+  assert.doesNotThrow(()=>assert.equal(app.weeklyReviewTarget({capabilityRevision:1,weeklyReviews:[]},{mode:'generated',plan:noWeeks}),null));
+  assert.doesNotThrow(()=>assert.equal(app.weeklyReviewTarget({capabilityRevision:1,weeklyReviews:[]},{mode:'generated',plan:noSessions}),null));
+  const malformedRejected={id:'weekly-rejected',planId:'',resultPlanId:null,weekNumber:1,capabilityRevision:1,decision:'rejected',proposal:{type:'keep',targetWeekNumber:null,variable:null,reasonCode:'appropriate'}};
+  assert.equal(app.weeklyReviewTarget({capabilityRevision:1,weeklyReviews:[malformedRejected]},context),null);
 });
 
 test('应用层周复盘目标对accessor与Proxy稳定fail closed且零getter执行',()=>{

@@ -90,6 +90,13 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(api.REVIEW_VERSION, 1);
   });
 
+  await t.test('schedule shift exports its finite display-only suggestion API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.scheduleShift);
+    assert.deepEqual(Object.keys(api), ['suggestScheduleShift']);
+    assert.equal(typeof api.suggestScheduleShift, 'function');
+  });
+
   await t.test('risk engine exports deterministic browser-independent APIs', () => {
     clearMove28ModuleCache();
     const api = require(modules.riskEngine);
@@ -116,6 +123,7 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.savePlan, 'function');
     assert.equal(typeof api.recordWeeklyReview, 'function');
     assert.equal(typeof api.resolveWeeklyReview, 'function');
+    assert.equal(typeof api.previewScheduleShift, 'function');
     assert.equal(typeof api.clearAll, 'function');
     assert.equal(typeof api.exportReviewSummary, 'function');
     assert.equal(api.STORAGE_KEY, 'move28-pilot-v1');

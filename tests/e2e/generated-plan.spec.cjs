@@ -106,6 +106,13 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
   await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
 });
 
+test('generated-plan 真实激活路径不执行加载后替换的Object.values',async({page})=>{
+  await completeOnboarding(page);await approvePendingPlan(page);
+  const calls=await page.evaluate(()=>{const original=Object.values;let count=0;Object.values=()=>{count+=1;throw new Error('TAMPERED_VALUES')};try{Move28.ui.setPlanContext({mode:'generated'})}finally{Object.values=original}return count});
+  expect(calls).toBe(0);
+  await expect(page.getByRole('button',{name:'▶ 开始本节训练'})).toBeVisible();
+});
+
 test('generated-plan context accessor在Object原型污染下不执行getter',async({page})=>{
   const reads=await page.evaluate(()=>{
     let count=0;
@@ -229,4 +236,116 @@ test('generated-plan 缺少审核动作时原子阻断且不回退成用户训�
   await expect(page.locator('#todayCard')).toContainText('暂未生成可执行计划');
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+});
+
+test('generated-plan 安全顺延只改变本次日历显示并继续使用原sessionId',async({page})=>{
+  await completeOnboarding(page,{daysPerWeek:'2',weekdays:['mon','wed','fri']});
+  await page.getByRole('button',{name:'完成，返回首页'}).click();
+  await approvePendingPlan(page);
+
+  const baseline=await page.evaluate(()=>{
+    const bytes=localStorage.getItem('move28-pilot-v1'),state=JSON.parse(bytes),session=state.plan.weeks[0].sessions[0];
+    return{bytes,plan:state.plan,logs:state.logs,sessionId:session.id,weekday:session.weekday,actions:session.actions,minutes:session.estimatedMinutes};
+  });
+  expect(baseline.weekday).toBe('mon');
+  await expect(page.getByRole('button',{name:'错过了这节？查看安全顺延'})).toBeVisible();
+
+  const rejected=await page.evaluate(sessionId=>{
+    const before=localStorage.getItem('move28-pilot-v1');let name='';
+    try{Move28.storage.previewScheduleShift({sessionId,weekday:'fri'})}catch(error){name=error&&error.name}
+    return{name,before,after:localStorage.getItem('move28-pilot-v1')};
+  },baseline.sessionId);
+  expect(rejected.name).toBeTruthy();
+  expect(rejected.after).toBe(rejected.before);
+
+  await page.getByRole('button',{name:'错过了这节？查看安全顺延'}).click();
+  const preview=page.locator('.schedule-shift-preview');
+  await expect(preview).toContainText('第1周周一 → 第1周周五');
+  await expect(preview).toContainText('动作、剂量、完成状态和人工审核处方不会改变');
+  await expect(preview.locator('input,select,textarea')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'仅更新日历显示'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'关闭',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'关闭',exact:true}).click();
+  await expect(preview).toHaveCount(0);
+  expect(await page.evaluate(()=>localStorage.getItem('move28-pilot-v1'))).toBe(baseline.bytes);
+
+  await page.getByRole('button',{name:'错过了这节？查看安全顺延'}).click();
+  await page.getByRole('button',{name:'仅更新日历显示'}).click();
+  await expect(page.locator('#todayCard .today-top')).toContainText('周五');
+  await expect(page.locator('#todayCard .shift-display-badge')).toHaveText('顺延显示 · 原周一');
+  const shiftedCard=page.locator(`#weekView .day-card[data-session-id="${baseline.sessionId}"]`);
+  await expect(shiftedCard.locator('.num')).toHaveText('周五');
+  await expect(shiftedCard.locator('.shift-display-badge')).toHaveText('顺延显示 · 原周一');
+  await expect(page.getByRole('button',{name:'恢复原日历'})).toBeVisible();
+  const afterApply=await page.evaluate(()=>({bytes:localStorage.getItem('move28-pilot-v1'),state:Move28.storage.loadState(),actions:document.querySelector('#todayCard .today-value').textContent,minutes:document.querySelector('#todayCard .today-top').textContent}));
+  expect(afterApply.bytes).toBe(baseline.bytes);
+  expect(afterApply.state.plan).toEqual(baseline.plan);
+  expect(afterApply.state.logs).toEqual(baseline.logs);
+  expect(afterApply.state.plan.weeks[0].sessions[0].actions).toEqual(baseline.actions);
+  expect(afterApply.state.plan.weeks[0].sessions[0].estimatedMinutes).toBe(baseline.minutes);
+  expect(afterApply.minutes).toContain(`${baseline.minutes}分钟`);
+
+  await page.evaluate(()=>{
+    window.__openedShiftSessionId=null;
+    window.openSessionReadiness=id=>{window.__openedShiftSessionId=id;return true};
+  });
+  await page.getByRole('button',{name:'开始本节训练'}).click();
+  expect(await page.evaluate(()=>window.__openedShiftSessionId)).toBe(baseline.sessionId);
+
+  await page.reload();
+  await expect(page.locator('#todayCard .today-top')).toContainText('周一');
+  await expect(page.locator('.shift-display-badge')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'恢复原日历'})).toHaveCount(0);
+});
+
+test('generated-plan 第4周顺延预览不产生第5周显示',async({page})=>{
+  await completeOnboarding(page,{daysPerWeek:'2',weekdays:['mon','wed','fri']});
+  await page.getByRole('button',{name:'完成，返回首页'}).click();
+  await approvePendingPlan(page);
+  await page.getByRole('button',{name:'第4周'}).click();
+  const lastCard=page.locator('#weekView .day-card').last();
+  await lastCard.getByRole('button',{name:'查看此节'}).click();
+  await page.getByRole('button',{name:'错过了这节？查看安全顺延'}).click();
+  await expect(page.locator('.schedule-shift-preview')).toBeVisible();
+  await expect(page.locator('.schedule-shift-preview')).not.toContainText('第5周');
+  const result=await page.evaluate(()=>{const state=Move28.storage.loadState(),session=state.plan.weeks[3].sessions.at(-1);return Move28.storage.previewScheduleShift({sessionId:session.id})});
+  expect(JSON.stringify(result)).not.toContain('"weekNumber":5');
+});
+
+test('generated-plan 顺延确认前重新校验安全状态，失效计划不能套用旧预览',async({page})=>{
+  await completeOnboarding(page,{daysPerWeek:'2',weekdays:['mon','wed','fri']});
+  await page.getByRole('button',{name:'完成，返回首页'}).click();
+  await approvePendingPlan(page);
+  await page.getByRole('button',{name:'错过了这节？查看安全顺延'}).click();
+  await expect(page.getByRole('button',{name:'仅更新日历显示'})).toBeVisible();
+  await page.evaluate(()=>{
+    const state=Move28.storage.loadState(),session=state.plan.weeks[0].sessions[0];
+    Move28.storage.recordWorkoutStop({sessionId:session.id,reasonCode:'sudden_severe_pain',actionIndex:0,occurredAt:'2030-01-02T03:05:00.000Z'});
+  });
+  await page.getByRole('button',{name:'仅更新日历显示'}).click();
+  await expect(page.locator('#todayCard')).toContainText('计划未通过有效状态、人工复核或安全校验');
+  await expect(page.locator('.shift-display-badge')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+});
+
+test('generated-plan 完成、疼痛失效与显式stale上下文都不显示顺延入口',async({page})=>{
+  await completeOnboarding(page,{daysPerWeek:'2',weekdays:['mon','wed','fri']});
+  await page.getByRole('button',{name:'完成，返回首页'}).click();
+  await approvePendingPlan(page);
+  const ids=await page.evaluate(()=>{const state=Move28.storage.loadState(),session=state.plan.weeks[0].sessions[0];Move28.storage.recordWorkoutCompletion({planId:state.plan.id,sessionId:session.id});return{planId:state.plan.id,sessionId:session.id}});
+  await page.reload();
+  await page.locator(`#weekView .day-card[data-session-id="${ids.sessionId}"]`).getByRole('button',{name:'查看此节'}).click();
+  await expect(page.locator('#todayCard')).toContainText('已完成');
+  await expect(page.getByRole('button',{name:'错过了这节？查看安全顺延'})).toHaveCount(0);
+
+  await page.evaluate(sessionId=>Move28.storage.recordWorkoutFeedback({sessionId,feedbackCode:'pain'}),ids.sessionId);
+  await page.reload();
+  await expect(page.locator('#todayCard')).toContainText('计划已失效');
+  await expect(page.getByRole('button',{name:'错过了这节？查看安全顺延'})).toHaveCount(0);
+  await page.evaluate(()=>Move28.ui.setPlanContext({mode:'stale',message:'受控失效测试'}));
+  await expect(page.locator('#todayCard')).toContainText('受控失效测试');
+  await expect(page.getByRole('button',{name:'错过了这节？查看安全顺延'})).toHaveCount(0);
+  await page.evaluate(()=>Move28.ui.setPlanContext({mode:'review',message:'受控复核测试'}));
+  await expect(page.locator('#todayCard')).toContainText('受控复核测试');
+  await expect(page.getByRole('button',{name:'错过了这节？查看安全顺延'})).toHaveCount(0);
 });
