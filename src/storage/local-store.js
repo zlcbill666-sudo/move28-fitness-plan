@@ -5,14 +5,15 @@
   const adaptationApi = isCommonJS ? require('../domain/weekly-adaptation.js') : root.Move28 && root.Move28.domain;
   const riskApi = isCommonJS ? require('../domain/risk-engine.js') : root.Move28 && root.Move28.domain;
   const capabilityApi = isCommonJS ? require('../domain/capability-engine.js') : root.Move28 && root.Move28.domain;
-  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {}, capabilityApi || {});
+  const dailyExecutionApi = isCommonJS ? require('../domain/daily-execution-validator.js') : root.Move28 && root.Move28.domain;
+  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {}, capabilityApi || {}, dailyExecutionApi || {});
   if (isCommonJS) {
     module.exports = api;
   } else {
     const Move28 = root.Move28 = root.Move28 || {};
     Move28.storage = api;
   }
-})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi, capabilityApi) {
+})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi, capabilityApi, dailyExecutionApi) {
   'use strict';
 
   // Hostile classic-script peers can replace realm intrinsics after this script loads.
@@ -47,6 +48,7 @@
   const RISK_LEVELS = new Set(['normal', 'conservative', 'manual_review', 'stop']);
   const PARTICIPANT_ID_PATTERN = /^pilot-[a-z0-9]{1,12}$/;
   const MACHINE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
+  const ADAPTATION_ID_PATTERN = /^daily\.[a-z0-9._-]{1,494}$/;
   const FIELD_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
   const UTC_ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
   const RUNTIME_STOP_REASON_CODES = Object.freeze(['chest_pain_or_pressure','near_faint_or_faint','abnormal_shortness_of_breath','sudden_severe_pain','unable_to_bear_weight','neurologic_or_consciousness_change','joint_pain_persisted_or_worsened']);
@@ -60,6 +62,8 @@
   const trustedEvaluateRisk = typeof riskApi.evaluateRisk === 'function' ? riskApi.evaluateRisk : null;
   const trustedEvaluateCapabilityProfile = typeof capabilityApi.evaluateCapabilityProfile === 'function'
     ? capabilityApi.evaluateCapabilityProfile : null;
+  const trustedValidateDailyExecution = typeof dailyExecutionApi.validateDailyExecution === 'function'
+    ? dailyExecutionApi.validateDailyExecution : null;
   const TRUSTED_RISK_CODES = new Set(Array.isArray(riskApi.REASON_CODES) ? riskApi.REASON_CODES : []);
   const TRUSTED_RULE_VERSIONS = new Set(['pilot-v1', typeof riskApi.RULE_VERSION === 'string' ? riskApi.RULE_VERSION : 'pilot-v2']);
   const TRUSTED_PLAN_VERSIONS = new Set(TRUSTED_RULE_VERSIONS);
@@ -372,7 +376,11 @@
       if (!planId || !sessionId) continue;
       if (record.status === 'completed') {
         const completedAt = typeof record.completedAt === 'string' && UTC_ISO_PATTERN.test(record.completedAt) ? record.completedAt : null;
-        if (completedAt) clean[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+        const adaptationId = typeof record.adaptationId === 'string' && ADAPTATION_ID_PATTERN.test(record.adaptationId)
+          ? record.adaptationId : null;
+        if (completedAt) clean[`${planId}.${sessionId}`] = adaptationId
+          ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
+          : { planId, sessionId, status: 'completed', completedAt };
         continue;
       }
       const reasonCode = sanitizeMachineId(record.reasonCode);
@@ -920,11 +928,15 @@
 
     function recordWorkoutCompletion(completion) {
       const clean = clonePlainData(completion);
-      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
-        || Object.keys(clean).some(key => !['planId', 'sessionId'].includes(key))) throw invalidPlainData();
+      const keys = clean && typeof clean === 'object' && !Array.isArray(clean) ? Object.keys(clean) : [];
+      const legacy = keys.length === 2 && keys.every(key => ['planId', 'sessionId'].includes(key));
+      const adapted = keys.length === 4 && keys.every(key => ['planId', 'sessionId', 'adaptationId', 'manifest'].includes(key));
+      if (!legacy && !adapted) throw invalidPlainData();
       const planId = sanitizeMachineId(clean.planId);
       const sessionId = sanitizeMachineId(clean.sessionId);
-      if (!planId || !sessionId) throw invalidPlainData();
+      const adaptationId = adapted && typeof clean.adaptationId === 'string' && ADAPTATION_ID_PATTERN.test(clean.adaptationId)
+        ? clean.adaptationId : null;
+      if (!planId || !sessionId || (adapted && !adaptationId)) throw invalidPlainData();
       const state = loadStateForWrite();
       const plan = state.plan;
       const sessions = plan && Array.isArray(plan.weeks)
@@ -935,9 +947,31 @@
         || !isPlanApprovedForState(plan, state)
         || !passesTrustedPlanGate(plan, state)
         || !sessions.some(session => session && session.id === sessionId)) throw createStorageError();
+      if (adapted) {
+        let validation = null;
+        try {
+          validation = trustedValidateDailyExecution && trustedValidateDailyExecution({
+            plan: state.plan,
+            intake: state.intake,
+            intakeRevision: state.intakeRevision,
+            risk: state.risk,
+            capabilityProfile: state.capabilityProfile,
+            capabilityRevision: state.capabilityRevision,
+            manifest: clean.manifest
+          });
+        } catch (_error) {
+          validation = null;
+        }
+        if (!validation || validation.ok !== true || !Array.isArray(validation.errors) || validation.errors.length !== 0
+          || !clean.manifest || clean.manifest.adaptationId !== adaptationId
+          || clean.manifest.sourcePlanId !== planId || clean.manifest.sourceSessionId !== sessionId
+          || !clean.manifest.executionSession || clean.manifest.executionSession.id !== sessionId) throw createStorageError();
+      }
       const completedAt = String(now());
       if (!UTC_ISO_PATTERN.test(completedAt)) throw createStorageError();
-      state.logs[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+      state.logs[`${planId}.${sessionId}`] = adapted
+        ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
+        : { planId, sessionId, status: 'completed', completedAt };
       return persist(state);
     }
 

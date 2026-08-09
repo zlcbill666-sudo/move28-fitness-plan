@@ -44,6 +44,7 @@ const DEFAULT_STATE = {
 };
 
 const VALID_INTAKE = Object.freeze({boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true});
+const ADAPTATION_INTAKE = Object.freeze({...VALID_INTAKE,daysPerWeek:'3',weekdays:['mon','wed','fri']});
 const VALID_RISK = Object.freeze({level:'normal',ruleVersion:'pilot-v2',reasons:[]});
 const VALID_CAPABILITY_PROFILE = Object.freeze({version:1,completed:true,chairRise:'independent_controlled',wallPushup:'controlled',wallHinge:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'});
 function generateValidPlan(revision){
@@ -65,6 +66,23 @@ function boundPlanStore({active=false}={}){
   return{moduleApi,storage,store,plan};
 }
 function mutateStoredPlan(storage,moduleApi,mutate){const raw=JSON.parse(storage.raw(moduleApi.STORAGE_KEY));mutate(raw);storage.setItem(moduleApi.STORAGE_KEY,JSON.stringify(raw));return raw;}
+function activeAdaptationStore(){
+  const moduleApi=api(),storage=memoryStorage(),store=moduleApi.createLocalStore({storage,now:()=> '2030-01-02T03:04:05.000Z'});
+  store.saveIntake(structuredClone(ADAPTATION_INTAKE),structuredClone(VALID_RISK));saveValidCapability(store);
+  clearMove28ModuleCache();const generator=loadScript('planGenerator'),catalog=loadScript('exerciseCatalog'),current=store.loadState();
+  const plan=generator.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,catalog:catalog.exerciseCatalog,capabilityResult:current.capabilityResult,capabilityRevision:current.capabilityRevision});
+  store.savePlan(plan);store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1});
+  const fixture={moduleApi,storage,store,plan},state=store.loadState();
+  const source=state.plan.weeks[0].sessions.find(session=>session.intent==='low_impact_cardio');
+  const readiness=loadScript('sessionReadiness').routeSessionReadiness({time:'full',equipment:'bodyweight_only',space:'normal',noise:'normal',energy:'normal',symptom:'none'});
+  const proposal=loadScript('sessionAdaptation').proposeSessionAdaptation({
+    plan:state.plan,sessionId:source.id,intake:state.intake,intakeRevision:state.intakeRevision,risk:state.risk,
+    capabilityProfile:state.capabilityProfile,capabilityRevision:state.capabilityRevision,readiness,
+    equipmentSnapshot:['stable_chair','exercise_mat','wall','flat_walking_route']
+  });
+  assert.equal(proposal.status,'candidate',JSON.stringify(proposal));
+  return{...fixture,state,source,manifest:proposal.manifest};
+}
 
 test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活计划',()=>{
   const storage=memoryStorage(),moduleApi=api();
@@ -300,6 +318,51 @@ test('完成记录只绑定人工复核后的active计划和已知session，刷�
   assert.throws(() => store.recordWorkoutCompletion({ planId: plan.id, sessionId: 'w9-s9' }), error => error.name === 'StorageError');
   assert.throws(() => store.recordWorkoutCompletion({ planId: 'other-plan', sessionId }), error => error.name === 'StorageError');
   assert.throws(() => store.recordWorkoutCompletion({ planId: plan.id, sessionId, note: 'secret' }), TypeError);
+});
+
+test('适配完成记录重新校验当前状态并只持久化有限绑定元数据',()=>{
+  const {store,state,source,manifest}=activeAdaptationStore();
+  const planBefore=JSON.stringify(state.plan),intakeBefore=JSON.stringify(state.intake);
+  const saved=store.recordWorkoutCompletion({planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId,manifest});
+  const record=Object.values(saved.logs).find(item=>item.adaptationId===manifest.adaptationId);
+  assert.deepEqual(Object.keys(record),['planId','sessionId','adaptationId','status','completedAt']);
+  assert.deepEqual(record,{planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId,status:'completed',completedAt:'2030-01-02T03:04:05.000Z'});
+  assert.equal(Object.hasOwn(record,'manifest'),false);
+  assert.equal(JSON.stringify(saved).includes('equipmentSnapshot'),false);
+  assert.equal(JSON.stringify(saved.plan),planBefore);
+  assert.equal(JSON.stringify(saved.intake),intakeBefore);
+  assert.deepEqual(store.loadState().logs,saved.logs);
+});
+
+test('适配完成绑定、manifest或当前revision变化时原子fail closed',()=>{
+  const mutations=[
+    input=>{input.adaptationId='daily.forged'},
+    input=>{input.sessionId='w9-s9'},
+    input=>{input.manifest.executionSession.actions[0].durationMin+=1},
+    input=>{input.manifest.sourcePlanId='other-plan'},
+    input=>{input.manifest.approvalStatus='approved'}
+  ];
+  for(const mutate of mutations){
+    const {moduleApi,storage,store,state,source,manifest}=activeAdaptationStore(),input={planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId,manifest:structuredClone(manifest)};
+    mutate(input);const before=storage.raw(moduleApi.STORAGE_KEY);
+    assert.throws(()=>store.recordWorkoutCompletion(input),error=>error.name==='StorageError'||error.name==='TypeError');
+    assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  }
+  const {moduleApi,storage,store,state,source,manifest}=activeAdaptationStore(),before=storage.raw(moduleApi.STORAGE_KEY);
+  mutateStoredPlan(storage,moduleApi,raw=>{raw.intakeRevision+=1});
+  assert.throws(()=>store.recordWorkoutCompletion({planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId,manifest}),error=>error.name==='StorageError');
+  assert.notEqual(storage.raw(moduleApi.STORAGE_KEY),before);
+  assert.equal(Object.values(JSON.parse(storage.raw(moduleApi.STORAGE_KEY)).logs).length,0);
+});
+
+test('适配完成拒绝额外字段、accessor与无manifest快捷路径且不读取getter',()=>{
+  const {moduleApi,storage,store,state,source,manifest}=activeAdaptationStore(),base={planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId,manifest};
+  const before=storage.raw(moduleApi.STORAGE_KEY);let reads=0;
+  const accessor={...base};Object.defineProperty(accessor,'manifest',{enumerable:true,get(){reads+=1;return manifest}});
+  for(const input of [{...base,note:'raw-health'},accessor,{planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId}]){
+    assert.throws(()=>store.recordWorkoutCompletion(input),TypeError);assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  }
+  assert.equal(reads,0);
 });
 
 test('保存问卷使用深拷贝、revision 递增，并让旧计划明确失效', () => {

@@ -26,6 +26,7 @@
 <div id="guideModal" class="guide-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="guideTitle"><div class="guide-shell"><div class="guide-head"><div class="guide-head-row"><div><div id="guideEyebrow" class="guide-eyebrow">STEP 1 / 5</div><div id="guideTitle" class="guide-title">跟练模式</div></div><button class="guide-close" type="button" aria-label="退出跟练" onclick="closeGuide()">×</button></div><div class="guide-progress"><i id="guideBar"></i></div></div><div id="musicDock" class="music-dock paused" aria-label="跟练音乐控制"><button id="musicToggle" class="music-toggle" type="button" onclick="toggleWorkoutMusic()" aria-label="播放或暂停音乐">▶</button><div class="music-meta"><small><span class="music-bars" aria-hidden="true"><i></i><i></i><i></i></span>当前训练音乐</small><strong id="musicTitle">准备播放</strong><span id="musicCredit">按训练环节自动切换</span></div><label class="music-volume">音量 <input id="musicVolume" type="range" min="0" max="100" value="32" oninput="setWorkoutVolume(this.value)" aria-label="音乐音量"></label><p class="music-note">保持低音量，户外步行时注意车辆和环境；身体警示信号优先于节拍。</p></div><div id="guideBody" class="guide-body" aria-live="polite"></div><div class="guide-foot"><button id="guideBack" class="btn" type="button" onclick="guideBack()">← 上一步</button><button id="guideNext" class="btn primary" type="button" onclick="guideNext()">下一步 →</button></div></div></div>
 <div id="onboardingView" class="onboarding-view" role="dialog" aria-modal="true" aria-hidden="true" aria-label="4周计划引导问卷"></div>
 <div id="capabilityAssessmentView" class="capability-view" role="dialog" aria-modal="true" aria-hidden="true" aria-label="三屏能力校准"></div>
+<div id="sessionReadinessView" class="session-readiness-view" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="sessionReadinessTitle"></div>
 <div id="weeklyReviewView" class="weekly-review-view" role="dialog" aria-modal="true" aria-hidden="true" aria-label="每周训练复盘"></div>
 <audio id="workoutAudio" preload="metadata" loop></audio>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -47,6 +48,7 @@
 <script src="src/ui/onboarding.js"></script>
 <script src="src/ui/capability-assessment.js"></script>
 <script src="src/ui/dashboard.js"></script>
+<script src="src/ui/session-readiness.js"></script>
 <script src="src/ui/workout-guide.js"></script>
 <script src="src/ui/weekly-review.js"></script>
 <script src="src/ui/privacy-tools.js"></script>

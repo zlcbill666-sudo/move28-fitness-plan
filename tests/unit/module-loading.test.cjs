@@ -137,6 +137,17 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.openTrack, 'function');
   });
 
+  await t.test('session readiness UI exports a controller and trusted confirmed loader', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.sessionReadinessUi);
+    assert.equal(typeof api.createSessionReadiness, 'function');
+    assert.equal(typeof api.loadConfirmedAdaptation, 'function');
+    assert.equal(typeof api.revokeConfirmedAdaptation, 'function');
+    assert.deepEqual(Object.keys(api), ['createSessionReadiness', 'loadConfirmedAdaptation', 'revokeConfirmedAdaptation']);
+    assert.equal(api.loadConfirmedAdaptation('daily.not-confirmed'), null);
+    assert.equal(api.revokeConfirmedAdaptation('daily.not-confirmed'), false);
+  });
+
   await t.test('workout guide exports callable guide APIs without a DOM', () => {
     clearMove28ModuleCache();
     const api = require(modules.workoutGuide);

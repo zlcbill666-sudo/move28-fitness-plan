@@ -66,6 +66,7 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/ui/onboarding.js',
     'src/ui/capability-assessment.js',
     'src/ui/dashboard.js',
+    'src/ui/session-readiness.js',
     'src/ui/workout-guide.js',
     'src/ui/weekly-review.js',
     'src/ui/privacy-tools.js',
@@ -81,7 +82,8 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   expect(await page.evaluate(() => ({
     namespace: typeof window.Move28,
     sharedState: typeof window.Move28?.state,
-    openGeneratedWorkout: typeof window.openGeneratedWorkout,
+    openSessionReadiness: typeof window.openSessionReadiness,
+    confirmedAdaptationLoader: typeof window.Move28?.sessionReadiness?.loadConfirmedAdaptation,
     openWorkout: typeof window.Move28?.guide?.openWorkout,
     uiRenderToday: typeof window.Move28?.ui?.renderToday,
     setPlanContext: typeof window.Move28?.ui?.setPlanContext,
@@ -96,7 +98,8 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   }))).toEqual({
     namespace: 'object',
     sharedState: 'object',
-    openGeneratedWorkout: 'function',
+    openSessionReadiness: 'function',
+    confirmedAdaptationLoader: 'function',
     openWorkout: 'function',
     uiRenderToday: 'function',
     setPlanContext: 'function',

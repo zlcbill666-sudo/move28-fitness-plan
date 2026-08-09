@@ -128,6 +128,8 @@ test('tracker与音乐偏好写入失败只显示固定降级提示，不破坏�
   expect(await page.evaluate(() => localStorage.getItem('move28-tracker-v1'))).toBeNull();
 
   await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '检查今天状态' }).click();
+  await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await page.locator('#musicToggle').click();
   await expect(page.locator('#toast')).toContainText('音乐偏好未能保存');

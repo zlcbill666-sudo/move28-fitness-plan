@@ -142,6 +142,8 @@ test('generated-plan 四天与5+计划把recovery明确显示为恢复训练',as
     await expect(page.locator('#todayCard h3')).toHaveText('恢复训练');
     await expect(page.locator('#todayCard h3')).not.toHaveText('低冲击有氧');
     await page.getByRole('button',{name:'开始本节训练'}).click();
+    await page.getByRole('button',{name:'检查今天状态'}).click();
+    await page.getByRole('button',{name:'按原计划继续'}).click();
     await page.getByRole('button',{name:'开始本节',exact:true}).click();
     await expect(page.locator('#guideTitle')).toContainText('恢复训练');
     await expect(page.locator('#guideBody .guide-phase')).toHaveText('恢复训练');
@@ -159,6 +161,8 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     return{planId:state.plan.id,sessionId:session.id,actions:session.actions.map(action=>({action,exercise:index[action.exerciseId]}))};
   });
   await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'检查今天状态'}).click();
+  await page.getByRole('button',{name:'按原计划继续'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   for(let index=0;index<expected.actions.length;index+=1){
@@ -197,6 +201,8 @@ test('generated-plan 受控能力档案在跟练页显示可信中文变式指�
   await expect(page.locator('.plan-explanation')).not.toContainText('hands_supported');
   await expect(page.locator('.plan-explanation')).not.toContainText('limited_range');
   await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'检查今天状态'}).click();
+  await page.getByRole('button',{name:'按原计划继续'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
 
   await expect(page.locator('.guide-variant')).toContainText('受控变式 · 高位座椅变式');

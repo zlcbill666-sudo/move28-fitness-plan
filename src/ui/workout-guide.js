@@ -5,11 +5,13 @@ if(isCommonJS)require('./dashboard.js');
 const trustedCatalog=isCommonJS?require('../data/exercise-catalog.js').exerciseCatalog:Move28.data&&Move28.data.exerciseCatalog;
 const validatorApi=isCommonJS?require('../domain/plan-validator.js'):Move28.domain;
 const storageApi=isCommonJS?require('../storage/local-store.js'):Move28.storage;
+const readinessApi=isCommonJS?require('./session-readiness.js'):Move28.sessionReadiness;
 const trustedValidatePlan=validatorApi&&typeof validatorApi.validatePlan==='function'?validatorApi.validatePlan:null;
 const trustedLoadState=storageApi&&typeof storageApi.loadState==='function'?storageApi.loadState:null;
-const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState);
+const trustedLoadConfirmedAdaptation=readinessApi&&typeof readinessApi.loadConfirmedAdaptation==='function'?readinessApi.loadConfirmedAdaptation:null;
+const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedLoadConfirmedAdaptation);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState){
+})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedLoadConfirmedAdaptation){
 'use strict';
 const state=Move28.state;
 const {$,esc,storage}=Move28.utils;
@@ -188,11 +190,18 @@ function prepareReviewedSession(requestedSession,catalog){
 function openWorkout(options){
   if(state.guideMode&&state.guideMode!=='closed')return false;
   const settings=options&&typeof options==='object'?options:{};
-  const requestedSession=settings&&ownData(settings,'session'),catalog=settings&&ownData(settings,'catalog');
-  const session=prepareReviewedSession(requestedSession,catalog);
+  const requestedSession=ownData(settings,'session'),adaptationId=ownData(settings,'adaptationId'),catalog=ownData(settings,'catalog');
+  let session=null,guideAdaptationId=null;
+  if(typeof adaptationId==='string'&&requestedSession===undefined&&catalog===trustedCatalog&&trustedLoadConfirmedAdaptation){
+    let loaded=null;try{loaded=trustedLoadConfirmedAdaptation(adaptationId)}catch(_error){loaded=null}
+    const safeLoaded=clonePureData(loaded);
+    if(safeLoaded&&safeLoaded.adaptationId===adaptationId&&safeLoaded.sourceSessionId===safeLoaded.session?.id){session=safeLoaded.session;guideAdaptationId=adaptationId}
+  }else if(adaptationId===undefined&&requestedSession!==undefined){
+    session=prepareReviewedSession(requestedSession,catalog);
+  }
   const steps=session&&buildWorkoutSteps(session,trustedCatalog);
   if(!steps){Move28.ui.showToast('该训练节无法安全打开，请重新生成计划');return false}
-  state.guideSession={id:steps[0].sessionId,weekday:steps[0].weekday,intent:steps[0].intent};state.guideStep=0;state.guideSteps=steps;
+  state.guideSession={id:steps[0].sessionId,weekday:steps[0].weekday,intent:steps[0].intent,adaptationId:guideAdaptationId};state.guideStep=0;state.guideSteps=steps;
   const onComplete=ownData(settings,'onComplete'),onStop=ownData(settings,'onStop');
   state.guideOnComplete=typeof onComplete==='function'?onComplete:()=>{};
   state.guideOnStop=typeof onStop==='function'?onStop:()=>{};
@@ -229,7 +238,7 @@ function persistGuideStop(){
   if(!['safety_confirm','safety_save_failed'].includes(state.guideMode))return false;
   state.guideMode='safety_persisting';getWorkoutAudio().pause();updateMusicUI();$('#guideNext').disabled=true;
   try{
-    state.guideOnStop({type:'safety_stop',sessionId:state.guideSession.id,reasonCode:state.guideStopReason,actionIndex:state.guideStep,occurredAt:new Date().toISOString()});
+    state.guideOnStop({type:'safety_stop',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,reasonCode:state.guideStopReason,actionIndex:state.guideStep,occurredAt:new Date().toISOString()});
     state.guideMode='safety_stopped';renderGuide();return true;
   }catch(_error){state.guideMode='safety_save_failed';renderGuide();return false}
 }
@@ -246,13 +255,13 @@ Move28.guideBack=()=>{
 };
 Move28.guideNext=()=>{
   if(state.guideMode==='ready'){state.guideMode='action';renderGuide();return}
-  if(state.guideMode==='exit_confirm'){state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,actionIndex:state.guideStep});hardCloseGuide();return}
+  if(state.guideMode==='exit_confirm'){state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,actionIndex:state.guideStep});hardCloseGuide();return}
   if(['safety_confirm','safety_save_failed'].includes(state.guideMode)){persistGuideStop();return}
   if(state.guideMode!=='action'||state.guideFinishing)return;
   if(state.guideStep<state.guideSteps.length-1){state.guideStep++;renderGuide();return}
   state.guideFinishing=true;$('#guideNext').disabled=true;
   try{
-    state.guideOnComplete({sessionId:state.guideSession.id});
+    state.guideOnComplete({sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId});
     hardCloseGuide();
     Move28.ui.showToast('本节训练已完成并保存到本机');
   }catch(_error){state.guideFinishing=false;$('#guideNext').disabled=false;Move28.ui.showToast('完成记录保存失败，请检查本机存储后重试')}

@@ -3,11 +3,12 @@ const isCommonJS=typeof module==='object'&&module.exports;
 const Move28=isCommonJS?require('./namespace.js'):(root.Move28=root.Move28||{});
 if(isCommonJS){
   Move28.data=Move28.data||{};Move28.domain=Move28.domain||{};Move28.storage=Move28.storage||{};
-  Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};Move28.capabilityAssessment=Move28.capabilityAssessment||{};Move28.privacy=Move28.privacy||{};
+  Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};Move28.capabilityAssessment=Move28.capabilityAssessment||{};Move28.privacy=Move28.privacy||{};Move28.sessionReadiness=Move28.sessionReadiness||{};
   Object.assign(Move28.data,require('./data/exercise-catalog.js'),require('./data/legacy-demo-plan.js'),require('./data/tracker-fields.js'));
-  Object.assign(Move28.domain,require('./domain/risk-engine.js'),require('./domain/capability-engine.js'),require('./domain/movement-matcher.js'),require('./domain/plan-validator.js'),require('./domain/plan-generator.js'),require('./domain/plan-explanation.js'),require('./domain/weekly-adaptation.js'));
+  Object.assign(Move28.domain,require('./domain/risk-engine.js'),require('./domain/capability-engine.js'),require('./domain/movement-matcher.js'),require('./domain/plan-validator.js'),require('./domain/plan-generator.js'),require('./domain/plan-explanation.js'),require('./domain/weekly-adaptation.js'),require('./domain/session-readiness.js'),require('./domain/daily-execution-validator.js'),require('./domain/session-adaptation.js'));
   Object.assign(Move28.storage,require('./storage/local-store.js'));
   Object.assign(Move28.ui,require('./ui/dashboard.js'));
+  Move28.sessionReadiness=require('./ui/session-readiness.js');
   Object.assign(Move28.guide,require('./ui/workout-guide.js'));
   Object.assign(Move28.onboarding,require('./ui/onboarding.js'));
   Move28.capabilityAssessment=require('./ui/capability-assessment.js');
@@ -179,16 +180,20 @@ function handleCapabilityComplete(profile){
   activatePlanView(persisted);
   return{message:'能力档案与4周计划已保存到本机；人工一致性复核完成前不会开放训练入口。'};
 }
+function revokeAdaptation(adaptationId){
+  const revoke=Move28.sessionReadiness&&Move28.sessionReadiness.revokeConfirmedAdaptation;
+  return typeof revoke==='function'&&typeof adaptationId==='string'?revoke(adaptationId):false;
+}
 function handleGuideStop(event){
   if(!event||typeof event!=='object')return false;
-  if(event.type==='ordinary_exit')return true;
+  if(event.type==='ordinary_exit'){revokeAdaptation(event.adaptationId);return true}
   if(event.type==='rescreen'){
     const controller=Move28.onboardingController;if(!controller)return false;
     controller.setField('finalConfirmed',false);controller.open();controller.goTo(rescreenStepForReason(event.reasonCode));return true;
   }
   if(event.type!=='safety_stop'||!trustedRecordWorkoutStop)throw new Error('Safety stop unavailable');
   const updated=trustedRecordWorkoutStop({sessionId:event.sessionId,reasonCode:event.reasonCode,actionIndex:event.actionIndex,occurredAt:event.occurredAt});
-  activatePlanView(updated);return true;
+  revokeAdaptation(event.adaptationId);activatePlanView(updated);return true;
 }
 function openGeneratedWorkout(sessionId){
   const state=Move28.storage.loadState(),context=contextFromState(state);
@@ -200,6 +205,26 @@ function openGeneratedWorkout(sessionId){
     onComplete:()=>{const updated=Move28.storage.recordWorkoutCompletion({planId:context.plan.id,sessionId:session.id});activatePlanView(updated)},
     onStop:handleGuideStop
   });
+}
+function openAdaptedWorkout(adaptationId){
+  const loader=Move28.sessionReadiness&&Move28.sessionReadiness.loadConfirmedAdaptation;
+  const loaded=typeof loader==='function'?loader(adaptationId):null;
+  if(!loaded){Move28.ui.showToast('当日适配已失效，请重新确认');return false}
+  const opened=Move28.guide.openWorkout({
+    adaptationId,catalog:trustedCatalog,
+    onComplete:()=>{
+      const current=loader(adaptationId);
+      if(!current)throw new Error('Confirmed adaptation unavailable');
+      const updated=Move28.storage.recordWorkoutCompletion({planId:current.planId,sessionId:current.sourceSessionId,adaptationId:current.adaptationId,manifest:current.manifest});
+      revokeAdaptation(adaptationId);activatePlanView(updated);
+    },
+    onStop:handleGuideStop
+  });
+  if(opened!==true)revokeAdaptation(adaptationId);return opened;
+}
+function openSessionReadiness(sessionId){
+  if(Move28.state&&Move28.state.guideMode&&Move28.state.guideMode!=='closed')return false;
+  return Boolean(Move28.sessionReadinessController&&Move28.sessionReadinessController.open(sessionId));
 }
 function handleWeeklySubmit(review){
   if(!trustedRecordWeeklyReview)throw new Error('Weekly review unavailable');
@@ -226,7 +251,16 @@ function init(){
   workoutAudio.addEventListener('error',()=>{guide.updateMusicUI();ui.showToast('音乐加载失败，请检查网络或离线资源')});
   $('#guideModal').addEventListener('click',event=>{if(event.target===$('#guideModal'))Move28.closeGuide()});
   root.document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#guideModal').classList.contains('open'))Move28.closeGuide()});
-  Move28.openGeneratedWorkout=openGeneratedWorkout;if(root.window===root)root.openGeneratedWorkout=openGeneratedWorkout;
+  Move28.openSessionReadiness=openSessionReadiness;
+  if(root.window===root)root.openSessionReadiness=openSessionReadiness;
+  const readinessRoot=$('#sessionReadinessView');
+  if(readinessRoot&&Move28.sessionReadiness&&typeof Move28.sessionReadiness.createSessionReadiness==='function'){
+    Move28.sessionReadinessController=Move28.sessionReadiness.createSessionReadiness({
+      rootElement:readinessRoot,
+      onKeep:({sessionId})=>openGeneratedWorkout(sessionId),
+      onAdapted:({adaptationId})=>openAdaptedWorkout(adaptationId)
+    });
+  }
   const onboardingRoot=$('#onboardingView');
   if(onboardingRoot&&Move28.onboarding&&Move28.storage){
     Move28.onboardingController=Move28.onboarding.createOnboarding({rootElement:onboardingRoot,onComplete:handleOnboardingComplete});
