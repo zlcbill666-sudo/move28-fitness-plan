@@ -121,6 +121,14 @@ test('getter、accessor、稀疏数组、Proxy与危险键统一fail closed且�
   const dangerous=structuredClone(base);Object.defineProperty(dangerous,'__proto__',{value:{polluted:true},enumerable:true});assert.equal(propose(api,dangerous).status,'unavailable');
 });
 
+test('伪造null-root与透明Proxy原型不能冒充纯数据边界',()=>{
+  const api=apis(),base=inputFor(api);let traps=0;
+  const forgedRoot=Object.create(null);Object.defineProperty(forgedRoot,'constructor',{value:Object});const forged=Object.assign(Object.create(forgedRoot),base);
+  const proxyPrototype=new Proxy(Object.prototype,{getPrototypeOf(){traps+=1;return null},get(){traps+=1;return Object}}),proxied=Object.assign(Object.create(proxyPrototype),base);
+  assert.deepEqual(propose(api,forged),{status:'unavailable',code:'INVALID_ADAPTATION_INPUT',manifest:null});assert.deepEqual(propose(api,proxied),{status:'unavailable',code:'INVALID_ADAPTATION_INPUT',manifest:null});
+  const valid=propose(api,base),context=Object.assign(Object.create(forgedRoot),{plan:base.plan,intake,intakeRevision:2,risk,capabilityProfile,capabilityRevision:3,manifest:valid.manifest});assert.equal(api.validator.validateDailyExecution(context).ok,false);assert.equal(traps,0);
+});
+
 test('模块加载后替换依赖、器械枚举和structuredClone不改变可信结果',()=>{
   const api=apis(),input=inputFor(api),before=propose(api,input),namespace=require('../../src/namespace.js');
   const original={match:namespace.domain.matchExercise,plan:namespace.domain.validatePlan,execution:namespace.domain.validateDailyExecution,evaluate:namespace.domain.evaluateCapabilityProfile,policy:namespace.domain.POLICY_VERSION,equipment:namespace.data.EQUIPMENT_IDS,clone:globalThis.structuredClone};let calls=0;
@@ -134,6 +142,12 @@ test('模块加载后篡改输入边界内建不能执行外部代码',()=>{
   assert.equal(adaptationResult.status,'unavailable');assert.equal(validatorResult.ok,false);assert.equal(getterReads,0);assert.equal(trapCalls,0);
 });
 
+test('模块加载后篡改剩余数组内建与构造器时固定fail closed且不执行外部代码',()=>{
+  const api=apis(),input=inputFor(api),candidate=propose(api,input),context={plan:input.plan,intake,intakeRevision:2,risk,capabilityProfile,capabilityRevision:3,manifest:candidate.manifest};
+  const cases=[...['some','every','map','flat','forEach','includes','filter','find','sort','push','pop','join','indexOf'].map(key=>({get:()=>Array.prototype[key],set:value=>{Array.prototype[key]=value}})),{get:()=>Array.prototype[Symbol.iterator],set:value=>{Array.prototype[Symbol.iterator]=value}},{get:()=>String.prototype.trim,set:value=>{String.prototype.trim=value}},{get:()=>Set.prototype[Symbol.iterator],set:value=>{Set.prototype[Symbol.iterator]=value}},{get:()=>Set.prototype.has,set:value=>{Set.prototype.has=value}},{get:()=>Set.prototype.add,set:value=>{Set.prototype.add=value}},{get:()=>Set.prototype.delete,set:value=>{Set.prototype.delete=value}},{get:()=>WeakSet.prototype.has,set:value=>{WeakSet.prototype.has=value}},{get:()=>WeakSet.prototype.add,set:value=>{WeakSet.prototype.add=value}},{get:()=>WeakSet.prototype.delete,set:value=>{WeakSet.prototype.delete=value}},{get:()=>Map.prototype.has,set:value=>{Map.prototype.has=value}},{get:()=>Map.prototype.get,set:value=>{Map.prototype.get=value}},{get:()=>Map.prototype.set,set:value=>{Map.prototype.set=value}},{get:()=>Map.prototype.values,set:value=>{Map.prototype.values=value}},{get:()=>Object.getOwnPropertyDescriptor(Set.prototype,'size'),set:value=>{Object.defineProperty(Set.prototype,'size',value)},accessor:true},{get:()=>global.String,set:value=>{global.String=value}},{get:()=>global.Set,set:value=>{global.Set=value}},{get:()=>global.WeakSet,set:value=>{global.WeakSet=value}},{get:()=>global.Map,set:value=>{global.Map=value}}];
+  for(const entry of cases){const original=entry.get();let calls=0,adapted,validated;const trap=function(){calls+=1;throw new Error('SECRET')};try{entry.set(entry.accessor?{...original,get:trap}:trap);adapted=propose(api,input);validated=api.validator.validateDailyExecution(context)}finally{entry.set(original)}assert.equal(adapted.status,'unavailable');assert.equal(validated.ok,false);assert.equal(calls,0)}
+});
+
 test('模块加载后篡改Set.has不能绕过有效manifest的剂量与来源保持门',()=>{
   const api=apis(),input=inputFor(api),candidate=propose(api,input),context={plan:input.plan,intake,intakeRevision:2,risk,capabilityProfile,capabilityRevision:3,manifest:structuredClone(candidate.manifest)},original=Set.prototype.has;context.manifest.executionSession.actions[0].rpe+=1;let checked;
   try{Set.prototype.has=()=>true;checked=api.validator.validateDailyExecution(context)}finally{Set.prototype.has=original}
@@ -145,6 +159,6 @@ test('classic script与CommonJS暴露候选和独立校验API，缺依赖时固�
   const validatorSource=fs.readFileSync(path.join(projectRoot,'src/domain/daily-execution-validator.js'),'utf8'),adaptationSource=fs.readFileSync(path.join(projectRoot,'src/domain/session-adaptation.js'),'utf8');
   const context=vm.createContext({Move28:{domain:{},data:{}},structuredClone});vm.runInContext(validatorSource,context);vm.runInContext(adaptationSource,context);
   assert.equal(context.Move28.domain.validateDailyExecution({}).ok,false);assert.equal(context.Move28.domain.proposeSessionAdaptation({}).status,'unavailable');
-  const api=apis(),catalog=require('../../src/data/exercise-catalog.js'),matcher=require('../../src/domain/movement-matcher.js'),planValidator=require('../../src/domain/plan-validator.js'),rich=vm.createContext({Move28:{domain:{evaluateCapabilityProfile:api.capability.evaluateCapabilityProfile,matchExercise:matcher.matchExercise,validatePlan:planValidator.validatePlan},data:{exerciseCatalog:catalog.exerciseCatalog,EQUIPMENT_IDS:catalog.EQUIPMENT_IDS}},structuredClone});vm.runInContext(validatorSource,rich);vm.runInContext(adaptationSource,rich);
-  assert.equal(rich.Move28.domain.proposeSessionAdaptation(inputFor(api)).status,'candidate');
+  const api=apis(),catalog=require('../../src/data/exercise-catalog.js'),matcher=require('../../src/domain/movement-matcher.js'),planValidator=require('../../src/domain/plan-validator.js'),bridgeEvaluate=value=>api.capability.evaluateCapabilityProfile(structuredClone(value)),bridgeMatch=value=>matcher.matchExercise(structuredClone(value)),bridgeValidate=value=>planValidator.validatePlan(structuredClone(value)),rich=vm.createContext({Move28:{domain:{},data:{exerciseCatalog:catalog.exerciseCatalog,EQUIPMENT_IDS:catalog.EQUIPMENT_IDS}},bridgeEvaluate,bridgeMatch,bridgeValidate,input:JSON.stringify(inputFor(api))});vm.runInContext("structuredClone=value=>JSON.parse(JSON.stringify(value));Move28.domain.evaluateCapabilityProfile=value=>structuredClone(bridgeEvaluate(value));Move28.domain.matchExercise=value=>structuredClone(bridgeMatch(value));Move28.domain.validatePlan=value=>structuredClone(bridgeValidate(value))",rich);vm.runInContext(validatorSource,rich);vm.runInContext(adaptationSource,rich);vm.runInContext('result=Move28.domain.proposeSessionAdaptation(JSON.parse(input))',rich);
+  assert.equal(rich.result.status,'candidate');
 });
