@@ -69,6 +69,20 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(Object.keys(api), ['routeSessionReadiness']);
   });
 
+  await t.test('daily execution validator exports its independent hard gate', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.dailyExecutionValidator);
+    assert.equal(typeof api.validateDailyExecution, 'function');
+    assert.equal(api.POLICY_VERSION, 'daily-execution.v1');
+  });
+
+  await t.test('session adaptation exports its finite candidate API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.sessionAdaptation);
+    assert.equal(typeof api.proposeSessionAdaptation, 'function');
+    assert.deepEqual(Object.keys(api), ['proposeSessionAdaptation']);
+  });
+
   await t.test('weekly adaptation exports deterministic single-variable API', () => {
     clearMove28ModuleCache();
     const api = require(modules.weeklyAdaptation);

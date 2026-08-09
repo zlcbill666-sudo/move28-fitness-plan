@@ -211,7 +211,13 @@ The pure router returns only this fixed schema:
 - 全节原子成功或失败，不返回部分候选；
 - 不修改 `state.plan.weeks`，不创建 weekly lineage；
 - 15/20 分钟、低精力模式在有经过审核的耗时模型和减量顺序前返回不可适配；
-- quiet/space 模式只有目录存在明确审核标签时才开放，否则返回不可适配。
+- quiet/space 模式只有目录存在明确审核标签时才开放，否则返回不可适配；
+- Task 3 入口只接受 Task 2 的 `adapt_candidate + equipment_bodyweight_only`；时间、精力、空间、噪声及开放文本均不能进入候选生成；
+- 能力结果必须由当前有限 `capabilityProfile` 经可信能力引擎重新计算，不接受调用方直接提交的 `capabilityResult`；
+- 器械快照按可信目录枚举规范化，且 `bodyweight_only` 只允许椅子、垫子、墙面和步行路线等非负重支持条件；相同器械集合或没有真实动作/variant 变化都不是适配并固定返回 `NO_ADAPTATION_CHANGE`；
+- 当前 `intakeRevision` 与 `capabilityRevision` 都必须显式传入并同时匹配 active 计划、人工审核记录和 manifest；当前 intake 的 `avoidEquipment` 优先，禁止在当日适配中重新引入；
+- 当前目录没有无器械的水平拉动作，因此完整力量课在 `bodyweight_only` 下必须全节原子返回 unavailable；不得删除水平拉、保留机器动作或把阻力带伪装成徒手；
+- 清单批准状态固定为 `pending`，独立校验器通过重建临时计划并调用完整 plan validator 验证明细关系；原 active 计划始终保持字节不变。
 
 ## Task 4：当日适配 UI 与显式确认
 

@@ -59,6 +59,8 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
     'src/domain/plan-generator.js',
     'src/domain/plan-explanation.js',
     'src/domain/session-readiness.js',
+    'src/domain/daily-execution-validator.js',
+    'src/domain/session-adaptation.js',
     'src/domain/weekly-adaptation.js',
     'src/storage/local-store.js',
     'src/ui/onboarding.js',
