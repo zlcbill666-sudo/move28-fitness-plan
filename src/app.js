@@ -122,6 +122,19 @@ function weeklyPlanLineage(reviews,currentPlanId,capabilityRevision){
   for(const item of accepted)if(!lineage.has(item.planId)||!lineage.has(item.resultPlanId))return new Set([currentPlanId]);
   return lineage;
 }
+const WORKOUT_FEEDBACK_CODES=Object.freeze(['too_easy','appropriate','too_hard','pain']),UTC_ISO_PATTERN=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+function feedbackSummaryForWeek(state,plan,week){
+  const counts={too_easy:0,appropriate:0,too_hard:0,pain:0},sessionIds=new Set(week.sessions.map(session=>session.id)),recordedSessions=new Set();
+  const logs=state.logs&&plainRecord(state.logs)?Object.values(state.logs):[];
+  for(const record of logs){
+    if(!record||record.status!=='completed'||record.planId!==plan.id||record.capabilityRevision!==state.capabilityRevision
+      ||!sessionIds.has(record.sessionId)||!WORKOUT_FEEDBACK_CODES.includes(record.feedbackCode)||recordedSessions.has(record.sessionId)
+      ||typeof record.completedAt!=='string'||!UTC_ISO_PATTERN.test(record.completedAt)
+      ||typeof record.feedbackAt!=='string'||!UTC_ISO_PATTERN.test(record.feedbackAt))continue;
+    recordedSessions.add(record.sessionId);counts[record.feedbackCode]+=1;
+  }
+  return{recorded:recordedSessions.size,total:week.sessions.length,counts};
+}
 function weeklyReviewTarget(state,context){
   const trustedInput=clonePureData({state,context});
   if(!trustedInput)return null;
@@ -130,10 +143,10 @@ function weeklyReviewTarget(state,context){
   const currentReviews=state.weeklyReviews.filter(item=>item&&item.capabilityRevision===state.capabilityRevision);
   const lineage=weeklyPlanLineage(currentReviews,context.plan.id,state.capabilityRevision);
   const pending=currentReviews.find(item=>lineage.has(item.planId)&&item.decision==='pending');
-  if(pending)return{weekNumber:pending.weekNumber,scheduledSessions:pending.answers.scheduledSessions,reviewId:pending.id,proposal:pending.proposal};
+  if(pending){const week=context.plan.weeks.find(item=>item.number===pending.weekNumber);return week?{weekNumber:pending.weekNumber,scheduledSessions:pending.answers.scheduledSessions,reviewId:pending.id,proposal:pending.proposal,feedbackSummary:feedbackSummaryForWeek(state,context.plan,week)}:null}
   const reviewed=new Set(currentReviews.filter(item=>lineage.has(item.planId)).map(item=>item.weekNumber));
   const week=context.plan.weeks.find(item=>!reviewed.has(item.number));
-  return week?{weekNumber:week.number,scheduledSessions:week.sessions.length}:null;
+  return week?{weekNumber:week.number,scheduledSessions:week.sessions.length,feedbackSummary:feedbackSummaryForWeek(state,context.plan,week)}:null;
 }
 function renderWeeklyEntry(state,context){
   if(!root.document)return;const slot=root.document.querySelector('#weeklyReviewSlot');if(!slot)return;
@@ -196,6 +209,15 @@ function handleGuideStop(event){
   const updated=trustedRecordWorkoutStop({sessionId:event.sessionId,reasonCode:event.reasonCode,actionIndex:event.actionIndex,occurredAt:event.occurredAt});
   revokeAdaptation(event.adaptationId);activatePlanView(updated);return true;
 }
+function handleWorkoutFeedback(event){
+  if(!event||event.type!=='workout_feedback'||!event.persistedState)return false;
+  activatePlanView(event.persistedState);
+  if(event.feedbackCode==='pain'){
+    const controller=Move28.onboardingController;if(!controller)return false;
+    controller.setField('finalConfirmed',false);controller.open();controller.goTo(6);
+  }
+  return true;
+}
 function openGeneratedWorkout(sessionId){
   const state=Move28.storage.loadState(),context=contextFromState(state);
   if(context.mode!=='generated'){activatePlanView(state);Move28.ui.showToast('当前没有可执行的有效计划');return false}
@@ -204,6 +226,7 @@ function openGeneratedWorkout(sessionId){
   return Move28.guide.openWorkout({
     session,catalog:trustedCatalog,
     onComplete:()=>{const updated=Move28.storage.recordWorkoutCompletion({planId:context.plan.id,sessionId:session.id});activatePlanView(updated)},
+    onFeedback:handleWorkoutFeedback,
     onStop:handleGuideStop
   });
 }
@@ -216,6 +239,7 @@ function openAdaptedWorkout(adaptationId){
     opened=Move28.guide.openWorkout({
       adaptationId,catalog:trustedCatalog,
       onComplete:event=>{if(event&&event.type==='adapted_completed')activatePlanView(event.persistedState)},
+      onFeedback:handleWorkoutFeedback,
       onStop:handleGuideStop
     });
   }catch(_error){opened=false}

@@ -130,13 +130,18 @@ test('已确认适配只能经adaptationId可信加载，完成绑定且不持�
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
   for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   const record=Object.values(stored.logs).find(item=>item.adaptationId===adaptationId);
-  expect(Object.keys(record)).toEqual(['planId','sessionId','adaptationId','status','completedAt']);
+  expect(Object.keys(record)).toEqual(['planId','sessionId','adaptationId','status','completedAt','capabilityRevision','feedbackCode','feedbackAt']);
   expect(record.planId).toBe(loaded.planId);
   expect(record.sessionId).toBe(loaded.sourceSessionId);
   expect(record.status).toBe('completed');
+  expect(record.capabilityRevision).toBe(stored.capabilityRevision);
+  expect(record.feedbackCode).toBe('appropriate');
+  expect(record.feedbackAt).toMatch(/Z$/);
   expect(record).not.toHaveProperty('manifest');
   expect(JSON.stringify(record)).not.toContain('equipmentSnapshot');
   expect(JSON.stringify(stored.plan)).toBe(before.plan);
@@ -273,8 +278,11 @@ test('适配完成保存失败后保留授权且重试只写一条完成记录',
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
   await page.evaluate(()=>{Storage.prototype.setItem=window.__move28OriginalSetItem;delete window.__move28OriginalSetItem});
   await page.locator('#guideNext').click();
+  await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
-  expect(await page.evaluate(id=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).filter(item=>item.adaptationId===id).length,adaptationId)).toBe(1);
+  const records=await page.evaluate(id=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).filter(item=>item.adaptationId===id),adaptationId);
+  expect(records).toHaveLength(1);expect(records[0].feedbackCode).toBe('appropriate');
 });
 
 test('适配完成依赖返回畸形状态时不得伪称保存成功',async({page})=>{
@@ -302,4 +310,35 @@ test('适配停止依赖返回畸形状态时不得进入安全停止成功页',
   await expect(page.getByRole('heading',{name:'停止记录尚未保存'})).toBeVisible();
   await expect(page.getByRole('heading',{name:'训练已安全停止'})).toHaveCount(0);
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).toBeNull();
+});
+
+test('可信反馈依赖返回畸形状态时不得显示保存成功',async({page})=>{
+  await setupWithMalformedStorageResult(page,'recordWorkoutFeedback');
+  await previewBodyweight(page);
+  const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
+  await page.getByRole('button',{name:'确认本次适配'}).click();
+  await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
+  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await page.getByRole('button',{name:'刚刚好'}).click();
+  await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  await expect(page.getByText('反馈尚未保存，请检查本机存储后重试。')).toBeVisible();
+  const record=await page.evaluate(id=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).find(item=>item.adaptationId===id),adaptationId);
+  expect(record.status).toBe('completed');expect(record).not.toHaveProperty('feedbackCode');
+});
+
+test('反馈通知回调抛异常不逆转可信保存结果',async({page})=>{
+  const opened=await page.evaluate(()=>{
+    const persisted=Move28.storage.loadState(),session=persisted.plan.weeks[0].sessions[0];
+    return Move28.guide.openWorkout({session,catalog:Move28.data.exerciseCatalog,
+      onComplete:event=>Move28.storage.recordWorkoutCompletion({planId:persisted.plan.id,sessionId:event.sessionId}),
+      onFeedback:()=>{throw new Error('notification failed')}});
+  });
+  expect(opened).toBe(true);await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
+  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await page.getByRole('button',{name:'刚刚好'}).click();
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
+  const record=await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).find(item=>item.feedbackCode==='appropriate'));
+  expect(record).toMatchObject({status:'completed',feedbackCode:'appropriate'});
 });

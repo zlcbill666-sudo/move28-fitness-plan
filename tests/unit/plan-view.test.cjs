@@ -72,7 +72,8 @@ test('应用层周复盘目标仅沿当前能力revision的完整多跳lineage�
   const accepted=(id,planId,resultPlanId,weekNumber,capabilityRevision=2)=>({id,planId,resultPlanId,weekNumber,capabilityRevision,decision:'accepted'});
   const state={capabilityRevision:2,weeklyReviews:[accepted('r1','plan-origin','plan-middle',1),accepted('r2','plan-middle','plan-current',2)]};
   const refreshed=JSON.parse(JSON.stringify(state));
-  assert.deepEqual(app.weeklyReviewTarget(refreshed,context),{weekNumber:3,scheduledSessions:currentPlan.weeks[2].sessions.length});
+  const target=weekNumber=>({weekNumber,scheduledSessions:currentPlan.weeks[weekNumber-1].sessions.length,feedbackSummary:{recorded:0,total:currentPlan.weeks[weekNumber-1].sessions.length,counts:{too_easy:0,appropriate:0,too_hard:0,pain:0}}});
+  assert.deepEqual(app.weeklyReviewTarget(refreshed,context),target(3));
   const invalidCases=[
     raw=>{raw.weeklyReviews.forEach(item=>{item.capabilityRevision=1})},
     raw=>{raw.weeklyReviews.push({...raw.weeklyReviews[0],id:'duplicate'})},
@@ -80,10 +81,19 @@ test('应用层周复盘目标仅沿当前能力revision的完整多跳lineage�
     raw=>{raw.weeklyReviews.push(accepted('detached','detached-parent','detached-parent-w1-a',1))},
     raw=>{raw.weeklyReviews[1].resultPlanId='broken-child'}
   ];
-  for(const mutate of invalidCases){const raw=JSON.parse(JSON.stringify(state));mutate(raw);assert.deepEqual(app.weeklyReviewTarget(raw,context),{weekNumber:1,scheduledSessions:currentPlan.weeks[0].sessions.length})}
+  for(const mutate of invalidCases){const raw=JSON.parse(JSON.stringify(state));mutate(raw);assert.deepEqual(app.weeklyReviewTarget(raw,context),target(1))}
   const oldPending={id:'old-pending',planId:'plan-current',resultPlanId:null,weekNumber:4,capabilityRevision:1,decision:'pending',answers:{scheduledSessions:99},proposal:{type:'keep'}};
-  assert.deepEqual(app.weeklyReviewTarget({...state,weeklyReviews:[...state.weeklyReviews,oldPending]},context),{weekNumber:3,scheduledSessions:currentPlan.weeks[2].sessions.length});
+  assert.deepEqual(app.weeklyReviewTarget({...state,weeklyReviews:[...state.weeklyReviews,oldPending]},context),target(3));
   assert.equal(app.weeklyReviewTarget({...state,capabilityRevision:1},context),null);
+});
+
+test('应用层反馈摘要只统计语义完整且绑定当前session的完成记录',()=>{
+  const {app,plan}=setup(),session=plan.weeks[0].sessions[0],at='2030-01-02T03:04:05.000Z';
+  const context={mode:'generated',plan},base={capabilityRevision:1,weeklyReviews:[],logs:{}},record={planId:plan.id,sessionId:session.id,status:'completed',completedAt:at,capabilityRevision:1,feedbackCode:'appropriate',feedbackAt:at};
+  const target=app.weeklyReviewTarget({...base,logs:{valid:record}},context);
+  assert.deepEqual(target.feedbackSummary,{recorded:1,total:plan.weeks[0].sessions.length,counts:{too_easy:0,appropriate:1,too_hard:0,pain:0}});
+  const mutations=[item=>{item.status='safety_stopped'},item=>{delete item.completedAt},item=>{item.completedAt='invalid'},item=>{delete item.feedbackAt},item=>{item.feedbackAt='invalid'},item=>{item.sessionId='forged'},item=>{item.planId='forged'},item=>{item.capabilityRevision=2}];
+  for(const mutate of mutations){const item=structuredClone(record);mutate(item);assert.equal(app.weeklyReviewTarget({...base,logs:{invalid:item}},context).feedbackSummary.recorded,0)}
 });
 
 test('应用层周复盘目标对accessor与Proxy稳定fail closed且零getter执行',()=>{

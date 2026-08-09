@@ -332,6 +332,12 @@ test('适配完成记录重新校验当前状态并只持久化有限绑定元�
   assert.equal(JSON.stringify(saved.plan),planBefore);
   assert.equal(JSON.stringify(saved.intake),intakeBefore);
   assert.deepEqual(store.loadState().logs,saved.logs);
+  const withFeedback=store.recordWorkoutFeedback({sessionId:source.id,feedbackCode:'appropriate'}),feedbackRecord=withFeedback.logs[`${state.plan.id}.${source.id}`],before=JSON.stringify(withFeedback);
+  const repeated=store.recordWorkoutCompletion({planId:state.plan.id,sessionId:source.id,adaptationId:manifest.adaptationId,manifest});
+  assert.equal(JSON.stringify(repeated),before);
+  assert.deepEqual(repeated.logs[`${state.plan.id}.${source.id}`],feedbackRecord);
+  assert.throws(()=>store.recordWorkoutCompletion({planId:state.plan.id,sessionId:source.id}),error=>error.name==='StorageError');
+  assert.throws(()=>store.recordWorkoutFeedback({sessionId:source.id,feedbackCode:'too_hard'}),error=>error.name==='StorageError');
 });
 
 test('适配完成绑定、manifest或当前revision变化时原子fail closed',()=>{

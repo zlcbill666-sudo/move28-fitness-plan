@@ -76,6 +76,7 @@
   const WEEKLY_PAIN_AREAS = new Set(['shoulder','knee','lower_back','hip','ankle','other']);
   const WEEKLY_RECOVERY = new Set(['good','fair','poor']);
   const WEEKLY_TIME = new Set(['less','same','more']);
+  const WORKOUT_FEEDBACK_CODES = new Set(['too_easy','appropriate','too_hard','pain']);
   const MAX_WEEKLY_REVIEWS = 16;
   let nativeStructuredClone = null;
 
@@ -369,18 +370,30 @@
     const entries = Object.entries(logs);
     if (entries.length > 256) return {};
     const clean = {};
-    for (const record of Object.values(logs)) {
+    for (const entry of entries) {
+      const rawKey = entry[0], record = entry[1];
       if (!record || typeof record !== 'object' || Array.isArray(record)) continue;
       const planId = sanitizeMachineId(record.planId);
       const sessionId = sanitizeMachineId(record.sessionId);
       if (!planId || !sessionId) continue;
       if (record.status === 'completed') {
+        if (rawKey !== `${planId}.${sessionId}`) continue;
         const completedAt = typeof record.completedAt === 'string' && UTC_ISO_PATTERN.test(record.completedAt) ? record.completedAt : null;
         const adaptationId = typeof record.adaptationId === 'string' && ADAPTATION_ID_PATTERN.test(record.adaptationId)
           ? record.adaptationId : null;
-        if (completedAt) clean[`${planId}.${sessionId}`] = adaptationId
-          ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
-          : { planId, sessionId, status: 'completed', completedAt };
+        if (completedAt) {
+          const completion = adaptationId
+            ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
+            : { planId, sessionId, status: 'completed', completedAt };
+          const feedbackAt = typeof record.feedbackAt === 'string' && UTC_ISO_PATTERN.test(record.feedbackAt) ? record.feedbackAt : null;
+          if (Number.isSafeInteger(record.capabilityRevision) && record.capabilityRevision >= 1
+            && WORKOUT_FEEDBACK_CODES.has(record.feedbackCode) && feedbackAt) {
+            completion.capabilityRevision = record.capabilityRevision;
+            completion.feedbackCode = record.feedbackCode;
+            completion.feedbackAt = feedbackAt;
+          }
+          clean[`${planId}.${sessionId}`] = completion;
+        }
         continue;
       }
       const reasonCode = sanitizeMachineId(record.reasonCode);
@@ -577,6 +590,22 @@
         defaults.plan.staleReason = bound ? 'runtime-safety-event' : 'runtime-safety-state-inconsistent';
         defaults.plan.staleAt = event.occurredAt;
       }
+    }
+    const currentSessionIds = defaults.plan && Array.isArray(defaults.plan.weeks)
+      ? new Set(defaults.plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions.map(session => session && session.id).filter(Boolean) : []))
+      : new Set();
+    const currentPainFeedback = defaults.plan ? Object.entries(defaults.logs).find(entry => {
+      const key = entry[0], record = entry[1];
+      return record.status === 'completed'
+        && key === `${defaults.plan.id}.${record.sessionId}` && currentSessionIds.has(record.sessionId)
+        && record.planId === defaults.plan.id && record.capabilityRevision === defaults.capabilityRevision && record.feedbackCode === 'pain'
+        && typeof record.completedAt === 'string' && UTC_ISO_PATTERN.test(record.completedAt)
+        && typeof record.feedbackAt === 'string' && UTC_ISO_PATTERN.test(record.feedbackAt);
+    }) : null;
+    const painRecord = currentPainFeedback && currentPainFeedback[1];
+    if (painRecord && !currentStops.length && (defaults.plan.status !== 'stale'
+      || defaults.plan.staleReason !== 'workout_feedback_pain' || defaults.plan.staleAt !== painRecord.feedbackAt)) {
+      defaults.plan.status = 'stale'; defaults.plan.staleReason = 'workout_feedback_pain'; defaults.plan.staleAt = painRecord.feedbackAt;
     }
     const weeklyReviews = ownDataValue(raw, 'weeklyReviews');
     if (weeklyReviews.present) defaults.weeklyReviews = sanitizeWeeklyReviews(weeklyReviews.value);
@@ -967,11 +996,55 @@
           || clean.manifest.sourcePlanId !== planId || clean.manifest.sourceSessionId !== sessionId
           || !clean.manifest.executionSession || clean.manifest.executionSession.id !== sessionId) throw createStorageError();
       }
+      const existing = state.logs[`${planId}.${sessionId}`];
+      if (existing !== undefined) {
+        const sameCompletion = existing && existing.status === 'completed' && existing.planId === planId && existing.sessionId === sessionId
+          && (adapted ? existing.adaptationId === adaptationId : existing.adaptationId === undefined);
+        if (!sameCompletion) throw createStorageError();
+        return clonePlainData(state);
+      }
       const completedAt = String(now());
       if (!UTC_ISO_PATTERN.test(completedAt)) throw createStorageError();
       state.logs[`${planId}.${sessionId}`] = adapted
         ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
         : { planId, sessionId, status: 'completed', completedAt };
+      return persist(state);
+    }
+
+    function recordWorkoutFeedback(feedback) {
+      const clean = clonePlainData(feedback);
+      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
+        || Object.keys(clean).length !== 2
+        || Object.keys(clean).some(key => !['sessionId', 'feedbackCode'].includes(key))) throw invalidPlainData();
+      const sessionId = sanitizeMachineId(clean.sessionId);
+      if (!sessionId || !WORKOUT_FEEDBACK_CODES.has(clean.feedbackCode)) throw invalidPlainData();
+      const state = loadStateForWrite(), plan = state.plan;
+      const sessions = plan && Array.isArray(plan.weeks)
+        ? plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions : []) : [];
+      const record = plan && state.logs[`${plan.id}.${sessionId}`];
+      const bindingValid = Boolean(plan && plan.intakeRevision === state.intakeRevision
+        && isPlanApprovedForState(plan, state) && passesTrustedPlanGate(plan, state)
+        && sessions.some(session => session && session.id === sessionId)
+        && record && record.status === 'completed' && record.planId === plan.id && record.sessionId === sessionId
+        && record.capabilityRevision === state.capabilityRevision && record.feedbackCode === clean.feedbackCode);
+      const recoveredPain = bindingValid && clean.feedbackCode === 'pain' && plan.status === 'stale'
+        && plan.staleReason === 'workout_feedback_pain' && plan.staleAt === record.feedbackAt
+        && typeof record.feedbackAt === 'string' && UTC_ISO_PATTERN.test(record.feedbackAt);
+      if (recoveredPain) return clonePlainData(state);
+      if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
+        || !isPlanApprovedForState(plan, state) || !passesTrustedPlanGate(plan, state)
+        || !sessions.some(session => session && session.id === sessionId)
+        || !record || record.status !== 'completed' || record.planId !== plan.id || record.sessionId !== sessionId
+        || (record.feedbackCode !== undefined && record.feedbackCode !== clean.feedbackCode)) throw createStorageError();
+      if (record.feedbackCode === clean.feedbackCode) return clonePlainData(state);
+      const feedbackAt = String(now());
+      if (!UTC_ISO_PATTERN.test(feedbackAt)) throw createStorageError();
+      record.capabilityRevision = state.capabilityRevision;
+      record.feedbackCode = clean.feedbackCode;
+      record.feedbackAt = feedbackAt;
+      if (clean.feedbackCode === 'pain') {
+        plan.status = 'stale'; plan.staleReason = 'workout_feedback_pain'; plan.staleAt = feedbackAt;
+      }
       return persist(state);
     }
 
@@ -1011,12 +1084,12 @@
         recovery: answers.recovery, nextWeekTime: answers.nextWeekTime };
     }
 
-    function proposeForState(state, review) {
+    function proposeForState(state, review, sessionFeedbackCodes) {
       if (!trustedProposeWeeklyChange) return null;
       const lineage = state.plan ? weeklyPlanLineage(state.weeklyReviews, state.plan.id, state.capabilityRevision) : new Set();
       const previousReviews = state.weeklyReviews.filter(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId));
       let proposal;
-      try { proposal = trustedProposeWeeklyChange({ plan: state.plan, review,
+      try { proposal = trustedProposeWeeklyChange({ plan: state.plan, review, sessionFeedbackCodes,
         previousReviews, intake: state.intake, risk: state.risk,
         capabilityResult: state.capabilityResult, capabilityRevision: state.capabilityRevision }); }
       catch (_error) { return null; }
@@ -1038,7 +1111,15 @@
       if (weekNumber !== expectedWeekNumber) throw createStorageError();
       const week = Number.isSafeInteger(weekNumber) && weekNumber >= 1 && weekNumber <= 4 ? plan.weeks[weekNumber - 1] : null;
       if (!week || !Array.isArray(week.sessions) || state.weeklyReviews.some(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId) && item.weekNumber === weekNumber)) throw createStorageError();
-      const proposal = proposeForState(state, cleanReview);
+      const sessionFeedbackCodes = week.sessions.map(session => state.logs[`${plan.id}.${session.id}`])
+        .filter(record => record && record.planId === plan.id && record.capabilityRevision === state.capabilityRevision
+          && WORKOUT_FEEDBACK_CODES.has(record.feedbackCode)).map(record => record.feedbackCode);
+      if (sessionFeedbackCodes.includes('pain')) throw createStorageError();
+      if (sessionFeedbackCodes.includes('too_hard')) cleanReview.difficulty = 'too_hard';
+      else if (sessionFeedbackCodes.length === week.sessions.length && cleanReview.completedSessions === week.sessions.length
+        && sessionFeedbackCodes.every(code => code === 'too_easy')) cleanReview.difficulty = 'too_light';
+      else if (sessionFeedbackCodes.length && cleanReview.difficulty === 'too_light') cleanReview.difficulty = 'suitable';
+      const proposal = proposeForState(state, cleanReview, sessionFeedbackCodes);
       if (!proposal) throw createStorageError();
       const submittedAt = String(now());
       if (!UTC_ISO_PATTERN.test(submittedAt)) throw createStorageError();
@@ -1070,7 +1151,11 @@
       const decidedAt = String(now());
       if (!UTC_ISO_PATTERN.test(decidedAt)) throw createStorageError();
       if (clean.decision === 'accepted') {
-        const proposal = proposeForState(state, weeklyReviewInput(record));
+        const week = state.plan.weeks[record.weekNumber - 1];
+        const sessionFeedbackCodes = week.sessions.map(session => state.logs[`${state.plan.id}.${session.id}`])
+          .filter(item => item && item.planId === state.plan.id && item.capabilityRevision === state.capabilityRevision
+            && WORKOUT_FEEDBACK_CODES.has(item.feedbackCode)).map(item => item.feedbackCode);
+        const proposal = proposeForState(state, weeklyReviewInput(record), sessionFeedbackCodes);
         if (!proposal || !proposal.after || proposal.type !== record.proposal.type
           || proposal.variable !== record.proposal.variable || proposal.reason !== record.proposal.reasonCode
           || !hasCurrentCapabilityBinding(proposal.after, state, { requireReview: false })
@@ -1156,7 +1241,7 @@
       return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutFeedback, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
   function createLocalParticipantId() {
@@ -1186,6 +1271,7 @@
     buildDetailedReviewDossier: defaultStore.buildDetailedReviewDossier,
     approvePlanReview: defaultStore.approvePlanReview,
     recordWorkoutCompletion: defaultStore.recordWorkoutCompletion,
+    recordWorkoutFeedback: defaultStore.recordWorkoutFeedback,
     recordWorkoutStop: defaultStore.recordWorkoutStop,
     recordWeeklyReview: defaultStore.recordWeeklyReview,
     resolveWeeklyReview: defaultStore.resolveWeeklyReview,

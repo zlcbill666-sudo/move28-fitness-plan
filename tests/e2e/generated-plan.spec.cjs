@@ -176,6 +176,8 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     await expect(page.locator('#guideBody')).not.toContainText('任选');
     await page.locator('#guideNext').click();
   }
+  await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const record=await page.evaluate(()=>{
     const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
