@@ -161,14 +161,25 @@ Expected: PASS.
 
 - `keep_session`
 - `adapt_candidate`
+- `unavailable`
 - `manual_review`
 - `stop`
+
+The pure router returns only this fixed schema:
+
+```js
+{
+  version: 'session-readiness.v1',
+  route: 'keep_session' | 'adapt_candidate' | 'unavailable' | 'manual_review' | 'stop',
+  reasonCodes: ['finite_machine_code']
+}
+```
 
 **Hard rules:**
 
 - `warning` → `stop`；
 - `pain` → 至少 `manual_review`，不得生成普通替换；
-- unknown/missing/hostile input → fixed fail-closed result；
+- unknown/missing/hostile input → fixed `stop + input_invalid` fail-closed result；
 - 该模块只路由，不自行生成动作或剂量。
 
 **Verification:** focused unit tests plus hostile-input probes.

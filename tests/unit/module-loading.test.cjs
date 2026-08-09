@@ -62,6 +62,13 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(Object.keys(api), ['buildPlanExplanation']);
   });
 
+  await t.test('session readiness exports its finite routing API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.sessionReadiness);
+    assert.equal(typeof api.routeSessionReadiness, 'function');
+    assert.deepEqual(Object.keys(api), ['routeSessionReadiness']);
+  });
+
   await t.test('weekly adaptation exports deterministic single-variable API', () => {
     clearMove28ModuleCache();
     const api = require(modules.weeklyAdaptation);
