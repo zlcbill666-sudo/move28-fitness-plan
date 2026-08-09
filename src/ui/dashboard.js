@@ -20,8 +20,12 @@ const state=Move28.state;
 const {$,$$,esc,localDate,storage}=Move28.utils;
 const planContext={mode:'demo',plan:null,logs:{},explanation:null,message:''};
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
+const safeHasOwn=Function.prototype.call.bind(Object.prototype.hasOwnProperty);
+const safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor;
 const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
 function dayClass(t){return /力量/.test(t)?'strength':/有氧/.test(t)?'cardio':'recovery'}
+function generatedSessionLabel(intent){return intent==='full_body_strength'?'全身力量':intent==='low_impact_cardio'?'低冲击有氧':intent==='recovery'?'恢复训练':'计划受限'}
+function generatedSessionClass(intent){return intent==='full_body_strength'?'strength':intent==='low_impact_cardio'?'cardio':'recovery'}
 function legacyProgress(){const done=Object.values(state.tracker).filter(r=>['已完成','部分完成'].includes(r['完成状态'])).length;return{done,pct:Math.round(done/28*100)}}
 function generatedSessions(){return planContext.plan?planContext.plan.weeks.flatMap(week=>week.sessions):[]}
 function completedSessionIds(){return new Set(Object.values(planContext.logs||{}).filter(record=>record&&record.planId===planContext.plan?.id&&record.status==='completed').map(record=>record.sessionId))}
@@ -45,7 +49,7 @@ function renderGeneratedToday(){
   const sessions=generatedSessions(),completed=completedSessionIds(),done=sessions.filter(item=>completed.has(item.id)).length,pct=Math.round(done/sessions.length*100);
   const week=planContext.plan.weeks.find(item=>item.sessions.some(candidate=>candidate.id===session.id));
   const actionNames=session.actions.map(action=>trustedCatalog.find(item=>item.id===action.exerciseId)?.name||action.exerciseId);
-  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${week.number}周</span><strong>${String(week.number).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)} · ${session.setting==='gym'?'健身房':'居家'}</span><span class="chip">${session.estimatedMinutes}分钟</span></div><h3>${session.intent==='full_body_strength'?'全身力量':'低冲击有氧'}</h3><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div>${explanationMarkup(planContext.explanation)}<div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><div class="day-controls"><button class="btn primary today-start" onclick="openGeneratedWorkout('${esc(session.id)}')">▶ 开始本节训练</button></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
+  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${week.number}周</span><strong>${String(week.number).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)} · ${session.setting==='gym'?'健身房':'居家'}</span><span class="chip">${session.estimatedMinutes}分钟</span></div><h3>${generatedSessionLabel(session.intent)}</h3><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div>${explanationMarkup(planContext.explanation)}<div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><div class="day-controls"><button class="btn primary today-start" onclick="openGeneratedWorkout('${esc(session.id)}')">▶ 开始本节训练</button></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
 }
 function renderDemoToday(){const d=DATA.days[state.currentDay-1],p=legacyProgress();$('#todayCard').innerHTML=`<div class="today-day"><span>只读示例 / 第${d.week}周</span><strong>${String(d.day).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">示例计划</span><span class="chip">${esc(d.weekday)} · ${esc(d.place)}</span><span class="chip">${esc(d.duration)}</span></div><h3>${esc(d.type)}</h3><div class="today-grid"><div class="today-block"><div class="label">热身与力量</div><div class="today-value">${esc(d.strength)}</div></div><div class="today-block"><div class="label">有氧 / 步行</div><div class="today-value">${esc(d.cardio)}</div></div></div><div class="progress-text">示例只用于了解结构，不会写入训练记录。旧示例记录：${p.done}/28。</div><div class="day-controls"><button class="btn" onclick="moveDay(-1)">← 前一天</button><button class="btn" onclick="moveDay(1)">后一天 →</button></div></div>`}
 function renderToday(){if(planContext.mode==='generated')renderGeneratedToday();else if(planContext.mode==='demo')renderDemoToday();else $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要复核'}</span><h3>暂未生成可执行计划</h3><p>${esc(planContext.message||'请修改问卷或等待人工复核；当前不会开放训练入口。')}</p></div>`}
@@ -56,7 +60,7 @@ function renderWeeks(){
     const completed=completedSessionIds();
     $('#weekTabs').innerHTML=planContext.plan.weeks.map(week=>`<button class="tab ${week.number===state.currentWeek?'active':''}" onclick="pickWeek(${week.number})">第${week.number}周</button>`).join('');
     const week=planContext.plan.weeks[state.currentWeek-1];
-    $('#weekView').innerHTML=`<div class="week-focus"><span>本周重点</span>${esc(week.focus)}</div><div class="days-grid generated-days">${week.sessions.map(session=>`<article class="day-card ${session.intent==='full_body_strength'?'strength':'cardio'} ${completed.has(session.id)?'completed':''}"><div class="num">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)}</div><h3>${session.intent==='full_body_strength'?'全身力量':'低冲击有氧'}</h3><div class="type">${session.estimatedMinutes}分钟 · ${completed.has(session.id)?'已完成':'待完成'}</div><button class="btn" type="button" onclick="selectGeneratedSession('${esc(session.id)}')">查看此节</button></article>`).join('')}</div>`;
+    $('#weekView').innerHTML=`<div class="week-focus"><span>本周重点</span>${esc(week.focus)}</div><div class="days-grid generated-days">${week.sessions.map(session=>`<article class="day-card ${generatedSessionClass(session.intent)} ${completed.has(session.id)?'completed':''}"><div class="num">${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)}</div><h3>${generatedSessionLabel(session.intent)}</h3><div class="type">${session.estimatedMinutes}分钟 · ${completed.has(session.id)?'已完成':'待完成'}</div><button class="btn" type="button" onclick="selectGeneratedSession('${esc(session.id)}')">查看此节</button></article>`).join('')}</div>`;
     return;
   }
   if(planContext.mode!=='demo'){$('#weekTabs').innerHTML='';$('#weekView').innerHTML=`<div class="week-focus"><span>计划受限</span>${esc(planContext.message||'没有可执行计划')}</div>`;return}
@@ -64,7 +68,7 @@ function renderWeeks(){
 }
 Move28.pickWeek=n=>{state.currentWeek=n;renderWeeks()};
 Move28.selectGeneratedSession=id=>{if(planContext.mode!=='generated'||!generatedSessions().some(session=>session.id===id))return;state.currentSessionId=id;renderToday();root.location.hash='today'};
-function ownData(object,key){try{const descriptor=object&&Object.getOwnPropertyDescriptor(object,key);return descriptor&&'value'in descriptor?descriptor.value:undefined}catch(_error){return undefined}}
+function ownData(object,key){try{const descriptor=object&&safeGetOwnPropertyDescriptor(object,key);return descriptor&&safeHasOwn(descriptor,'value')?descriptor.value:undefined}catch(_error){return undefined}}
 function storedGeneratedContext(){
   if(!trustedLoadState||!trustedValidatePlan||!trustedCatalog)return null;let stored;
   try{stored=trustedLoadState()}catch(_error){return null}

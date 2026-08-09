@@ -106,6 +106,49 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
   await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
 });
 
+test('generated-plan context accessor在Object原型污染下不执行getter',async({page})=>{
+  const reads=await page.evaluate(()=>{
+    let count=0;
+    const context={};
+    Object.defineProperty(context,'mode',{enumerable:true,get(){count+=100;return'generated'}});
+    const originalDescriptor=Object.getOwnPropertyDescriptor;
+    Object.defineProperty(Object.prototype,'value',{configurable:true,get(){count+=1;return'demo'}});
+    Object.getOwnPropertyDescriptor=(object,key)=>{
+      const descriptor=originalDescriptor(object,key);
+      return descriptor&&descriptor.get?{value:object[key]}:descriptor;
+    };
+    try{Move28.ui.setPlanContext(context)}finally{Object.getOwnPropertyDescriptor=originalDescriptor;delete Object.prototype.value}
+    return count;
+  });
+  expect(reads).toBe(0);
+  await expect(page.locator('#todayCard')).toContainText('暂未生成可执行计划');
+});
+
+test('generated-plan 四天与5+计划把recovery明确显示为恢复训练',async({page})=>{
+  const cases=[
+    {daysPerWeek:'4',weekdays:['mon','tue','thu','sat']},
+    {daysPerWeek:'5plus',weekdays:['mon','tue','wed','fri','sat']}
+  ];
+  for(const item of cases){
+    await reset(page);
+    await completeOnboarding(page,item);
+    await page.getByRole('button',{name:'完成，返回首页'}).click();
+    await approvePendingPlan(page);
+    const recoveryCard=page.locator('#weekView .day-card.recovery').first();
+    await expect(recoveryCard).toHaveCount(1);
+    await expect(recoveryCard.getByRole('heading')).toHaveText('恢复训练');
+    await expect(recoveryCard).not.toContainText('低冲击有氧');
+    await recoveryCard.getByRole('button',{name:'查看此节'}).click();
+    await expect(page.locator('#todayCard h3')).toHaveText('恢复训练');
+    await expect(page.locator('#todayCard h3')).not.toHaveText('低冲击有氧');
+    await page.getByRole('button',{name:'开始本节训练'}).click();
+    await page.getByRole('button',{name:'开始本节',exact:true}).click();
+    await expect(page.locator('#guideTitle')).toContainText('恢复训练');
+    await expect(page.locator('#guideBody .guide-phase')).toHaveText('恢复训练');
+    await expect(page.locator('#guideTitle')).not.toContainText('低冲击有氧');
+  }
+});
+
 test('generated-plan 跟练严格消费session.actions，每屏一个动作并完成记录',async({page})=>{
   await completeOnboarding(page);
   await page.getByRole('button',{name:'完成，返回首页'}).click();

@@ -78,6 +78,7 @@ test('stop用户计划数严格为0，刷新后仍阻断', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
   await expect(page.locator('#todayCard')).toContainText(/不开放自动训练|重新完成筛查/);
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
 
 test('年龄边界：15岁人工审核，17岁按规则生成且无激进减重话术', async ({ page }) => {

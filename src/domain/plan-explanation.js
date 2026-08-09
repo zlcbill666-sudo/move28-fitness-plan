@@ -31,6 +31,9 @@ const safeMathMax=Math.max;
 const nativeObjectPrototype=Object.prototype;
 const MAX_KEYS_PER_NODE=1024;
 const MAX_TOTAL_KEYS=10000;
+const MAX_PROPERTY_KEY_LENGTH=128;
+const MAX_STRING_LENGTH=4096;
+const MAX_TOTAL_CHARACTERS=100000;
 const DANGEROUS_KEYS=new SafeSet(['__proto__','prototype','constructor']);
 const ACTIVE_CAPABILITY_STATUSES=new SafeSet(['normal','conservative']);
 const RISK_LEVELS=new SafeSet(['normal','conservative']);
@@ -75,10 +78,14 @@ function ownData(value,key){
 function clonePureData(value){
   if(!nativeStructuredClone)return null;
   try{
-    const stack=[{value,depth:0}],seen=new SafeWeakSet();let nodes=0,totalKeys=0;
+    const stack=[{value,depth:0}],seen=new SafeWeakSet();let nodes=0,totalKeys=0,totalCharacters=0;
     while(stack.length){
       const item=safeArrayPop(stack),current=item.value;
-      if(current===null||typeof current==='string'||typeof current==='boolean')continue;
+      if(current===null||typeof current==='boolean')continue;
+      if(typeof current==='string'){
+        if(current.length>MAX_STRING_LENGTH||(totalCharacters+=current.length)>MAX_TOTAL_CHARACTERS)return null;
+        continue;
+      }
       if(typeof current==='number'){if(!safeNumberIsFinite(current))return null;continue;}
       if(typeof current!=='object'||safeWeakSetHas(seen,current)||item.depth>32)return null;
       safeWeakSetAdd(seen,current);
@@ -87,7 +94,10 @@ function clonePureData(value){
       if(!array&&!plainRecord(current))return null;
       const keys=safeOwnKeys(current);
       if(keys.length>MAX_KEYS_PER_NODE||(totalKeys+=keys.length)>MAX_TOTAL_KEYS)return null;
-      for(let index=0;index<keys.length;index+=1){const key=keys[index];if(typeof key!=='string'||safeSetHas(DANGEROUS_KEYS,key))return null;}
+      for(let index=0;index<keys.length;index+=1){
+        const key=keys[index];
+        if(typeof key!=='string'||key.length>MAX_PROPERTY_KEY_LENGTH||(totalCharacters+=key.length)>MAX_TOTAL_CHARACTERS||safeSetHas(DANGEROUS_KEYS,key))return null;
+      }
       if(array){
         const lengthDescriptor=safeGetOwnPropertyDescriptor(current,'length');
         if(!lengthDescriptor||!safeHasOwn(lengthDescriptor,'value')||!safeNumberIsSafeInteger(lengthDescriptor.value)||lengthDescriptor.value>512)return null;

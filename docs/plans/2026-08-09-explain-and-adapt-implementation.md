@@ -87,7 +87,7 @@ Expected: FAIL because module/API does not exist.
 - Capture required native intrinsics at module load.
 - Canonicalize only own data properties.
 - Accept only active normal/conservative capability context with positive matching revision.
-- Derive setting, week-1 session count and duration range from validated finite plan fields.
+- Derive setting, four-week session-count range and duration range from validated finite plan fields.
 - Map only recognized capability reason codes to fixed Chinese labels.
 - Deep-freeze output.
 - Export CommonJS and attach to `Move28.domain` in classic-script mode.

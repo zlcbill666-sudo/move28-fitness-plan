@@ -157,6 +157,9 @@ test('getter、Proxy、稀疏数组、危险键与内建篡改均零getter执行
   const wide={plan,capabilityResult:NORMAL_CAPABILITY_RESULT,capabilityRevision:3};
   for(let index=0;index<1025;index+=1)wide[`extra${index}`]=index;
   assert.deepEqual(explanation.buildPlanExplanation(wide),failed);
+  assert.deepEqual(explanation.buildPlanExplanation({plan,capabilityResult:NORMAL_CAPABILITY_RESULT,capabilityRevision:3,extra:'x'.repeat(4097)}),failed);
+  assert.deepEqual(explanation.buildPlanExplanation({plan,capabilityResult:NORMAL_CAPABILITY_RESULT,capabilityRevision:3,['k'.repeat(129)]:1}),failed);
+  assert.deepEqual(explanation.buildPlanExplanation({plan,capabilityResult:NORMAL_CAPABILITY_RESULT,capabilityRevision:3,extra:Array.from({length:30},()=> 'x'.repeat(4000))}),failed);
   assert.equal(reads,0);
 
   const original=Object.getOwnPropertyDescriptor;
