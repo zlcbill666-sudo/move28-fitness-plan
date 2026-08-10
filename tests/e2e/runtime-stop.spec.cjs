@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
 const {resetHttp,completeOnboarding,approvePendingPlan}=require('./helpers/pilot-flow.cjs');
-async function setup(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click()}
+async function setup(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click()}
 
 test.beforeEach(async({page})=>setup(page));
 
@@ -40,10 +40,10 @@ test('runtime 严重症状停止后原子失效、刷新后无训练入口',asyn
   expect(Object.values(stored.logs).filter(record=>record.status==='safety_stopped')).toHaveLength(1);
   expect(Object.values(stored.logs).some(record=>record.status==='completed')).toBe(false);
   await page.getByRole('button',{name:'返回首页'}).click();
-  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
 

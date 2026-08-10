@@ -26,7 +26,7 @@ for (const corruption of [
     await page.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: 'move28-pilot-v1', value: corruption.value });
     await page.reload();
     await expect(page.locator('#todayCard')).toContainText('示例计划');
-    await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
     await openFilledConfirmation(page);
     await confirm(page);
     await expect(page.locator('.ob-saved')).toContainText('本机保存失败');
@@ -53,7 +53,7 @@ test('localStorage读写删除均抛错时只读示例可用，最终保存固�
   });
   await page.goto('/index.html');
   await expect(page.locator('#todayCard')).toContainText('示例计划');
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
   await openFilledConfirmation(page);
   await confirm(page);
   await expect(page.locator('.ob-saved')).toContainText('本机保存失败');
@@ -127,7 +127,7 @@ test('tracker与音乐偏好写入失败只显示固定降级提示，不破坏�
   await expect(page.locator('#saveBtn')).toHaveText('保存今天 ✓');
   expect(await page.evaluate(() => localStorage.getItem('move28-tracker-v1'))).toBeNull();
 
-  await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '开始今天训练' }).click();
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();

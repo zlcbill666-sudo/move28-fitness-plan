@@ -23,16 +23,21 @@ test('plan-view active计划必须与当前intake revision一致并再次通过�
   const active={...structuredClone(plan),status:'active',review:{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1}};
   let context=app.contextFromState({intake,intakeRevision:1,risk,...capability,plan:{...structuredClone(plan),status:'pending_review',review:null},logs:{}});
   assert.equal(context.mode,'review');
+  assert.equal(context.workflowStage,'human_review');
   context=app.contextFromState({intake,intakeRevision:1,risk,...capability,plan:active,logs:{}});
   assert.equal(context.mode,'generated');
+  assert.equal(context.workflowStage,'ready');
   assert.deepEqual(context.plan,active);
   context=app.contextFromState({intake,intakeRevision:2,risk,...capability,plan:active,logs:{}});
   assert.equal(context.mode,'stale');
+  assert.equal(context.workflowStage,'plan_stale');
   const damaged=structuredClone(active);damaged.weeks[0].sessions[0].actions[0].reps=99;
   context=app.contextFromState({intake,intakeRevision:1,risk,...capability,plan:damaged,logs:{}});
   assert.equal(context.mode,'invalid');
+  assert.equal(context.workflowStage,'invalid');
   context=app.contextFromState({intake:null,intakeRevision:0,risk:null,plan:null,logs:{}});
   assert.equal(context.mode,'demo');
+  assert.equal(context.workflowStage,'questionnaire');
   let reads=0;const hostilePlan={};Object.defineProperty(hostilePlan,'status',{enumerable:true,get(){reads+=1;throw new Error('SECRET')}});
   assert.doesNotThrow(()=>{context=app.contextFromState({intake,intakeRevision:1,risk,...capability,plan:hostilePlan,logs:{}})});
   assert.equal(context.mode,'invalid');assert.equal(reads,0);
@@ -41,9 +46,34 @@ test('plan-view active计划必须与当前intake revision一致并再次通过�
   assert.equal(app.contextFromState(new Proxy({},{ownKeys(){throw new Error('SECRET')}})).mode,'invalid');
   const forgedRiskContext=app.contextFromState({intake:{...intake,chestSymptoms:'yes'},intakeRevision:1,risk,...capability,plan:active,logs:{}});
   assert.equal(forgedRiskContext.mode,'blocked');
+  assert.equal(forgedRiskContext.workflowStage,'risk_blocked');
   let validationReads=0;const hostileValidation={errors:[]};Object.defineProperty(hostileValidation,'ok',{enumerable:true,get(){validationReads+=1;throw new Error('VALIDATOR_RESULT_GETTER')}});
   assert.doesNotThrow(()=>assert.equal(app.validationPassed(hostileValidation),false));assert.equal(validationReads,0);
   const validationProxy=new Proxy({ok:true,errors:[]},{ownKeys(){throw new Error('SECRET')}});assert.equal(app.validationPassed(validationProxy),false);
+});
+
+test('plan-view workflowStage只表达可信流程阶段且不能授予训练权限',()=>{
+  const {app,plan,capabilityResult}=setup();
+  const capability={capabilityProfile,capabilityResult,capabilityRevision:1};
+  const pending={...structuredClone(plan),status:'pending_review',review:null};
+  const active={...structuredClone(plan),status:'active',review:{status:'approved',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1}};
+  const painPlan={...structuredClone(active),status:'stale',staleReason:'workout_feedback_pain',staleAt:'2030-01-02T03:04:05.000Z'},painSession=painPlan.weeks[0].sessions[0];
+  const painRecord={planId:painPlan.id,sessionId:painSession.id,status:'completed',completedAt:'2030-01-02T03:04:05.000Z',capabilityRevision:1,feedbackCode:'pain',feedbackAt:'2030-01-02T03:04:05.000Z'};
+  const cases=[
+    {state:null,mode:'demo',stage:'questionnaire'},
+    {state:{intake,intakeRevision:1,risk,logs:{}},mode:'review',stage:'capability_required'},
+    {state:{intake,intakeRevision:1,risk,...capability,plan:null,logs:{}},mode:'review',stage:'plan_required'},
+    {state:{intake,intakeRevision:1,risk,...capability,plan:pending,logs:{}},mode:'review',stage:'human_review'},
+    {state:{intake,intakeRevision:1,risk,...capability,plan:active,logs:{}},mode:'generated',stage:'ready'},
+    {state:{intake,intakeRevision:1,risk,...capability,plan:active,logs:{stop:{status:'safety_stopped',planId:active.id}}},mode:'stale',stage:'rescreen_required'},
+    {state:{intake,intakeRevision:1,risk,...capability,plan:painPlan,logs:{pain:painRecord}},mode:'stale',stage:'rescreen_required'},
+    {state:{intake,intakeRevision:1,risk,...capability,plan:painPlan,logs:{pain:{...painRecord,capabilityRevision:2}}},mode:'stale',stage:'plan_stale'},
+    {state:{intake,intakeRevision:2,risk,...capability,plan:active,logs:{}},mode:'stale',stage:'plan_stale'}
+  ];
+  for(const item of cases){const context=app.contextFromState(item.state);assert.equal(context.mode,item.mode);assert.equal(context.workflowStage,item.stage);assert.equal(context.workflowStage==='ready',context.mode==='generated')}
+  const hostile={intake};let reads=0;Object.defineProperty(hostile,'workflowStage',{enumerable:true,get(){reads+=1;throw new Error('SECRET_STAGE')}});
+  const context=app.contextFromState(hostile);assert.equal(context.mode,'invalid');assert.equal(context.workflowStage,'invalid');assert.equal(reads,0);
+  assert.equal(app.contextFromState(new Proxy({},{ownKeys(){throw new Error('SECRET_STAGE_PROXY')}})).workflowStage,'invalid');
 });
 
 test('plan-view active上下文逐项拒绝能力revision缺失、0与错配',()=>{

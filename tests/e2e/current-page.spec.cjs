@@ -138,7 +138,7 @@ test('动作库全部GIF资料均存在并成功加载，包含已审核弹力�
 test('未问卷的28天示例保持只读，不开放旧跟练或写入记录', async ({ page }) => {
   await openCurrentPage(page);
   await expect(page.locator('#todayCard')).toContainText('示例计划');
-  await expect(page.getByRole('button', { name: /一步一步带我练|开始本节训练/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /一步一步带我练|开始今天训练/ })).toHaveCount(0);
   await expect(page.locator('#tracker')).toBeHidden();
   expect(await page.evaluate(key => localStorage.getItem(key), TRACKER_KEY)).toBeNull();
 });
