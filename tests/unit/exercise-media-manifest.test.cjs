@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.resolve(__dirname, '..', '..');
 const { exerciseCatalog } = require('../../src/data/exercise-catalog.js');
@@ -68,4 +69,20 @@ test('不存在未经四重审核就标记可发布的媒体', () => {
       assert.ok(item.replacement[key] && item.replacement[key].path);
     }
   }
+});
+
+test('媒体校验器审计模式通过、发布模式对25个未完成动作闭门失败', () => {
+  const script = path.join(projectRoot, 'scripts', 'validate_exercise_media.py');
+  const audit = spawnSync('python', [script], { cwd: projectRoot, encoding: 'utf8' });
+  assert.equal(audit.status, 0, audit.stderr || audit.stdout);
+  const auditReport = JSON.parse(audit.stdout);
+  assert.equal(auditReport.ok, true);
+  assert.equal(auditReport.assets, 25);
+
+  const release = spawnSync('python', [script, '--release'], { cwd: projectRoot, encoding: 'utf8' });
+  assert.equal(release.status, 1, release.stderr || release.stdout);
+  const releaseReport = JSON.parse(release.stdout);
+  assert.equal(releaseReport.ok, false);
+  assert.equal(releaseReport.releaseBlocked, 25);
+  assert.ok(releaseReport.errors.every(error => error.includes('releaseEligible=false')));
 });
