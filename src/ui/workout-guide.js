@@ -13,14 +13,20 @@ const trustedRecordWorkoutFeedback=storageApi&&typeof storageApi.recordWorkoutFe
 const trustedRecordWorkoutStop=storageApi&&typeof storageApi.recordWorkoutStop==='function'?storageApi.recordWorkoutStop:null;
 const trustedLoadConfirmedAdaptation=readinessApi&&typeof readinessApi.loadConfirmedAdaptation==='function'?readinessApi.loadConfirmedAdaptation:null;
 const trustedRevokeConfirmedAdaptation=readinessApi&&typeof readinessApi.revokeConfirmedAdaptation==='function'?readinessApi.revokeConfirmedAdaptation:null;
-const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation);
+const nativeJSONParse=JSON.parse.bind(JSON);
+let trustedReadRawState=null;
+try{
+  const storageKey=storageApi&&storageApi.STORAGE_KEY,adapter=root.localStorage,prototype=root.Storage&&root.Storage.prototype,getItem=prototype&&prototype.getItem;
+  if(typeof storageKey==='string'&&adapter&&typeof getItem==='function'){const safeGetItem=Function.prototype.call.bind(getItem);trustedReadRawState=()=>{const serialized=safeGetItem(adapter,storageKey);return typeof serialized==='string'?nativeJSONParse(serialized):null}}
+}catch(_error){trustedReadRawState=null}
+const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation,trustedReadRawState);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation){
+})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation,trustedReadRawState){
 'use strict';
 const state=Move28.state;
 const {$,esc,storage}=Move28.utils;
 const MUSIC={warmup:{src:'assets/audio/warmup-rising-forest.mp3',title:'Rising Forest',author:'Diego Nava · 热身'},strength:{src:'assets/audio/strength-deep-urban.mp3',title:'Deep Urban',author:'Eugenio Mininni · 力量'},cardio:{src:'assets/audio/cardio-techno-fest-vibes.mp3',title:'Techno Fest Vibes',author:'Alejandro Magaña (A. M.) · 有氧'},recovery:{src:'assets/audio/recovery-summer-dream.mp3',title:'Summer Dream',author:'Eugenio Mininni · 放松'}};
-let activeAdaptation=null;
+let activeAdaptation=null,activeGuideSnapshot=null,guideStartedAtMs=null,guideCompletionSummary=null;
 const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
 function sessionIntentLabel(intent){return intent==='full_body_strength'?'全身力量':intent==='low_impact_cardio'?'低冲击有氧':intent==='recovery'?'恢复训练':'计划受限'}
 const STOP_REASONS=Object.freeze([['chest_pain_or_pressure','胸部不适或压迫感'],['near_faint_or_faint','明显晕厥感或已经晕厥'],['abnormal_shortness_of_breath','异常气短'],['sudden_severe_pain','突发剧痛'],['unable_to_bear_weight','无法承重'],['neurologic_or_consciousness_change','意识或神经异常']].map(Object.freeze));
@@ -29,8 +35,22 @@ const SAFETY_RULE='胸部不适、晕厥感、异常气短、突发剧痛、无�
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
 const safeArrayIsArray=Array.isArray,safeGetPrototypeOf=Object.getPrototypeOf,safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor,safeObjectKeys=Object.keys,safeOwnKeys=Reflect.ownKeys;
 const safeHasOwn=Function.prototype.call.bind(Object.prototype.hasOwnProperty),safeArraySome=Function.prototype.call.bind(Array.prototype.some),safeArrayEvery=Function.prototype.call.bind(Array.prototype.every),safeArrayIncludes=Function.prototype.call.bind(Array.prototype.includes),safeArrayMap=Function.prototype.call.bind(Array.prototype.map),safeArrayJoin=Function.prototype.call.bind(Array.prototype.join),safeArrayFind=Function.prototype.call.bind(Array.prototype.find),safeArrayPush=Function.prototype.call.bind(Array.prototype.push),safeArrayPop=Function.prototype.call.bind(Array.prototype.pop),safeSetHas=Function.prototype.call.bind(Set.prototype.has),safeMapGet=Function.prototype.call.bind(Map.prototype.get),safeMapSet=Function.prototype.call.bind(Map.prototype.set),safeWeakSetHas=Function.prototype.call.bind(WeakSet.prototype.has),safeWeakSetAdd=Function.prototype.call.bind(WeakSet.prototype.add),safeRegexTest=Function.prototype.call.bind(RegExp.prototype.test),safeDateToISOString=Function.prototype.call.bind(Date.prototype.toISOString);
-const safeNumberIsFinite=Number.isFinite,safeNumberIsSafeInteger=Number.isSafeInteger,safeObjectIs=Object.is,SafeSet=Set,SafeWeakSet=WeakSet,SafeMap=Map,SafeDate=Date,SafeString=String,nativeObjectPrototype=Object.prototype;
-const DANGEROUS_KEYS=new SafeSet(['__proto__','prototype','constructor']),UTC_ISO=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const safeNumberIsFinite=Number.isFinite,safeNumberIsSafeInteger=Number.isSafeInteger,safeObjectIs=Object.is,safeMathFloor=Math.floor,SafeArray=Array,SafeObject=Object,SafeSet=Set,SafeWeakSet=WeakSet,SafeMap=Map,SafeWeakMap=WeakMap,SafeDate=Date,SafeString=String,SafeNumber=Number,SafeRegExp=RegExp,SafeFunction=Function,SafeSymbol=Symbol,SafeBoolean=Boolean,SafeError=Error,SafeTypeError=TypeError,SafeUint8Array=Uint8Array,SafeJSON=JSON,SafeReflect=Reflect,SafeMath=Math,nativeObjectPrototype=Object.prototype;
+const safePerformanceNow=root.performance&&typeof root.performance.now==='function'?root.performance.now.bind(root.performance):null;
+const COMPLETION_INTRINSICS=[
+  [root,'Array',SafeArray],[root,'Object',SafeObject],[root,'Set',SafeSet],[root,'Map',SafeMap],[root,'WeakSet',SafeWeakSet],[root,'WeakMap',SafeWeakMap],[root,'Date',SafeDate],[root,'String',SafeString],[root,'Number',SafeNumber],[root,'RegExp',SafeRegExp],[root,'Function',SafeFunction],[root,'Symbol',SafeSymbol],[root,'Boolean',SafeBoolean],[root,'Error',SafeError],[root,'TypeError',SafeTypeError],[root,'Uint8Array',SafeUint8Array],[root,'JSON',SafeJSON],[root,'Reflect',SafeReflect],[root,'Math',SafeMath],
+  [SafeArray,'isArray',safeArrayIsArray],[SafeArray.prototype,'push',SafeArray.prototype.push],[SafeArray.prototype,'pop',SafeArray.prototype.pop],[SafeArray.prototype,'sort',SafeArray.prototype.sort],[SafeArray.prototype,'reverse',SafeArray.prototype.reverse],[SafeArray.prototype,'some',SafeArray.prototype.some],[SafeArray.prototype,'every',SafeArray.prototype.every],[SafeArray.prototype,'map',SafeArray.prototype.map],[SafeArray.prototype,'filter',SafeArray.prototype.filter],[SafeArray.prototype,'find',SafeArray.prototype.find],[SafeArray.prototype,'flat',SafeArray.prototype.flat],[SafeArray.prototype,'flatMap',SafeArray.prototype.flatMap],[SafeArray.prototype,'forEach',SafeArray.prototype.forEach],[SafeArray.prototype,'includes',SafeArray.prototype.includes],[SafeArray.prototype,'indexOf',SafeArray.prototype.indexOf],[SafeArray.prototype,'join',SafeArray.prototype.join],[SafeArray.prototype,'slice',SafeArray.prototype.slice],[SafeArray.prototype,'reduce',SafeArray.prototype.reduce],[SafeArray.prototype,Symbol.iterator,SafeArray.prototype[Symbol.iterator]],
+  [SafeObject,'getPrototypeOf',safeGetPrototypeOf],[SafeObject,'getOwnPropertyDescriptor',safeGetOwnPropertyDescriptor],[SafeObject,'getOwnPropertyDescriptors',SafeObject.getOwnPropertyDescriptors],[SafeObject,'keys',safeObjectKeys],[SafeObject,'values',SafeObject.values],[SafeObject,'entries',SafeObject.entries],[SafeObject,'fromEntries',SafeObject.fromEntries],[SafeObject,'assign',SafeObject.assign],[SafeObject,'create',SafeObject.create],[SafeObject,'isFrozen',SafeObject.isFrozen],[SafeObject,'freeze',SafeObject.freeze],[SafeObject,'defineProperty',SafeObject.defineProperty],[SafeObject,'is',safeObjectIs],[SafeObject.prototype,'hasOwnProperty',SafeObject.prototype.hasOwnProperty],
+  [SafeReflect,'ownKeys',safeOwnKeys],[SafeNumber,'isFinite',safeNumberIsFinite],[SafeNumber,'isSafeInteger',safeNumberIsSafeInteger],[SafeNumber,'isInteger',SafeNumber.isInteger],[SafeNumber,'isNaN',SafeNumber.isNaN],[SafeNumber,'MAX_SAFE_INTEGER',SafeNumber.MAX_SAFE_INTEGER],[SafeJSON,'parse',SafeJSON.parse],[SafeJSON,'stringify',SafeJSON.stringify],[SafeMath,'floor',safeMathFloor],[SafeMath,'abs',SafeMath.abs],[SafeMath,'min',SafeMath.min],
+  [SafeSet.prototype,'add',SafeSet.prototype.add],[SafeSet.prototype,'has',SafeSet.prototype.has],[SafeMap.prototype,'set',SafeMap.prototype.set],[SafeMap.prototype,'get',SafeMap.prototype.get],[SafeMap.prototype,'has',SafeMap.prototype.has],[SafeWeakSet.prototype,'add',SafeWeakSet.prototype.add],[SafeWeakSet.prototype,'delete',SafeWeakSet.prototype.delete],[SafeWeakSet.prototype,'has',SafeWeakSet.prototype.has],[SafeWeakMap.prototype,'set',SafeWeakMap.prototype.set],[SafeWeakMap.prototype,'get',SafeWeakMap.prototype.get],
+  [SafeString.prototype,'trim',SafeString.prototype.trim],[SafeString.prototype,'includes',SafeString.prototype.includes],[SafeString.prototype,'padStart',SafeString.prototype.padStart],[SafeString.prototype,'toLowerCase',SafeString.prototype.toLowerCase],[SafeRegExp.prototype,'test',SafeRegExp.prototype.test],[SafeDate.prototype,'toISOString',SafeDate.prototype.toISOString],[Function.prototype,'call',Function.prototype.call],[Function.prototype,'bind',Function.prototype.bind],[Function.prototype,'toString',Function.prototype.toString]
+];
+if(root.Storage&&root.Storage.prototype&&typeof root.Storage.prototype.getItem==='function')safeArrayPush(COMPLETION_INTRINSICS,[root.Storage.prototype,'getItem',root.Storage.prototype.getItem]);
+function completionIntrinsicsIntact(){
+  try{for(let index=0;index<COMPLETION_INTRINSICS.length;index+=1){const item=COMPLETION_INTRINSICS[index],descriptor=safeGetOwnPropertyDescriptor(item[0],item[1]);if(!descriptor||!safeHasOwn(descriptor,'value')||descriptor.value!==item[2])return false}return true}catch(_error){return false}
+}
+const DANGEROUS_KEYS=new SafeSet(['__proto__','prototype','constructor']),UTC_ISO=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/,ADAPTATION_ID=/^daily\.[a-z0-9._-]{1,494}$/;
+const FEEDBACK_CODES=new SafeSet(['too_easy','appropriate','too_hard','pain']);
 function plainRecord(value){
   if(!value||typeof value!=='object'||safeArrayIsArray(value))return false;
   const proto=safeGetPrototypeOf(value);return proto===nativeObjectPrototype||proto===null;
@@ -172,12 +192,85 @@ function renderSafetyResult(){
   $('#guideBody').innerHTML=`<section class="guide-state ${failed?'guide-warning':'guide-danger'}"><h3>${failed?'停止记录尚未保存':'训练已安全停止'}</h3><p>${failed?'训练保持停止。请检查浏览器存储权限后重试；当前不会恢复训练。':'旧计划已失效，当前训练不会记为整节完成。请重新完成安全筛查后再决定下一步。'}</p>${failed?'':'<div class="guide-state-actions"><button class="btn primary" type="button" onclick="guideRescreen()">重新完成安全筛查</button><button class="btn" type="button" onclick="guideReturnHome()">返回首页</button></div>'}</section>`;
   setGuideFoot({label:'',hidden:true},{label:failed?'重试保存':'',hidden:!failed});
 }
+function completedRecordStatus(logs,planId,sessionId,capabilityRevision){
+  if(!plainRecord(logs))return null;
+  const record=logs[`${planId}.${sessionId}`];
+  if(record===undefined)return false;
+  if(!plainRecord(record)||record.planId!==planId||record.sessionId!==sessionId||record.status!=='completed'||typeof record.completedAt!=='string'||!safeRegexTest(UTC_ISO,record.completedAt))return null;
+  const adapted=safeHasOwn(record,'adaptationId'),hasFeedback=safeHasOwn(record,'capabilityRevision')||safeHasOwn(record,'feedbackCode')||safeHasOwn(record,'feedbackAt');
+  const expected=adapted
+    ?hasFeedback?['planId','sessionId','adaptationId','status','completedAt','capabilityRevision','feedbackCode','feedbackAt']:['planId','sessionId','adaptationId','status','completedAt']
+    :hasFeedback?['planId','sessionId','status','completedAt','capabilityRevision','feedbackCode','feedbackAt']:['planId','sessionId','status','completedAt'];
+  if(!exactKeys(record,expected)||(adapted&&(typeof record.adaptationId!=='string'||!safeRegexTest(ADAPTATION_ID,record.adaptationId))))return null;
+  if(hasFeedback&&(record.capabilityRevision!==capabilityRevision||!safeSetHas(FEEDBACK_CODES,record.feedbackCode)||typeof record.feedbackAt!=='string'||!safeRegexTest(UTC_ISO,record.feedbackAt)))return null;
+  return true;
+}
+function validatedCompletionPlanState(value,completedSessionId){
+  if(!trustedValidatePlan)return null;const current=clonePureData(value),plan=current&&current.plan,review=plan&&plan.review;
+  if(!current||!plainRecord(current.intake)||!plainRecord(current.risk)||!plainRecord(current.capabilityResult)||!plainRecord(plan)||!plainRecord(current.logs)
+    ||plan.status!=='active'||plan.intakeRevision!==current.intakeRevision||plan.capabilityRevision!==current.capabilityRevision
+    ||!plainRecord(review)||review.status!=='approved'||review.planId!==plan.id||review.intakeRevision!==current.intakeRevision||review.capabilityRevision!==current.capabilityRevision
+    ||!safeRegexTest(/^[a-z][a-z0-9._-]{0,63}$/,review.reviewerId||'')||!safeRegexTest(UTC_ISO,review.reviewedAt||'')||!safeArrayIsArray(plan.weeks))return null;
+  const candidate=clonePureData(plan);if(!candidate)return null;delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated';
+  let validation;try{validation=clonePureData(trustedValidatePlan({plan:candidate,intake:current.intake,risk:current.risk,capabilityResult:current.capabilityResult,capabilityRevision:current.capabilityRevision,catalog:trustedCatalog}))}catch(_error){return null}
+  if(!validation||validation.ok!==true||!safeArrayIsArray(validation.errors)||validation.errors.length!==0||completedRecordStatus(current.logs,plan.id,completedSessionId,current.capabilityRevision)!==true)return null;
+  return current;
+}
+function deriveNextTraining(value,completedSessionId){
+  const current=validatedCompletionPlanState(value,completedSessionId);if(!current)return null;
+  const plan=current.plan,sessions=[];let currentIndex=-1;
+  for(let weekIndex=0;weekIndex<plan.weeks.length;weekIndex+=1){
+    const week=plan.weeks[weekIndex];if(!plainRecord(week)||!safeNumberIsSafeInteger(week.number)||!safeArrayIsArray(week.sessions))return null;
+    for(let sessionIndex=0;sessionIndex<week.sessions.length;sessionIndex+=1){
+      const session=week.sessions[sessionIndex];if(!plainRecord(session)||typeof session.id!=='string'||typeof session.weekday!=='string'||typeof session.intent!=='string')return null;
+      if(session.id===completedSessionId){if(currentIndex!==-1)return null;currentIndex=sessions.length}
+      safeArrayPush(sessions,{weekNumber:week.number,session});
+    }
+  }
+  if(currentIndex<0)return null;
+  for(let offset=1;offset<sessions.length;offset+=1){
+    const candidate=sessions[(currentIndex+offset)%sessions.length],status=completedRecordStatus(current.logs,plan.id,candidate.session.id,current.capabilityRevision);
+    if(status===null)return null;
+    if(status===false)return {complete:false,weekNumber:candidate.weekNumber,weekday:candidate.session.weekday,intent:candidate.session.intent};
+  }
+  return {complete:true};
+}
+function formatElapsedDuration(elapsedMs){
+  if(!safeNumberIsFinite(elapsedMs)||elapsedMs<0||elapsedMs>86400000)return '计时不可用';
+  const seconds=safeMathFloor(elapsedMs/1000);
+  if(seconds<60)return `${seconds}秒`;
+  const minutes=safeMathFloor(seconds/60),remainder=seconds%60;
+  return remainder?`${minutes}分${remainder}秒`:`${minutes}分钟`;
+}
+function createCompletionSnapshot(steps){
+  if(!safeArrayIsArray(steps)||steps.length===0)return null;const actions=[];
+  for(let index=0;index<steps.length;index+=1){const step=steps[index];if(!plainRecord(step)||!plainRecord(step.action)||!plainRecord(step.exercise)||typeof step.sessionId!=='string'||typeof step.exercise.name!=='string'||(index>0&&step.sessionId!==steps[0].sessionId))return null;safeArrayPush(actions,{name:step.exercise.name,dose:doseText(step.action)})}
+  return clonePureData({sessionId:steps[0].sessionId,actions});
+}
+
+function buildCompletionSummary(persistedState,allowTrustedNext=true){
+  const snapshot=clonePureData(activeGuideSnapshot),actions=snapshot&&snapshot.actions;if(!snapshot||typeof snapshot.sessionId!=='string'||!safeArrayIsArray(actions)||actions.length===0)return null;
+  for(let index=0;index<actions.length;index+=1){const item=actions[index];if(!plainRecord(item)||typeof item.name!=='string'||typeof item.dose!=='string')return null}
+  let endedAt=null,rawState=null;try{endedAt=safePerformanceNow?safePerformanceNow():null}catch(_error){endedAt=null}
+  if(allowTrustedNext&&trustedReadRawState)try{rawState=trustedReadRawState()}catch(_error){rawState=null}
+  const elapsedMs=safeNumberIsFinite(guideStartedAtMs)&&safeNumberIsFinite(endedAt)&&endedAt>=guideStartedAtMs?endedAt-guideStartedAtMs:null;
+  const next=allowTrustedNext&&rawState&&sameData(persistedState,rawState)?deriveNextTraining(rawState,snapshot.sessionId):null;
+  return {actions,duration:formatElapsedDuration(elapsedMs),next};
+}
+function completionSummaryHtml(){
+  const summary=clonePureData(guideCompletionSummary);if(!summary||!safeArrayIsArray(summary.actions)||typeof summary.duration!=='string')return '';
+  const actions=[];for(let index=0;index<summary.actions.length;index+=1){const item=summary.actions[index];if(!plainRecord(item)||typeof item.name!=='string'||typeof item.dose!=='string')return '';safeArrayPush(actions,`<li><span>${index+1}</span><div><b>${esc(item.name)}</b><small>${esc(item.dose)}</small></div></li>`)}
+  let nextText='下一次训练将在计划页继续显示';
+  if(summary.next&&summary.next.complete===true)nextText='本周期训练已全部完成';
+  else if(summary.next&&summary.next.complete===false)nextText=`第${summary.next.weekNumber}周 · ${WEEKDAY_LABELS[summary.next.weekday]||summary.next.weekday} · ${sessionIntentLabel(summary.next.intent)}`;
+  return `<section class="guide-completion" aria-label="本节训练完成摘要"><div class="guide-completion-mark">✓</div><div class="guide-completion-title"><span>SESSION COMPLETE</span><h3>本节已完成</h3><p>动作与时长来自本次实际跟练。</p></div><div class="guide-completion-metrics"><article><small>实际时长</small><strong>${esc(summary.duration)}</strong></article><article><small>完成动作</small><strong>${summary.actions.length} 项</strong></article></div><ol class="guide-completion-actions">${safeArrayJoin(actions,'')}</ol><div class="guide-completion-next"><small>下一次训练</small><b>${esc(nextText)}</b></div></section>`;
+}
 function renderFeedback(){
   const saving=state.guideMode==='feedback_saving',failed=state.guideMode==='feedback_failed';
   getWorkoutAudio().pause();updateMusicUI();
   $('#guideEyebrow').textContent='WORKOUT FEEDBACK';$('#guideTitle').textContent='这节训练感觉如何？';$('#guideBar').style.width='100%';
   const buttons=safeArrayJoin(safeArrayMap(FEEDBACK_OPTIONS,entry=>`<button class="btn${entry[0]==='pain'?' danger-outline':''}" type="button" onclick="submitWorkoutFeedback('${entry[0]}')"${saving?' disabled':''}>${esc(entry[1])}</button>`),'');
-  $('#guideBody').innerHTML=`<section class="guide-state guide-feedback"><h3>这节训练感觉如何？</h3><p>选择一个固定选项，帮助调整后续训练。</p>${failed?'<p class="guide-feedback-error" role="alert">反馈尚未保存，请检查本机存储后重试。</p>':''}<div class="guide-state-actions guide-feedback-options">${buttons}</div></section>`;
+  $('#guideBody').innerHTML=`${completionSummaryHtml()}<section class="guide-state guide-feedback"><h3>这节训练感觉如何？</h3><p>选择一个固定选项，帮助调整后续训练。</p>${failed?'<p class="guide-feedback-error" role="alert">反馈尚未保存，请检查本机存储后重试。</p>':''}<div class="guide-state-actions guide-feedback-options">${buttons}</div></section>`;
   setGuideFoot({label:'稍后反馈',hidden:false,disabled:saving},{label:'',hidden:true});
 }
 function renderGuide(){
@@ -215,21 +308,22 @@ function openWorkout(options){
   }else if(adaptationId===undefined&&requestedSession!==undefined){
     session=prepareReviewedSession(requestedSession,catalog);
   }
-  const steps=session&&buildWorkoutSteps(session,trustedCatalog);
-  if(!steps){Move28.ui.showToast('该训练节无法安全打开，请重新生成计划');return false}
+  const steps=session&&buildWorkoutSteps(session,trustedCatalog),completionSnapshot=steps&&createCompletionSnapshot(steps);
+  if(!steps||!completionSnapshot){Move28.ui.showToast('该训练节无法安全打开，请重新生成计划');return false}
+  activeGuideSnapshot=completionSnapshot;
   activeAdaptation=guideAdaptation;
   state.guideSession={id:steps[0].sessionId,weekday:steps[0].weekday,intent:steps[0].intent,adaptationId:guideAdaptation&&guideAdaptation.adaptationId};state.guideStep=0;state.guideSteps=steps;
   const onComplete=ownData(settings,'onComplete'),onFeedback=ownData(settings,'onFeedback'),onStop=ownData(settings,'onStop');
   state.guideOnComplete=typeof onComplete==='function'?onComplete:()=>{};
   state.guideOnFeedback=typeof onFeedback==='function'?onFeedback:()=>{};
   state.guideOnStop=typeof onStop==='function'?onStop:()=>{};
-  state.guideFinishing=false;state.guideMode='ready';state.guideResumeMode='ready';state.guideStopReason='';
+  state.guideFinishing=false;state.guideMode='ready';state.guideResumeMode='ready';state.guideStopReason='';guideStartedAtMs=null;guideCompletionSummary=null;
   $('#guideModal').classList.add('open');$('#guideModal').setAttribute('aria-hidden','false');root.document.body.classList.add('body-guide-open');
   renderGuide();setTimeout(()=>$('.guide-close').focus(),0);return true;
 }
 function hardCloseGuide(){
   $('#guideModal').classList.remove('open');$('#guideModal').setAttribute('aria-hidden','true');root.document.body.classList.remove('body-guide-open');
-  getWorkoutAudio().pause();updateMusicUI();state.guideFinishing=false;state.guideMode='closed';activeAdaptation=null;
+  getWorkoutAudio().pause();updateMusicUI();state.guideFinishing=false;state.guideMode='closed';activeAdaptation=null;activeGuideSnapshot=null;guideStartedAtMs=null;guideCompletionSummary=null;
 }
 function exactKeys(value,expected){const keys=plainRecord(value)&&safeObjectKeys(value);return !!(keys&&keys.length===expected.length&&safeArrayEvery(expected,key=>safeHasOwn(value,key)))}
 function validatedCompletionState(value,adaptation){
@@ -317,16 +411,18 @@ Move28.guideBack=()=>{
   if(state.guideMode==='action'&&state.guideStep>0&&!state.guideFinishing){state.guideStep--;renderGuide()}
 };
 Move28.guideNext=()=>{
-  if(state.guideMode==='ready'){state.guideMode='action';renderGuide();return}
+  if(state.guideMode==='ready'){let startedAt=null;try{startedAt=safePerformanceNow?safePerformanceNow():null}catch(_error){startedAt=null}guideStartedAtMs=safeNumberIsFinite(startedAt)?startedAt:null;state.guideMode='action';renderGuide();return}
   if(state.guideMode==='exit_confirm'){if(activeAdaptation)revokeActiveAdaptation();try{state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,actionIndex:state.guideStep})}catch(_error){}hardCloseGuide();return}
   if(safeArrayIncludes(['safety_confirm','safety_save_failed'],state.guideMode)){persistGuideStop();return}
   if(state.guideMode!=='action'||state.guideFinishing)return;
   if(state.guideStep<state.guideSteps.length-1){state.guideStep++;renderGuide();return}
+  if(!completionIntrinsicsIntact()){Move28.ui.showToast('运行环境已变化，完成记录未保存，请刷新后重试');return}
   state.guideFinishing=true;$('#guideNext').disabled=true;
   try{
-    if(activeAdaptation){const persistedState=persistAdaptedCompletion();try{state.guideOnComplete({type:'adapted_completed',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,persistedState})}catch(_error){}}
-    else state.guideOnComplete({sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId});
-    state.guideFinishing=false;state.guideMode='feedback';renderGuide();
+    let persistedState=null;
+    if(activeAdaptation){persistedState=persistAdaptedCompletion();try{state.guideOnComplete({type:'adapted_completed',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,persistedState})}catch(_error){}}
+    else persistedState=state.guideOnComplete({sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId});
+    const allowTrustedNext=completionIntrinsicsIntact();guideCompletionSummary=buildCompletionSummary(persistedState,allowTrustedNext);state.guideFinishing=false;state.guideMode='feedback';renderGuide();
   }catch(_error){state.guideFinishing=false;$('#guideNext').disabled=false;Move28.ui.showToast('完成记录保存失败，请检查本机存储后重试')}
 };
 Move28.submitWorkoutFeedback=feedbackCode=>{

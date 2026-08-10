@@ -131,6 +131,7 @@ test('已确认适配只能经adaptationId可信加载，完成绑定且不持�
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
   for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  const summary=page.locator('.guide-completion');await expect(summary).toBeVisible();await expect(summary).toContainText(`完成动作${actionCount} 项`);await expect(summary).toContainText('下一次训练');
   await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));

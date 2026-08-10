@@ -252,7 +252,7 @@ function openGeneratedWorkout(sessionId){
   if(!session){Move28.ui.showToast('未找到已校验的训练节');return false}
   return Move28.guide.openWorkout({
     session,catalog:trustedCatalog,
-    onComplete:()=>{const updated=Move28.storage.recordWorkoutCompletion({planId:context.plan.id,sessionId:session.id});activatePlanView(updated)},
+    onComplete:()=>{const updated=Move28.storage.recordWorkoutCompletion({planId:context.plan.id,sessionId:session.id});activatePlanView(updated);return updated},
     onFeedback:handleWorkoutFeedback,
     onStop:handleGuideStop
   });

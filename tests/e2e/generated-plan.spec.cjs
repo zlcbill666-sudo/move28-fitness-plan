@@ -164,8 +164,8 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   await approvePendingPlan(page);
   const expected=await page.evaluate(()=>{
     const state=JSON.parse(localStorage.getItem('move28-pilot-v1')),session=state.plan.weeks[0].sessions[0];
-    const index=Object.fromEntries(Move28.data.exerciseCatalog.map(item=>[item.id,item]));
-    return{planId:state.plan.id,sessionId:session.id,actions:session.actions.map(action=>({action,exercise:index[action.exerciseId]}))};
+    const index=Object.fromEntries(Move28.data.exerciseCatalog.map(item=>[item.id,item])),sessions=state.plan.weeks.flatMap(week=>week.sessions),next=sessions[1];
+    return{planId:state.plan.id,sessionId:session.id,actions:session.actions.map(action=>({action,exercise:index[action.exerciseId]})),next:`第1周 · ${Move28.data.weekdayLabels?.[next.weekday]||({mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'})[next.weekday]}`};
   });
   await page.getByRole('button',{name:'开始本节训练'}).click();
   await page.getByRole('button',{name:'检查今天状态'}).click();
@@ -184,6 +184,13 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     await page.locator('#guideNext').click();
   }
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  const summary=page.locator('.guide-completion');
+  await expect(summary).toBeVisible();await expect(summary.getByText('本节已完成')).toBeVisible();
+  await expect(summary.locator('.guide-completion-actions li')).toHaveCount(expected.actions.length);
+  for(const item of expected.actions)await expect(summary).toContainText(item.exercise.name);
+  await expect(summary.locator('.guide-completion-metrics')).toContainText(/实际时长\s*\d+(?:秒|分钟|分\d+秒)/);
+  await expect(summary.locator('.guide-completion-next')).toContainText(expected.next);
+  await expect(summary).not.toContainText(/kcal|千卡|消耗热量/i);
   await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const record=await page.evaluate(()=>{
@@ -195,6 +202,66 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   expect(record.status).toBe('completed');
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
+});
+
+test('generated-plan 完成摘要使用私有步骤快照、捕获单调时钟且伪造完成状态只降级下一节提示',async({page})=>{
+  await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
+  const expected=await page.evaluate(()=>{const state=Move28.storage.loadState(),session=state.plan.weeks[0].sessions[0],index=Object.fromEntries(Move28.data.exerciseCatalog.map(item=>[item.id,item]));return session.actions.map(action=>index[action.exerciseId].name)});
+  await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const total=await page.evaluate(()=>Move28.state.guideSteps.length);
+  await page.evaluate(()=>{
+    window.__task7GetterCalls=0;window.__task7ClockCalls=0;
+    Object.defineProperty(performance,'now',{configurable:true,value:()=>{window.__task7ClockCalls+=1;throw new Error('MUTATED_CLOCK')}});
+    const original=Move28.state.guideOnComplete;
+    Move28.state.guideOnComplete=event=>{const persisted=original(event);Object.defineProperty(Move28.state,'guideSteps',{configurable:true,get(){window.__task7GetterCalls+=1;throw new Error('UNTRUSTED_STEPS')}});const other=persisted.plan.weeks[0].sessions.find(session=>session.id!==event.sessionId),current=persisted.logs[`${persisted.plan.id}.${event.sessionId}`];persisted.logs[`${persisted.plan.id}.${other.id}`]={planId:persisted.plan.id,sessionId:other.id,status:'completed',completedAt:current.completedAt};return persisted};
+  });
+  for(let index=0;index<total;index+=1)await page.locator('#guideNext').click();
+  const summary=page.locator('.guide-completion');await expect(summary).toBeVisible();
+  for(const name of expected)await expect(summary.getByText(name,{exact:true})).toBeVisible();
+  await expect(summary).toContainText('下一次训练将在计划页继续显示');await expect(summary).toContainText(/实际时长\d+(?:秒|分钟|分\d+秒)/);
+  expect(await page.evaluate(()=>window.__task7GetterCalls)).toBe(0);
+});
+
+test('generated-plan 完成摘要对缺失、非法或额外字段的完成记录统一降级下一节提示',async({page})=>{
+  for(const mutation of ['missing_completed_at','invalid_completed_at','extra_field']){
+    await reset(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
+    await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+    const total=await page.evaluate(()=>Move28.state.guideSteps.length);
+    await page.evaluate(kind=>{const original=Move28.state.guideOnComplete;Move28.state.guideOnComplete=event=>{const persisted=original(event),record=persisted.logs[`${persisted.plan.id}.${event.sessionId}`];if(kind==='missing_completed_at')delete record.completedAt;else if(kind==='invalid_completed_at')record.completedAt='not-utc';else record.extra='forged';return persisted}},mutation);
+    for(let index=0;index<total;index+=1)await page.locator('#guideNext').click();
+    const summary=page.locator('.guide-completion');await expect(summary).toBeVisible();await expect(summary).toContainText('下一次训练将在计划页继续显示');
+  }
+});
+
+test('generated-plan 完成摘要对原始持久化state的顶层、日志或审核额外字段统一降级',async({page})=>{
+  for(const mutation of ['top_level','completion_log','plan_review']){
+    await reset(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
+    await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+    const total=await page.evaluate(()=>Move28.state.guideSteps.length);
+    await page.evaluate(kind=>{const original=Move28.state.guideOnComplete;Move28.state.guideOnComplete=event=>{const persisted=original(event),raw=JSON.parse(localStorage.getItem('move28-pilot-v1'));if(kind==='top_level')raw.extra='forged';else if(kind==='completion_log')raw.logs[`${raw.plan.id}.${event.sessionId}`].extra='forged';else raw.plan.review.extra='forged';localStorage.setItem('move28-pilot-v1',JSON.stringify(raw));return persisted}},mutation);
+    for(let index=0;index<total;index+=1)await page.locator('#guideNext').click();
+    await expect(page.locator('.guide-completion')).toContainText('下一次训练将在计划页继续显示');
+  }
+});
+
+test('generated-plan 完成写入前intrinsic身份预检阻止后加载Array.some替换且零执行',async({page})=>{
+  await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
+  await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const total=await page.evaluate(()=>Move28.state.guideSteps.length);for(let index=1;index<total;index+=1)await page.locator('#guideNext').click();
+  await page.evaluate(()=>{window.__task7OriginalSome=Array.prototype.some;window.__task7SomeCalls=0;Array.prototype.some=function(...args){window.__task7SomeCalls+=1;return window.__task7OriginalSome.apply(this,args)}});
+  await page.locator('#guideNext').click();
+  const result=await page.evaluate(()=>{const calls=window.__task7SomeCalls;Array.prototype.some=window.__task7OriginalSome;const state=JSON.parse(localStorage.getItem('move28-pilot-v1')),completed=Object.values(state.logs).some(item=>item.status==='completed');return{calls,completed,mode:Move28.state.guideMode}});
+  expect(result).toEqual({calls:0,completed:false,mode:'action'});await expect(page.getByText('运行环境已变化，完成记录未保存，请刷新后重试')).toBeVisible();
+});
+
+test('generated-plan 跟练在390竖屏、844横屏与1280桌面无横向溢出且横屏关键操作可见',async({page})=>{
+  await page.setViewportSize({width:844,height:390});
+  await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
+  await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  const assertNoOverflow=async()=>expect(await page.evaluate(()=>({doc:document.documentElement.scrollWidth<=innerWidth,body:document.body.scrollWidth<=innerWidth}))).toEqual({doc:true,body:true});
+  await assertNoOverflow();
+  for(const selector of ['.guide-instruction h3','.guide-dose','.guide-runtime-safety','#guideNext']){const locator=page.locator(selector);await expect(locator).toBeVisible();const box=await locator.boundingBox();expect(box).not.toBeNull();expect(box.x,selector).toBeGreaterThanOrEqual(0);expect(box.x+box.width,selector).toBeLessThanOrEqual(844);expect(box.y,selector).toBeGreaterThanOrEqual(0);expect(box.y+box.height,selector).toBeLessThanOrEqual(390)}
+  for(const viewport of [{width:390,height:844},{width:1280,height:800}]){await page.setViewportSize(viewport);await assertNoOverflow()}
 });
 
 test('generated-plan 受控能力档案在跟练页显示可信中文变式指导且不回显枚举',async({page})=>{
