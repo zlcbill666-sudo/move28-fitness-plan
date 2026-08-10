@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
 const {resetHttp,completeOnboarding,approvePendingPlan}=require('./helpers/pilot-flow.cjs');
-async function setup(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);await page.getByRole('button',{name:'开始本节训练'}).click()}
+async function setup(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click()}
 
 test.beforeEach(async({page})=>setup(page));
 
@@ -29,7 +29,7 @@ test('runtime 严重症状停止后原子失效、刷新后无训练入口',asyn
   await page.locator('.guide-close').click();
   await page.keyboard.press('Escape');
   await page.evaluate(()=>Move28.guideBack());
-  const reopened=await page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));return Move28.openGeneratedWorkout(state.plan.weeks[0].sessions[0].id)});
+  const reopened=await page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));return Move28.openSessionReadiness(state.plan.weeks[0].sessions[0].id)});
   expect(reopened).toBe(false);
   await expect(page.getByRole('heading',{name:'确认因不适停止'})).toBeVisible();
   await page.getByRole('button',{name:'确认停止并保存'}).click();
@@ -41,8 +41,10 @@ test('runtime 严重症状停止后原子失效、刷新后无训练入口',asyn
   expect(Object.values(stored.logs).some(record=>record.status==='completed')).toBe(false);
   await page.getByRole('button',{name:'返回首页'}).click();
   await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
 
 test('runtime 新发关节不适仅在调整后缓解时恢复',async({page})=>{

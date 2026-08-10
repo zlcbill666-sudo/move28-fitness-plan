@@ -5,14 +5,16 @@
   const adaptationApi = isCommonJS ? require('../domain/weekly-adaptation.js') : root.Move28 && root.Move28.domain;
   const riskApi = isCommonJS ? require('../domain/risk-engine.js') : root.Move28 && root.Move28.domain;
   const capabilityApi = isCommonJS ? require('../domain/capability-engine.js') : root.Move28 && root.Move28.domain;
-  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {}, capabilityApi || {});
+  const dailyExecutionApi = isCommonJS ? require('../domain/daily-execution-validator.js') : root.Move28 && root.Move28.domain;
+  const scheduleShiftApi = isCommonJS ? require('../domain/schedule-shift.js') : root.Move28 && root.Move28.domain;
+  const api = factory(root, validatorApi || {}, catalogApi || {}, adaptationApi || {}, riskApi || {}, capabilityApi || {}, dailyExecutionApi || {}, scheduleShiftApi || {});
   if (isCommonJS) {
     module.exports = api;
   } else {
     const Move28 = root.Move28 = root.Move28 || {};
     Move28.storage = api;
   }
-})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi, capabilityApi) {
+})(globalThis, function(root, validatorApi, catalogApi, adaptationApi, riskApi, capabilityApi, dailyExecutionApi, scheduleShiftApi) {
   'use strict';
 
   // Hostile classic-script peers can replace realm intrinsics after this script loads.
@@ -21,12 +23,27 @@
   const safeGetPrototypeOf = Object.getPrototypeOf;
   const safeGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
   const safeOwnKeys = Reflect.ownKeys;
+  const safeObjectValues = Object.values;
   const safeDefineProperty = Object.defineProperty;
   const safeHasOwn = Function.prototype.call.bind(Object.prototype.hasOwnProperty);
   const safeFunctionToString = Function.prototype.call.bind(Function.prototype.toString);
   const safeArrayPush = Function.prototype.call.bind(Array.prototype.push);
   const safeArrayPop = Function.prototype.call.bind(Array.prototype.pop);
   const safeArraySort = Function.prototype.call.bind(Array.prototype.sort);
+  const safeArrayReverse = Function.prototype.call.bind(Array.prototype.reverse);
+  const expectedArrayIterator = Array.prototype[Symbol.iterator];
+  const expectedSetAdd = Set.prototype.add;
+  const expectedSetHas = Set.prototype.has;
+  const expectedMapSet = Map.prototype.set;
+  const expectedMapHas = Map.prototype.has;
+  const expectedMapGet = Map.prototype.get;
+  const safeSetAdd = Function.prototype.call.bind(expectedSetAdd);
+  const safeSetHas = Function.prototype.call.bind(expectedSetHas);
+  const SafeSet = Set;
+  const SafeMap = Map;
+  const safeMapGet = Function.prototype.call.bind(expectedMapGet);
+  const safeMapSet = Function.prototype.call.bind(expectedMapSet);
+  const safeMapHas = Function.prototype.call.bind(expectedMapHas);
   const SafeWeakSet = WeakSet;
   const safeWeakSetAdd = Function.prototype.call.bind(WeakSet.prototype.add);
   const safeWeakSetDelete = Function.prototype.call.bind(WeakSet.prototype.delete);
@@ -47,6 +64,7 @@
   const RISK_LEVELS = new Set(['normal', 'conservative', 'manual_review', 'stop']);
   const PARTICIPANT_ID_PATTERN = /^pilot-[a-z0-9]{1,12}$/;
   const MACHINE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
+  const ADAPTATION_ID_PATTERN = /^daily\.[a-z0-9._-]{1,494}$/;
   const FIELD_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
   const UTC_ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
   const RUNTIME_STOP_REASON_CODES = Object.freeze(['chest_pain_or_pressure','near_faint_or_faint','abnormal_shortness_of_breath','sudden_severe_pain','unable_to_bear_weight','neurologic_or_consciousness_change','joint_pain_persisted_or_worsened']);
@@ -60,6 +78,10 @@
   const trustedEvaluateRisk = typeof riskApi.evaluateRisk === 'function' ? riskApi.evaluateRisk : null;
   const trustedEvaluateCapabilityProfile = typeof capabilityApi.evaluateCapabilityProfile === 'function'
     ? capabilityApi.evaluateCapabilityProfile : null;
+  const trustedValidateDailyExecution = typeof dailyExecutionApi.validateDailyExecution === 'function'
+    ? dailyExecutionApi.validateDailyExecution : null;
+  const trustedSuggestScheduleShift = typeof scheduleShiftApi.suggestScheduleShift === 'function'
+    ? scheduleShiftApi.suggestScheduleShift : null;
   const TRUSTED_RISK_CODES = new Set(Array.isArray(riskApi.REASON_CODES) ? riskApi.REASON_CODES : []);
   const TRUSTED_RULE_VERSIONS = new Set(['pilot-v1', typeof riskApi.RULE_VERSION === 'string' ? riskApi.RULE_VERSION : 'pilot-v2']);
   const TRUSTED_PLAN_VERSIONS = new Set(TRUSTED_RULE_VERSIONS);
@@ -72,6 +94,7 @@
   const WEEKLY_PAIN_AREAS = new Set(['shoulder','knee','lower_back','hip','ankle','other']);
   const WEEKLY_RECOVERY = new Set(['good','fair','poor']);
   const WEEKLY_TIME = new Set(['less','same','more']);
+  const WORKOUT_FEEDBACK_CODES = new Set(['too_easy','appropriate','too_hard','pain']);
   const MAX_WEEKLY_REVIEWS = 16;
   let nativeStructuredClone = null;
 
@@ -280,18 +303,19 @@
   function sanitizeRisk(value) {
     const risk = cloneObjectOr(value, null, false);
     const ruleVersion = risk && sanitizeMachineId(risk.ruleVersion);
-    if (!risk || !RISK_LEVELS.has(risk.level) || !ruleVersion || !Array.isArray(risk.reasons)) {
+    if (!risk || !safeSetHas(RISK_LEVELS, risk.level) || !ruleVersion || !Array.isArray(risk.reasons)) {
       return null;
     }
     const reasons = [];
-    for (const reason of risk.reasons) {
+    for (let index = 0; index < risk.reasons.length; index += 1) {
+      const reason = risk.reasons[index];
       if (!reason || typeof reason !== 'object' || Array.isArray(reason)) continue;
       if (!sanitizeMachineId(reason.code)
         || typeof reason.field !== 'string'
         || !FIELD_ID_PATTERN.test(reason.field)
         || typeof reason.message !== 'string'
         || reason.message.length > MAX_LOCAL_REASON_MESSAGE_LENGTH) continue;
-      reasons.push({ code: reason.code, field: reason.field, message: reason.message });
+      safeArrayPush(reasons, { code: reason.code, field: reason.field, message: reason.message });
     }
     return { level: risk.level, reasons, ruleVersion };
   }
@@ -310,7 +334,7 @@
       if (!trustedEvaluateCapabilityProfile) return null;
       const result = clonePlainData(trustedEvaluateCapabilityProfile(profile));
       if (!result || typeof result !== 'object' || Array.isArray(result)
-        || !RISK_LEVELS.has(result.status)
+        || !safeSetHas(RISK_LEVELS, result.status)
         || !Number.isSafeInteger(result.difficultyCap) || result.difficultyCap < 1 || result.difficultyCap > 2
         || !Array.isArray(result.exclusions) || result.exclusions.some(value => !['floor', 'hinge'].includes(value))
         || !result.variants || typeof result.variants !== 'object' || Array.isArray(result.variants)
@@ -365,19 +389,35 @@
     const entries = Object.entries(logs);
     if (entries.length > 256) return {};
     const clean = {};
-    for (const record of Object.values(logs)) {
+    for (const entry of entries) {
+      const rawKey = entry[0], record = entry[1];
       if (!record || typeof record !== 'object' || Array.isArray(record)) continue;
       const planId = sanitizeMachineId(record.planId);
       const sessionId = sanitizeMachineId(record.sessionId);
       if (!planId || !sessionId) continue;
       if (record.status === 'completed') {
+        if (rawKey !== `${planId}.${sessionId}`) continue;
         const completedAt = typeof record.completedAt === 'string' && UTC_ISO_PATTERN.test(record.completedAt) ? record.completedAt : null;
-        if (completedAt) clean[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+        const adaptationId = typeof record.adaptationId === 'string' && ADAPTATION_ID_PATTERN.test(record.adaptationId)
+          ? record.adaptationId : null;
+        if (completedAt) {
+          const completion = adaptationId
+            ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
+            : { planId, sessionId, status: 'completed', completedAt };
+          const feedbackAt = typeof record.feedbackAt === 'string' && UTC_ISO_PATTERN.test(record.feedbackAt) ? record.feedbackAt : null;
+          if (Number.isSafeInteger(record.capabilityRevision) && record.capabilityRevision >= 1
+            && safeSetHas(WORKOUT_FEEDBACK_CODES, record.feedbackCode) && feedbackAt) {
+            completion.capabilityRevision = record.capabilityRevision;
+            completion.feedbackCode = record.feedbackCode;
+            completion.feedbackAt = feedbackAt;
+          }
+          clean[`${planId}.${sessionId}`] = completion;
+        }
         continue;
       }
       const reasonCode = sanitizeMachineId(record.reasonCode);
       const occurredAt = typeof record.occurredAt === 'string' && UTC_ISO_PATTERN.test(record.occurredAt) ? record.occurredAt : null;
-      if (record.status !== 'safety_stopped' || !RUNTIME_STOP_REASON_SET.has(reasonCode)
+      if (record.status !== 'safety_stopped' || !safeSetHas(RUNTIME_STOP_REASON_SET, reasonCode)
         || !Number.isSafeInteger(record.actionIndex) || record.actionIndex < 0 || record.actionIndex > 255 || !occurredAt) continue;
       clean[`safety.${planId}.${sessionId}`] = { planId, sessionId, status: 'safety_stopped', reasonCode, actionIndex: record.actionIndex, occurredAt };
     }
@@ -388,11 +428,11 @@
     const answers = cloneObjectOr(value, null, false);
     if (!answers || !Number.isSafeInteger(answers.completedSessions) || !Number.isSafeInteger(answers.scheduledSessions)
       || answers.completedSessions < 0 || answers.completedSessions > answers.scheduledSessions
-      || !WEEKLY_COMPLETION_REASONS.has(answers.completionReason) || !WEEKLY_DIFFICULTIES.has(answers.difficulty)
-      || !WEEKLY_MOVEMENT_QUALITIES.has(answers.movementQuality) || !WEEKLY_PAIN_STATUSES.has(answers.painStatus)
+      || !safeSetHas(WEEKLY_COMPLETION_REASONS, answers.completionReason) || !safeSetHas(WEEKLY_DIFFICULTIES, answers.difficulty)
+      || !safeSetHas(WEEKLY_MOVEMENT_QUALITIES, answers.movementQuality) || !safeSetHas(WEEKLY_PAIN_STATUSES, answers.painStatus)
       || !Array.isArray(answers.painAreas) || answers.painAreas.length > 6 || new Set(answers.painAreas).size !== answers.painAreas.length
-      || answers.painAreas.some(area => !WEEKLY_PAIN_AREAS.has(area)) || typeof answers.painAffectsDailyActivity !== 'boolean'
-      || !WEEKLY_RECOVERY.has(answers.recovery) || !WEEKLY_TIME.has(answers.nextWeekTime)
+      || answers.painAreas.some(area => !safeSetHas(WEEKLY_PAIN_AREAS, area)) || typeof answers.painAffectsDailyActivity !== 'boolean'
+      || !safeSetHas(WEEKLY_RECOVERY, answers.recovery) || !safeSetHas(WEEKLY_TIME, answers.nextWeekTime)
       || (answers.painStatus === 'none') !== (answers.painAreas.length === 0)) return null;
     return { completedSessions: answers.completedSessions, scheduledSessions: answers.scheduledSessions,
       completionReason: answers.completionReason, difficulty: answers.difficulty, movementQuality: answers.movementQuality,
@@ -421,9 +461,9 @@
       if (!id || !planId || record.reviewVersion !== 1 || !Number.isSafeInteger(record.intakeRevision) || record.intakeRevision < 1
         || !Number.isSafeInteger(record.capabilityRevision) || record.capabilityRevision < 1
         || !Number.isSafeInteger(record.weekNumber) || record.weekNumber < 1 || record.weekNumber > 4 || !submittedAt || !answers
-        || !proposal || !WEEKLY_TYPES.has(proposal.type) || !reasonCode || !variableValid
+        || !proposal || !safeSetHas(WEEKLY_TYPES, proposal.type) || !reasonCode || !variableValid
         || !(proposal.targetWeekNumber === null || (Number.isSafeInteger(proposal.targetWeekNumber) && proposal.targetWeekNumber >= 2 && proposal.targetWeekNumber <= 4))
-        || !WEEKLY_DECISIONS.has(record.decision) || decidedAt === undefined || (record.decision === 'pending') !== (decidedAt === null)
+        || !safeSetHas(WEEKLY_DECISIONS, record.decision) || decidedAt === undefined || (record.decision === 'pending') !== (decidedAt === null)
         || (record.decision === 'accepted') !== (resultPlanId !== null)
         || (record.decision === 'accepted' && resultPlanId !== expectedResultPlanId)
         || (resultPlanId !== null && resultPlanId === planId)) continue;
@@ -435,48 +475,76 @@
     return clean;
   }
 
-  function weeklyPlanLineage(reviews, currentPlanId, capabilityRevision) {
-    const lineage = new Set([currentPlanId]);
-    const accepted = reviews.filter(record => record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted');
-    const incoming = new Map();
-    const outgoing = new Map();
-    for (const record of accepted) {
-      if (incoming.has(record.resultPlanId) || outgoing.has(record.planId)) return lineage;
-      incoming.set(record.resultPlanId, record.planId);
-      outgoing.set(record.planId, record.resultPlanId);
+  function lineageIntrinsicsIntact() {
+    try {
+      const arrayIterator = safeGetOwnPropertyDescriptor(Array.prototype, Symbol.iterator);
+      const setAdd = safeGetOwnPropertyDescriptor(Set.prototype, 'add');
+      const setHas = safeGetOwnPropertyDescriptor(Set.prototype, 'has');
+      const mapSet = safeGetOwnPropertyDescriptor(Map.prototype, 'set');
+      const mapHas = safeGetOwnPropertyDescriptor(Map.prototype, 'has');
+      const mapGet = safeGetOwnPropertyDescriptor(Map.prototype, 'get');
+      return Boolean(Set === SafeSet && Map === SafeMap
+        && arrayIterator && arrayIterator.value === expectedArrayIterator
+        && setAdd && setAdd.value === expectedSetAdd && setHas && setHas.value === expectedSetHas
+        && mapSet && mapSet.value === expectedMapSet && mapHas && mapHas.value === expectedMapHas
+        && mapGet && mapGet.value === expectedMapGet);
+    } catch (_error) { return false; }
+  }
+
+  function inspectWeeklyPlanLineage(reviews, currentPlanId, capabilityRevision) {
+    const lineage = new SafeSet(), accepted = [];
+    safeSetAdd(lineage, currentPlanId);
+    const invalid = () => {
+      const fallback = new SafeSet(); safeSetAdd(fallback, currentPlanId);
+      return { valid: false, lineage: fallback, accepted: [] };
+    };
+    for (let index = 0; index < reviews.length; index += 1) {
+      const record = reviews[index];
+      if (record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted') safeArrayPush(accepted, record);
     }
-    const globallyVisited = new Set();
-    for (const start of outgoing.keys()) {
-      if (globallyVisited.has(start)) continue;
-      const path = new Set();
+    const incoming = new SafeMap(), outgoing = new SafeMap();
+    for (let index = 0; index < accepted.length; index += 1) {
+      const record = accepted[index];
+      if (safeMapHas(incoming, record.resultPlanId) || safeMapHas(outgoing, record.planId)) return invalid();
+      safeMapSet(incoming, record.resultPlanId, record.planId);
+      safeMapSet(outgoing, record.planId, record.resultPlanId);
+    }
+    const globallyVisited = new SafeSet();
+    for (let index = 0; index < accepted.length; index += 1) {
+      const start = accepted[index].planId;
+      if (safeSetHas(globallyVisited, start)) continue;
+      const path = new SafeSet();
       let cursor = start;
-      while (outgoing.has(cursor)) {
-        if (path.has(cursor)) return new Set([currentPlanId]);
-        path.add(cursor); globallyVisited.add(cursor); cursor = outgoing.get(cursor);
+      while (safeMapHas(outgoing, cursor)) {
+        if (safeSetHas(path, cursor)) return invalid();
+        safeSetAdd(path, cursor); safeSetAdd(globallyVisited, cursor); cursor = safeMapGet(outgoing, cursor);
       }
     }
     let cursor = currentPlanId;
-    while (incoming.has(cursor)) {
-      const parent = incoming.get(cursor);
-      if (lineage.has(parent)) return new Set([currentPlanId]);
-      lineage.add(parent); cursor = parent;
+    while (safeMapHas(incoming, cursor)) {
+      const parent = safeMapGet(incoming, cursor);
+      if (safeSetHas(lineage, parent)) return invalid();
+      safeSetAdd(lineage, parent); cursor = parent;
     }
-    for (const record of accepted) {
-      if (!lineage.has(record.planId) || !lineage.has(record.resultPlanId)) return new Set([currentPlanId]);
+    for (let index = 0; index < accepted.length; index += 1) {
+      const record = accepted[index];
+      if (!safeSetHas(lineage, record.planId) || !safeSetHas(lineage, record.resultPlanId)) return invalid();
     }
-    return lineage;
+    return { valid: true, lineage, accepted };
   }
 
   function buildWeeklyLineageSummary(reviews, currentPlanId, capabilityRevision) {
-    const accepted = reviews.filter(record => record && record.capabilityRevision === capabilityRevision && record.decision === 'accepted');
-    const lineage = weeklyPlanLineage(reviews, currentPlanId, capabilityRevision);
-    if (accepted.some(record => !lineage.has(record.planId) || !lineage.has(record.resultPlanId))) return null;
-    const byResultPlanId = new Map(accepted.map(record => [record.resultPlanId, record]));
-    const edges = [];
+    const inspection = inspectWeeklyPlanLineage(reviews, currentPlanId, capabilityRevision);
+    if (!inspection.valid) return null;
+    const accepted = inspection.accepted, byResultPlanId = new SafeMap(), edges = [];
+    for (let index = 0; index < accepted.length; index += 1) {
+      const record = accepted[index];
+      safeMapSet(byResultPlanId, record.resultPlanId, record);
+    }
     let cursor = currentPlanId;
-    while (byResultPlanId.has(cursor)) {
-      const record = byResultPlanId.get(cursor);
-      edges.unshift(Object.freeze({
+    while (safeMapHas(byResultPlanId, cursor)) {
+      const record = safeMapGet(byResultPlanId, cursor);
+      safeArrayPush(edges, Object.freeze({
         sourcePlanId: record.planId,
         resultPlanId: record.resultPlanId,
         weekNumber: record.weekNumber,
@@ -484,6 +552,7 @@
       }));
       cursor = record.planId;
     }
+    safeArrayReverse(edges);
     return Object.freeze({
       validationResult: 'passed',
       currentPlanId,
@@ -555,14 +624,26 @@
 
     const logs = ownDataValue(raw, 'logs');
     if (logs.present) defaults.logs = sanitizeWorkoutLogs(logs.value);
-    const currentStops = defaults.plan ? Object.values(defaults.logs).filter(record => record.status === 'safety_stopped' && record.planId === defaults.plan.id) : [];
+    const currentStops = [];
+    if (defaults.plan) {
+      const logRecords = safeObjectValues(defaults.logs);
+      for (let index = 0; index < logRecords.length; index += 1) {
+        const record = logRecords[index];
+        if (record.status === 'safety_stopped' && record.planId === defaults.plan.id) safeArrayPush(currentStops, record);
+      }
+    }
     if (currentStops.length) {
-      const event = currentStops[0];
-      const sessions = Array.isArray(defaults.plan.weeks)
-        ? defaults.plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions : [])
-        : [];
-      const session = sessions.find(item => item && item.id === event.sessionId);
-      const bound = currentStops.length === 1 && session && Array.isArray(session.actions) && event.actionIndex < session.actions.length;
+      const event = currentStops[0], sessions = [];
+      if (safeArrayIsArray(defaults.plan.weeks)) {
+        for (let weekIndex = 0; weekIndex < defaults.plan.weeks.length; weekIndex += 1) {
+          const weekSessions = defaults.plan.weeks[weekIndex] && defaults.plan.weeks[weekIndex].sessions;
+          if (!safeArrayIsArray(weekSessions)) continue;
+          for (let sessionIndex = 0; sessionIndex < weekSessions.length; sessionIndex += 1) safeArrayPush(sessions, weekSessions[sessionIndex]);
+        }
+      }
+      let session = null;
+      for (let index = 0; index < sessions.length; index += 1) if (sessions[index] && sessions[index].id === event.sessionId) { session = sessions[index]; break; }
+      const bound = currentStops.length === 1 && session && safeArrayIsArray(session.actions) && event.actionIndex < session.actions.length;
       if (defaults.plan.status !== 'stale' || defaults.plan.staleReason !== 'runtime-safety-event'
         || defaults.plan.staleAt !== event.occurredAt || !bound) {
         defaults.plan.status = 'stale';
@@ -570,9 +651,40 @@
         defaults.plan.staleAt = event.occurredAt;
       }
     }
+    const currentSessionIds = new SafeSet();
+    if (defaults.plan && Array.isArray(defaults.plan.weeks)) {
+      for (let weekIndex = 0; weekIndex < defaults.plan.weeks.length; weekIndex += 1) {
+        const week = defaults.plan.weeks[weekIndex], sessions = week && Array.isArray(week.sessions) ? week.sessions : [];
+        for (let sessionIndex = 0; sessionIndex < sessions.length; sessionIndex += 1) {
+          const session = sessions[sessionIndex];
+          if (session && session.id) safeSetAdd(currentSessionIds, session.id);
+        }
+      }
+    }
+    let currentPainFeedback = null;
+    if (defaults.plan) {
+      const logKeys = safeOwnKeys(defaults.logs);
+      for (let index = 0; index < logKeys.length; index += 1) {
+        const key = logKeys[index], record = defaults.logs[key];
+        if (record.status === 'completed'
+          && key === `${defaults.plan.id}.${record.sessionId}` && safeSetHas(currentSessionIds, record.sessionId)
+          && record.planId === defaults.plan.id && record.capabilityRevision === defaults.capabilityRevision && record.feedbackCode === 'pain'
+          && typeof record.completedAt === 'string' && UTC_ISO_PATTERN.test(record.completedAt)
+          && typeof record.feedbackAt === 'string' && UTC_ISO_PATTERN.test(record.feedbackAt)) { currentPainFeedback = record; break; }
+      }
+    }
+    const painRecord = currentPainFeedback;
+    if (painRecord && !currentStops.length && (defaults.plan.status !== 'stale'
+      || defaults.plan.staleReason !== 'workout_feedback_pain' || defaults.plan.staleAt !== painRecord.feedbackAt)) {
+      defaults.plan.status = 'stale'; defaults.plan.staleReason = 'workout_feedback_pain'; defaults.plan.staleAt = painRecord.feedbackAt;
+    }
     const weeklyReviews = ownDataValue(raw, 'weeklyReviews');
     if (weeklyReviews.present) defaults.weeklyReviews = sanitizeWeeklyReviews(weeklyReviews.value);
-    const currentPainReview = defaults.plan && defaults.weeklyReviews.find(record => record.planId === defaults.plan.id && record.decision === 'rescreen');
+    let currentPainReview = null;
+    if (defaults.plan) for (let index = 0; index < defaults.weeklyReviews.length; index += 1) {
+      const record = defaults.weeklyReviews[index];
+      if (record.planId === defaults.plan.id && record.decision === 'rescreen') { currentPainReview = record; break; }
+    }
     if (currentPainReview && !currentStops.length && (defaults.plan.status !== 'stale' || defaults.plan.staleReason !== 'weekly_pain_rescreen')) {
       defaults.plan.status = 'stale'; defaults.plan.staleReason = 'weekly_pain_rescreen'; defaults.plan.staleAt = currentPainReview.decidedAt;
     }
@@ -631,24 +743,26 @@
 
     function readState(options) {
       const strict = Boolean(options && options.strict);
+      const includeRaw = Boolean(options && options.includeRaw);
+      const finish = (state, raw) => includeRaw ? { state, raw } : state;
       let serialized;
       try {
         serialized = storage.getItem(STORAGE_KEY);
       } catch (_error) {
         if (strict) throw createStorageError(READ_ERROR_MESSAGE);
-        return createDefaultState(participantId);
+        return finish(createDefaultState(participantId), null);
       }
-      if (serialized === null) return createDefaultState(participantId);
+      if (serialized === null) return finish(createDefaultState(participantId), null);
       if (typeof serialized !== 'string') {
         if (strict) throw createStorageError(READ_ERROR_MESSAGE);
-        return createDefaultState(participantId);
+        return finish(createDefaultState(participantId), null);
       }
       let raw;
       try {
         raw = JSON.parse(serialized);
       } catch (_error) {
         if (strict) throw createStorageError(READ_ERROR_MESSAGE);
-        return createDefaultState(participantId);
+        return finish(createDefaultState(participantId), null);
       }
       if (strict) {
         const schema = raw !== null && typeof raw === 'object' && !Array.isArray(raw)
@@ -658,7 +772,7 @@
           throw createStorageError(READ_ERROR_MESSAGE);
         }
       }
-      return migrateState(raw, participantId);
+      return finish(migrateState(raw, participantId), raw);
     }
 
     function loadState() {
@@ -829,6 +943,7 @@
     }
 
     function buildDetailedReviewDossier() {
+      if (!lineageIntrinsicsIntact()) throw createStorageError();
       const state = loadStateForWrite(), plan = state.plan;
       const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
       const planId = plan && sanitizeMachineId(plan.id);
@@ -838,7 +953,7 @@
       const selectedSetting = state.intake && ['home', 'gym'].includes(state.intake.setting) ? state.intake.setting : null;
       const trustedEquipmentIds = new Set(trustedExerciseCatalog.flatMap(exercise => exercise.equipmentOptions.flat()));
       const availableEquipment = state.intake && Array.isArray(state.intake.equipment)
-        ? state.intake.equipment.filter(item => trustedEquipmentIds.has(item))
+        ? state.intake.equipment.filter(item => safeSetHas(trustedEquipmentIds, item))
         : [];
       if (!planId || !trustedRisk || !risksEqual(state.risk, trustedRisk)
         || !selectedSetting
@@ -888,7 +1003,7 @@
         ruleVersion: trustedRisk.ruleVersion,
         riskLevel: trustedRisk.level,
         riskCodes: Object.freeze(trustedRisk.reasons.map(reason => reason.code)),
-        planVersion: TRUSTED_PLAN_VERSIONS.has(plan.planVersion) ? plan.planVersion : null,
+        planVersion: safeSetHas(TRUSTED_PLAN_VERSIONS, plan.planVersion) ? plan.planVersion : null,
         validationResult: 'passed',
         lineage: lineageSummary,
         weeks: Object.freeze(weeks)
@@ -920,11 +1035,15 @@
 
     function recordWorkoutCompletion(completion) {
       const clean = clonePlainData(completion);
-      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
-        || Object.keys(clean).some(key => !['planId', 'sessionId'].includes(key))) throw invalidPlainData();
+      const keys = clean && typeof clean === 'object' && !Array.isArray(clean) ? Object.keys(clean) : [];
+      const legacy = keys.length === 2 && keys.every(key => ['planId', 'sessionId'].includes(key));
+      const adapted = keys.length === 4 && keys.every(key => ['planId', 'sessionId', 'adaptationId', 'manifest'].includes(key));
+      if (!legacy && !adapted) throw invalidPlainData();
       const planId = sanitizeMachineId(clean.planId);
       const sessionId = sanitizeMachineId(clean.sessionId);
-      if (!planId || !sessionId) throw invalidPlainData();
+      const adaptationId = adapted && typeof clean.adaptationId === 'string' && ADAPTATION_ID_PATTERN.test(clean.adaptationId)
+        ? clean.adaptationId : null;
+      if (!planId || !sessionId || (adapted && !adaptationId)) throw invalidPlainData();
       const state = loadStateForWrite();
       const plan = state.plan;
       const sessions = plan && Array.isArray(plan.weeks)
@@ -935,9 +1054,75 @@
         || !isPlanApprovedForState(plan, state)
         || !passesTrustedPlanGate(plan, state)
         || !sessions.some(session => session && session.id === sessionId)) throw createStorageError();
+      if (adapted) {
+        let validation = null;
+        try {
+          validation = trustedValidateDailyExecution && trustedValidateDailyExecution({
+            plan: state.plan,
+            intake: state.intake,
+            intakeRevision: state.intakeRevision,
+            risk: state.risk,
+            capabilityProfile: state.capabilityProfile,
+            capabilityRevision: state.capabilityRevision,
+            manifest: clean.manifest
+          });
+        } catch (_error) {
+          validation = null;
+        }
+        if (!validation || validation.ok !== true || !Array.isArray(validation.errors) || validation.errors.length !== 0
+          || !clean.manifest || clean.manifest.adaptationId !== adaptationId
+          || clean.manifest.sourcePlanId !== planId || clean.manifest.sourceSessionId !== sessionId
+          || !clean.manifest.executionSession || clean.manifest.executionSession.id !== sessionId) throw createStorageError();
+      }
+      const existing = state.logs[`${planId}.${sessionId}`];
+      if (existing !== undefined) {
+        const sameCompletion = existing && existing.status === 'completed' && existing.planId === planId && existing.sessionId === sessionId
+          && (adapted ? existing.adaptationId === adaptationId : existing.adaptationId === undefined);
+        if (!sameCompletion) throw createStorageError();
+        return clonePlainData(state);
+      }
       const completedAt = String(now());
       if (!UTC_ISO_PATTERN.test(completedAt)) throw createStorageError();
-      state.logs[`${planId}.${sessionId}`] = { planId, sessionId, status: 'completed', completedAt };
+      state.logs[`${planId}.${sessionId}`] = adapted
+        ? { planId, sessionId, adaptationId, status: 'completed', completedAt }
+        : { planId, sessionId, status: 'completed', completedAt };
+      return persist(state);
+    }
+
+    function recordWorkoutFeedback(feedback) {
+      const clean = clonePlainData(feedback);
+      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
+        || Object.keys(clean).length !== 2
+        || Object.keys(clean).some(key => !['sessionId', 'feedbackCode'].includes(key))) throw invalidPlainData();
+      const sessionId = sanitizeMachineId(clean.sessionId);
+      if (!sessionId || !safeSetHas(WORKOUT_FEEDBACK_CODES, clean.feedbackCode)) throw invalidPlainData();
+      const state = loadStateForWrite(), plan = state.plan;
+      const sessions = plan && Array.isArray(plan.weeks)
+        ? plan.weeks.flatMap(week => week && Array.isArray(week.sessions) ? week.sessions : []) : [];
+      const record = plan && state.logs[`${plan.id}.${sessionId}`];
+      const bindingValid = Boolean(plan && plan.intakeRevision === state.intakeRevision
+        && isPlanApprovedForState(plan, state) && passesTrustedPlanGate(plan, state)
+        && sessions.some(session => session && session.id === sessionId)
+        && record && record.status === 'completed' && record.planId === plan.id && record.sessionId === sessionId
+        && record.capabilityRevision === state.capabilityRevision && record.feedbackCode === clean.feedbackCode);
+      const recoveredPain = bindingValid && clean.feedbackCode === 'pain' && plan.status === 'stale'
+        && plan.staleReason === 'workout_feedback_pain' && plan.staleAt === record.feedbackAt
+        && typeof record.feedbackAt === 'string' && UTC_ISO_PATTERN.test(record.feedbackAt);
+      if (recoveredPain) return clonePlainData(state);
+      if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
+        || !isPlanApprovedForState(plan, state) || !passesTrustedPlanGate(plan, state)
+        || !sessions.some(session => session && session.id === sessionId)
+        || !record || record.status !== 'completed' || record.planId !== plan.id || record.sessionId !== sessionId
+        || (record.feedbackCode !== undefined && record.feedbackCode !== clean.feedbackCode)) throw createStorageError();
+      if (record.feedbackCode === clean.feedbackCode) return clonePlainData(state);
+      const feedbackAt = String(now());
+      if (!UTC_ISO_PATTERN.test(feedbackAt)) throw createStorageError();
+      record.capabilityRevision = state.capabilityRevision;
+      record.feedbackCode = clean.feedbackCode;
+      record.feedbackAt = feedbackAt;
+      if (clean.feedbackCode === 'pain') {
+        plan.status = 'stale'; plan.staleReason = 'workout_feedback_pain'; plan.staleAt = feedbackAt;
+      }
       return persist(state);
     }
 
@@ -949,7 +1134,7 @@
         || Object.keys(clean).some(key => !allowed.includes(key))) throw invalidPlainData();
       const sessionId = sanitizeMachineId(clean.sessionId);
       const reasonCode = sanitizeMachineId(clean.reasonCode);
-      if (!sessionId || !RUNTIME_STOP_REASON_SET.has(reasonCode)
+      if (!sessionId || !safeSetHas(RUNTIME_STOP_REASON_SET, reasonCode)
         || !Number.isSafeInteger(clean.actionIndex) || clean.actionIndex < 0
         || typeof clean.occurredAt !== 'string' || !UTC_ISO_PATTERN.test(clean.occurredAt)) throw invalidPlainData();
       const state = loadStateForWrite();
@@ -969,6 +1154,143 @@
       return persist(state);
     }
 
+    function previewScheduleShift(request) {
+      if (!lineageIntrinsicsIntact()) throw createStorageError();
+      const clean = clonePlainData(request);
+      if (!clean || typeof clean !== 'object' || safeArrayIsArray(clean)) throw invalidPlainData();
+      const keys = safeOwnKeys(clean);
+      if (keys.length !== 1 || keys[0] !== 'sessionId') throw invalidPlainData();
+      const sessionId = sanitizeMachineId(clean.sessionId);
+      if (!sessionId) throw invalidPlainData();
+
+      const snapshot = readState({ strict: true, includeRaw: true });
+      const state = snapshot.state, plan = state.plan;
+      const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
+      if (!trustedSuggestScheduleShift
+        || !plan || plan.status !== 'active'
+        || plan.intakeRevision !== state.intakeRevision
+        || !isPlanApprovedForState(plan, state)
+        || !trustedRisk || !risksEqual(state.risk, trustedRisk)
+        || !passesTrustedPlanGate(plan, state)
+        || !state.intake || !safeArrayIsArray(state.intake.weekdays)) throw createStorageError();
+      const shiftLineageInspection = inspectWeeklyPlanLineage(state.weeklyReviews, plan.id, state.capabilityRevision);
+      if (!shiftLineageInspection.valid) throw createStorageError();
+      const shiftLineage = shiftLineageInspection.lineage;
+      for (let index = 0; index < state.weeklyReviews.length; index += 1) {
+        const review = state.weeklyReviews[index];
+        if (review && review.capabilityRevision === state.capabilityRevision
+          && safeSetHas(shiftLineage, review.planId) && review.decision === 'pending') throw createStorageError();
+      }
+
+      let source = null, currentWeekNumber = null, sourceCount = 0;
+      const currentSessionIds = new SafeSet();
+      for (let weekIndex = 0; weekIndex < plan.weeks.length; weekIndex += 1) {
+        const week = plan.weeks[weekIndex];
+        if (!week || week.number !== weekIndex + 1 || !safeArrayIsArray(week.sessions)) throw createStorageError();
+        for (let sessionIndex = 0; sessionIndex < week.sessions.length; sessionIndex += 1) {
+          const session = week.sessions[sessionIndex];
+          if (!session || !sanitizeMachineId(session.id) || safeSetHas(currentSessionIds, session.id)) throw createStorageError();
+          safeSetAdd(currentSessionIds, session.id);
+          if (session.id === sessionId) {
+            source = session;
+            currentWeekNumber = week.number;
+            sourceCount += 1;
+          }
+        }
+      }
+      if (!source || sourceCount !== 1 || !Number.isSafeInteger(currentWeekNumber)
+        || currentWeekNumber < 1 || currentWeekNumber > 4) throw createStorageError();
+
+      const canonicalCompletionKey = `${plan.id}.${sessionId}`;
+      let rawCurrentCompletionClaim = false;
+      const rawLogsField = ownDataValue(snapshot.raw, 'logs');
+      const rawLogs = rawLogsField.present ? rawLogsField.value : null;
+      if (rawLogsField.present && (!rawLogs || typeof rawLogs !== 'object' || safeArrayIsArray(rawLogs))) throw createStorageError();
+      if (rawLogs) {
+        const rawLogKeys = safeOwnKeys(rawLogs);
+        if (rawLogKeys.length > 256) throw createStorageError();
+        for (let index = 0; index < rawLogKeys.length; index += 1) {
+          const key = rawLogKeys[index];
+          if (typeof key !== 'string') throw createStorageError();
+          const rawRecordField = ownDataValue(rawLogs, key), record = rawRecordField.value;
+          if (!rawRecordField.present || !record || typeof record !== 'object' || safeArrayIsArray(record)) {
+            if (key === canonicalCompletionKey) throw createStorageError();
+            continue;
+          }
+          const rawPlanId = ownDataValue(record, 'planId'), rawSessionId = ownDataValue(record, 'sessionId');
+          const rawStatus = ownDataValue(record, 'status'), rawCompletedAt = ownDataValue(record, 'completedAt');
+          const internallyTargetsCurrent = rawPlanId.present && rawPlanId.value === plan.id
+            && rawSessionId.present && rawSessionId.value === sessionId;
+          if (key === canonicalCompletionKey) {
+            rawCurrentCompletionClaim = true;
+            if (!internallyTargetsCurrent || !rawStatus.present || rawStatus.value !== 'completed'
+              || !rawCompletedAt.present || typeof rawCompletedAt.value !== 'string'
+              || !UTC_ISO_PATTERN.test(rawCompletedAt.value)) throw createStorageError();
+            continue;
+          }
+          if (internallyTargetsCurrent && rawStatus.present && rawStatus.value === 'completed') throw createStorageError();
+        }
+      }
+      const migratedCompletion = state.logs[canonicalCompletionKey];
+      if (rawCurrentCompletionClaim && (!migratedCompletion || migratedCompletion.status !== 'completed'
+        || migratedCompletion.planId !== plan.id || migratedCompletion.sessionId !== sessionId)) throw createStorageError();
+
+      const completedLogs = [];
+      const logKeys = safeOwnKeys(state.logs);
+      if (logKeys.length > 256) throw createStorageError();
+      for (let index = 0; index < logKeys.length; index += 1) {
+        const key = logKeys[index];
+        if (typeof key !== 'string') throw createStorageError();
+        const record = state.logs[key];
+        if (!record || record.status !== 'completed' || record.planId !== plan.id
+          || key !== `${plan.id}.${record.sessionId}` || !safeSetHas(currentSessionIds, record.sessionId)
+          || typeof record.completedAt !== 'string' || !UTC_ISO_PATTERN.test(record.completedAt)) continue;
+        safeArrayPush(completedLogs, { planId: plan.id, sessionId: record.sessionId, status: 'completed', completedAt: record.completedAt });
+      }
+
+      const weekdays = [];
+      for (let index = 0; index < state.intake.weekdays.length; index += 1) safeArrayPush(weekdays, state.intake.weekdays[index]);
+      let result;
+      try {
+        result = clonePlainData(trustedSuggestScheduleShift({
+          plan,
+          currentWeekNumber,
+          sessionId,
+          intake: { weekdays },
+          completedLogs,
+          allowedThroughWeekNumber: currentWeekNumber
+        }));
+      } catch (_error) {
+        throw createStorageError();
+      }
+      if (!result || typeof result !== 'object' || safeArrayIsArray(result)) throw createStorageError();
+      if (result.status === 'unavailable') {
+        if ((result.code !== 'SESSION_ALREADY_COMPLETED' && result.code !== 'CYCLE_COMPLETE' && result.code !== 'NO_SAFE_SHIFT_DAY')
+          || result.suggestion !== null) throw createStorageError();
+        return Object.freeze({ status: 'unavailable', code: result.code, suggestion: null });
+      }
+      const suggestion = result.status === 'available' ? result.suggestion : null;
+      if (!suggestion || typeof suggestion !== 'object' || safeArrayIsArray(suggestion)
+        || result.code !== 'SCHEDULE_SHIFT_AVAILABLE'
+        || suggestion.planId !== plan.id || suggestion.sessionId !== sessionId
+        || suggestion.intent !== source.intent
+        || !suggestion.from || suggestion.from.weekNumber !== currentWeekNumber || suggestion.from.weekday !== source.weekday
+        || !suggestion.to || suggestion.to.weekNumber !== currentWeekNumber || suggestion.to.weekday === source.weekday
+        || suggestion.to.weekday !== 'mon' && suggestion.to.weekday !== 'tue' && suggestion.to.weekday !== 'wed'
+          && suggestion.to.weekday !== 'thu' && suggestion.to.weekday !== 'fri' && suggestion.to.weekday !== 'sat'
+          && suggestion.to.weekday !== 'sun'
+        || suggestion.displayOnly !== true) throw createStorageError();
+      const finiteSuggestion = Object.freeze({
+        planId: plan.id,
+        sessionId,
+        intent: suggestion.intent,
+        from: Object.freeze({ weekNumber: currentWeekNumber, weekday: suggestion.from.weekday }),
+        to: Object.freeze({ weekNumber: currentWeekNumber, weekday: suggestion.to.weekday }),
+        displayOnly: true
+      });
+      return Object.freeze({ status: 'available', code: 'SCHEDULE_SHIFT_AVAILABLE', suggestion: finiteSuggestion });
+    }
+
     function weeklyReviewInput(record) {
       const answers = record.answers;
       return { reviewVersion: 1, weekNumber: record.weekNumber, completedSessions: answers.completedSessions,
@@ -977,34 +1299,56 @@
         recovery: answers.recovery, nextWeekTime: answers.nextWeekTime };
     }
 
-    function proposeForState(state, review) {
-      if (!trustedProposeWeeklyChange) return null;
-      const lineage = state.plan ? weeklyPlanLineage(state.weeklyReviews, state.plan.id, state.capabilityRevision) : new Set();
-      const previousReviews = state.weeklyReviews.filter(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId));
+    function proposeForState(state, review, sessionFeedbackCodes, lineageInspection) {
+      if (!trustedProposeWeeklyChange || !state.plan) return null;
+      const inspection = lineageInspection || inspectWeeklyPlanLineage(state.weeklyReviews, state.plan.id, state.capabilityRevision);
+      if (!inspection.valid) return null;
+      const previousReviews = [];
+      for (let index = 0; index < state.weeklyReviews.length; index += 1) {
+        const item = state.weeklyReviews[index];
+        if (item.capabilityRevision === state.capabilityRevision && safeSetHas(inspection.lineage, item.planId)) safeArrayPush(previousReviews, item);
+      }
       let proposal;
-      try { proposal = trustedProposeWeeklyChange({ plan: state.plan, review,
+      try { proposal = trustedProposeWeeklyChange({ plan: state.plan, review, sessionFeedbackCodes,
         previousReviews, intake: state.intake, risk: state.risk,
         capabilityResult: state.capabilityResult, capabilityRevision: state.capabilityRevision }); }
       catch (_error) { return null; }
-      return proposal && proposal.status === 'ok' && WEEKLY_TYPES.has(proposal.type) ? proposal : null;
+      return proposal && proposal.status === 'ok' && safeSetHas(WEEKLY_TYPES, proposal.type) ? proposal : null;
     }
 
     function recordWeeklyReview(review) {
+      if (!lineageIntrinsicsIntact()) throw createStorageError();
       const cleanReview = clonePlainData(review);
       if (!cleanReview || typeof cleanReview !== 'object' || Array.isArray(cleanReview)) throw invalidPlainData();
       const state = loadStateForWrite(), plan = state.plan;
-      const lineage = plan ? weeklyPlanLineage(state.weeklyReviews, plan.id, state.capabilityRevision) : new Set();
-      if (!plan || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
+      const lineageInspection = plan ? inspectWeeklyPlanLineage(state.weeklyReviews, plan.id, state.capabilityRevision) : null;
+      if (!plan || !lineageInspection || !lineageInspection.valid || plan.status !== 'active' || plan.intakeRevision !== state.intakeRevision
         || !isPlanApprovedForState(plan, state) || !passesTrustedPlanGate(plan, state)
-        || state.weeklyReviews.length >= MAX_WEEKLY_REVIEWS
-        || state.weeklyReviews.some(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId) && item.decision === 'pending')) throw createStorageError();
-      const weekNumber = cleanReview.weekNumber;
-      const reviewedWeeks = new Set(state.weeklyReviews.filter(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId)).map(item => item.weekNumber));
-      const expectedWeekNumber = [1, 2, 3, 4].find(number => !reviewedWeeks.has(number));
+        || state.weeklyReviews.length >= MAX_WEEKLY_REVIEWS) throw createStorageError();
+      const lineage = lineageInspection.lineage;
+      for (let index = 0; index < state.weeklyReviews.length; index += 1) {
+        const item = state.weeklyReviews[index];
+        if (item.capabilityRevision === state.capabilityRevision && safeSetHas(lineage, item.planId) && item.decision === 'pending') throw createStorageError();
+      }
+      const weekNumber = cleanReview.weekNumber, reviewedWeeks = new SafeSet();
+      for (let index = 0; index < state.weeklyReviews.length; index += 1) {
+        const item = state.weeklyReviews[index];
+        if (item.capabilityRevision === state.capabilityRevision && safeSetHas(lineage, item.planId)) safeSetAdd(reviewedWeeks, item.weekNumber);
+      }
+      let expectedWeekNumber = null;
+      for (let number = 1; number <= 4; number += 1) if (!safeSetHas(reviewedWeeks, number)) { expectedWeekNumber = number; break; }
       if (weekNumber !== expectedWeekNumber) throw createStorageError();
       const week = Number.isSafeInteger(weekNumber) && weekNumber >= 1 && weekNumber <= 4 ? plan.weeks[weekNumber - 1] : null;
-      if (!week || !Array.isArray(week.sessions) || state.weeklyReviews.some(item => item.capabilityRevision === state.capabilityRevision && lineage.has(item.planId) && item.weekNumber === weekNumber)) throw createStorageError();
-      const proposal = proposeForState(state, cleanReview);
+      if (!week || !Array.isArray(week.sessions) || safeSetHas(reviewedWeeks, weekNumber)) throw createStorageError();
+      const sessionFeedbackCodes = week.sessions.map(session => state.logs[`${plan.id}.${session.id}`])
+        .filter(record => record && record.planId === plan.id && record.capabilityRevision === state.capabilityRevision
+          && safeSetHas(WORKOUT_FEEDBACK_CODES, record.feedbackCode)).map(record => record.feedbackCode);
+      if (sessionFeedbackCodes.includes('pain')) throw createStorageError();
+      if (sessionFeedbackCodes.includes('too_hard')) cleanReview.difficulty = 'too_hard';
+      else if (sessionFeedbackCodes.length === week.sessions.length && cleanReview.completedSessions === week.sessions.length
+        && sessionFeedbackCodes.every(code => code === 'too_easy')) cleanReview.difficulty = 'too_light';
+      else if (sessionFeedbackCodes.length && cleanReview.difficulty === 'too_light') cleanReview.difficulty = 'suitable';
+      const proposal = proposeForState(state, cleanReview, sessionFeedbackCodes, lineageInspection);
       if (!proposal) throw createStorageError();
       const submittedAt = String(now());
       if (!UTC_ISO_PATTERN.test(submittedAt)) throw createStorageError();
@@ -1024,11 +1368,15 @@
     }
 
     function resolveWeeklyReview(input) {
+      if (!lineageIntrinsicsIntact()) throw createStorageError();
       const clean = clonePlainData(input);
       if (!clean || typeof clean !== 'object' || Array.isArray(clean)
         || Object.keys(clean).length !== 2 || !sanitizeMachineId(clean.reviewId)
         || !['accepted','rejected'].includes(clean.decision)) throw invalidPlainData();
-      const state = loadStateForWrite(), record = state.weeklyReviews.find(item => item.id === clean.reviewId);
+      const state = loadStateForWrite();
+      const lineageInspection = state.plan ? inspectWeeklyPlanLineage(state.weeklyReviews, state.plan.id, state.capabilityRevision) : null;
+      if (!lineageInspection || !lineageInspection.valid) throw createStorageError();
+      const record = state.weeklyReviews.find(item => item.id === clean.reviewId);
       if (!record || record.decision !== 'pending' || !state.plan || state.plan.id !== record.planId
         || state.plan.status !== 'active' || state.plan.intakeRevision !== record.intakeRevision
         || record.capabilityRevision !== state.capabilityRevision || state.plan.capabilityRevision !== record.capabilityRevision
@@ -1036,7 +1384,11 @@
       const decidedAt = String(now());
       if (!UTC_ISO_PATTERN.test(decidedAt)) throw createStorageError();
       if (clean.decision === 'accepted') {
-        const proposal = proposeForState(state, weeklyReviewInput(record));
+        const week = state.plan.weeks[record.weekNumber - 1];
+        const sessionFeedbackCodes = week.sessions.map(session => state.logs[`${state.plan.id}.${session.id}`])
+          .filter(item => item && item.planId === state.plan.id && item.capabilityRevision === state.capabilityRevision
+            && safeSetHas(WORKOUT_FEEDBACK_CODES, item.feedbackCode)).map(item => item.feedbackCode);
+        const proposal = proposeForState(state, weeklyReviewInput(record), sessionFeedbackCodes, lineageInspection);
         if (!proposal || !proposal.after || proposal.type !== record.proposal.type
           || proposal.variable !== record.proposal.variable || proposal.reason !== record.proposal.reasonCode
           || !hasCurrentCapabilityBinding(proposal.after, state, { requireReview: false })
@@ -1122,7 +1474,7 @@
       return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutStop, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutFeedback, recordWorkoutStop, previewScheduleShift, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
   function createLocalParticipantId() {
@@ -1152,7 +1504,9 @@
     buildDetailedReviewDossier: defaultStore.buildDetailedReviewDossier,
     approvePlanReview: defaultStore.approvePlanReview,
     recordWorkoutCompletion: defaultStore.recordWorkoutCompletion,
+    recordWorkoutFeedback: defaultStore.recordWorkoutFeedback,
     recordWorkoutStop: defaultStore.recordWorkoutStop,
+    previewScheduleShift: defaultStore.previewScheduleShift,
     recordWeeklyReview: defaultStore.recordWeeklyReview,
     resolveWeeklyReview: defaultStore.resolveWeeklyReview,
     clearAll: defaultStore.clearAll,

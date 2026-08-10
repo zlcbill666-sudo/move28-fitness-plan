@@ -28,6 +28,11 @@ ZIP 和直接双击 `index.html` 仅用于维护者备份、离线恢复和发�
 - [问题记录模板](docs/pilot/issue-log-template.md)
 - [维护者离线说明](使用说明.txt)
 
+## 产品研究与更新
+
+- [产品演进知识库](docs/product/move28-evolution-knowledge-base.md)：竞品证据、长期方向、性别与生命周期策略、安全/隐私边界及下次研究流程。
+- [近期解释与受控适配实施计划](docs/plans/2026-08-09-explain-and-adapt-implementation.md)：按可信解释、当日适配、反馈闭环和安全顺延分阶段实施。
+
 ## 本地维护预览
 
 维护者可在完整目录内直接打开 `index.html`，或运行：

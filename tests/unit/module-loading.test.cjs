@@ -55,11 +55,46 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.deepEqual(api.STRENGTH_PATTERNS, ['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability']);
   });
 
+  await t.test('plan explanation exports its finite privacy-safe API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.planExplanation);
+    assert.equal(typeof api.buildPlanExplanation, 'function');
+    assert.deepEqual(Object.keys(api), ['buildPlanExplanation']);
+  });
+
+  await t.test('session readiness exports its finite routing API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.sessionReadiness);
+    assert.equal(typeof api.routeSessionReadiness, 'function');
+    assert.deepEqual(Object.keys(api), ['routeSessionReadiness']);
+  });
+
+  await t.test('daily execution validator exports its independent hard gate', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.dailyExecutionValidator);
+    assert.equal(typeof api.validateDailyExecution, 'function');
+    assert.equal(api.POLICY_VERSION, 'daily-execution.v1');
+  });
+
+  await t.test('session adaptation exports its finite candidate API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.sessionAdaptation);
+    assert.equal(typeof api.proposeSessionAdaptation, 'function');
+    assert.deepEqual(Object.keys(api), ['proposeSessionAdaptation']);
+  });
+
   await t.test('weekly adaptation exports deterministic single-variable API', () => {
     clearMove28ModuleCache();
     const api = require(modules.weeklyAdaptation);
     assert.equal(typeof api.proposeWeeklyChange, 'function');
     assert.equal(api.REVIEW_VERSION, 1);
+  });
+
+  await t.test('schedule shift exports its finite display-only suggestion API', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.scheduleShift);
+    assert.deepEqual(Object.keys(api), ['suggestScheduleShift']);
+    assert.equal(typeof api.suggestScheduleShift, 'function');
   });
 
   await t.test('risk engine exports deterministic browser-independent APIs', () => {
@@ -88,6 +123,7 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.savePlan, 'function');
     assert.equal(typeof api.recordWeeklyReview, 'function');
     assert.equal(typeof api.resolveWeeklyReview, 'function');
+    assert.equal(typeof api.previewScheduleShift, 'function');
     assert.equal(typeof api.clearAll, 'function');
     assert.equal(typeof api.exportReviewSummary, 'function');
     assert.equal(api.STORAGE_KEY, 'move28-pilot-v1');
@@ -107,6 +143,17 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.renderToday, 'function');
     assert.equal(typeof api.renderOverview, 'function');
     assert.equal(typeof api.openTrack, 'function');
+  });
+
+  await t.test('session readiness UI exports a controller and trusted confirmed loader', () => {
+    clearMove28ModuleCache();
+    const api = require(modules.sessionReadinessUi);
+    assert.equal(typeof api.createSessionReadiness, 'function');
+    assert.equal(typeof api.loadConfirmedAdaptation, 'function');
+    assert.equal(typeof api.revokeConfirmedAdaptation, 'function');
+    assert.deepEqual(Object.keys(api), ['createSessionReadiness', 'loadConfirmedAdaptation', 'revokeConfirmedAdaptation']);
+    assert.equal(api.loadConfirmedAdaptation('daily.not-confirmed'), null);
+    assert.equal(api.revokeConfirmedAdaptation('daily.not-confirmed'), false);
   });
 
   await t.test('workout guide exports callable guide APIs without a DOM', () => {

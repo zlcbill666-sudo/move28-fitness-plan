@@ -12,6 +12,8 @@
     ? root.structuredClone.bind(root)
     : null;
   const nativeObjectPrototype = Object.prototype;
+  const safeObjectValues = Object.values;
+  const safeObjectFreeze = Object.freeze;
   const hasOwn = Function.call.bind(nativeObjectPrototype.hasOwnProperty);
   const PROFILE_FIELDS = Object.freeze([
     'version', 'completed', 'chairRise', 'wallPushup', 'wallHinge', 'floorAccess', 'walkTolerance'
@@ -27,10 +29,12 @@
   });
 
   function deepFreeze(value) {
-    for (const nested of Object.values(value)) {
+    const nestedValues = safeObjectValues(value);
+    for (let index = 0; index < nestedValues.length; index += 1) {
+      const nested = nestedValues[index];
       if (nested !== null && typeof nested === 'object') deepFreeze(nested);
     }
-    return Object.freeze(value);
+    return safeObjectFreeze(value);
   }
 
   function invalidResult() {

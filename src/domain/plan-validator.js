@@ -13,6 +13,8 @@ else{
 })(globalThis,function(catalogApi,matcherApi,nativeStructuredClone){
 'use strict';
 
+const safeObjectValues=Object.values;
+const safeObjectFreeze=Object.freeze;
 const RULE_VERSION='pilot-v2';
 const WEEKDAYS=Object.freeze(['mon','tue','wed','thu','fri','sat','sun']);
 const STRENGTH_PATTERNS=Object.freeze(['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability']);
@@ -47,8 +49,8 @@ const MESSAGES=Object.freeze({
 function deepFreeze(value,seen=new Set()){
   if(!value||typeof value!=='object'||seen.has(value))return value;
   seen.add(value);
-  for(const child of Object.values(value))deepFreeze(child,seen);
-  return Object.freeze(value);
+  const children=safeObjectValues(value);for(let index=0;index<children.length;index+=1)deepFreeze(children[index],seen);
+  return safeObjectFreeze(value);
 }
 function result(errors){return deepFreeze({ok:errors.length===0,errors})}
 function invalid(){return result([{code:'INVALID_VALIDATOR_INPUT',path:'$',message:MESSAGES.INVALID_VALIDATOR_INPUT}])}

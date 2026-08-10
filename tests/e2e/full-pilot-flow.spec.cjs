@@ -41,6 +41,8 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
 
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '检查今天状态' }).click();
+  await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
   await expect.poll(() => page.locator('#guideBody img').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -78,6 +80,7 @@ test('stop用户计划数严格为0，刷新后仍阻断', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
   await expect(page.locator('#todayCard')).toContainText(/不开放自动训练|重新完成筛查/);
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
 
 test('年龄边界：15岁人工审核，17岁按规则生成且无激进减重话术', async ({ page }) => {
@@ -133,6 +136,8 @@ test('390×844跟练GIF、音乐区、停止按钮和固定操作区不重叠', 
   await finishSavedScreen(page);
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '检查今天状态' }).click();
+  await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   const layout = await page.evaluate(() => {
     const box = selector => {

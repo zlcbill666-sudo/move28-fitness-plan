@@ -42,7 +42,8 @@ npm run test:e2e
 npm run test:all
 
 tests/e2e/offline-file.spec.cjs 和 offline.spec.cjs 必须通过，确保
-18 个 classic script、25 个动作/GIF、4 段音乐和原生 file:// 路径完整。
+index.html 引用的全部本地 classic script 与样式、动作目录引用的全部 GIF、
+4 段音乐和原生 file:// 路径完整。
 任何安全、隐私、能力约束、计划校验、人工复核或运行时停止测试失败，
 都不得交付。
 

@@ -10,6 +10,9 @@
   const nativeStructuredClone = typeof root.structuredClone === 'function'
     ? root.structuredClone.bind(root)
     : null;
+  const safeObjectValues = Object.values;
+  const safeObjectIsFrozen = Object.isFrozen;
+  const safeObjectFreeze = Object.freeze;
   const RULE_VERSION = 'pilot-v2';
   const MIN_AGE = 0;
   const MAX_AGE = 120;
@@ -74,9 +77,10 @@
   ]);
 
   function deepFreeze(value) {
-    if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    return Object.freeze(value);
+    if (value === null || typeof value !== 'object' || safeObjectIsFrozen(value)) return value;
+    const nestedValues = safeObjectValues(value);
+    for (let index = 0; index < nestedValues.length; index += 1) deepFreeze(nestedValues[index]);
+    return safeObjectFreeze(value);
   }
 
   function isCanonicalCloneGraph(rootValue) {

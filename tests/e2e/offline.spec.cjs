@@ -32,9 +32,19 @@ test.afterEach(async ({ page }) => {
 test('离线资源清单包含全部本地CSS、JS、GIF和四段音乐', async () => {
   for (const relative of audioFiles) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
-  expect((html.match(/<script\s+src=/g) || []).length).toBe(18);
-  expect((html.match(/<link[^>]+stylesheet/g) || []).length).toBe(2);
-  expect(fs.readdirSync(path.join(projectRoot, 'assets', 'gifs')).filter(name => name.endsWith('.gif'))).toHaveLength(25);
+  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => match[1]);
+  const styles = [...html.matchAll(/<link[^>]+href="([^"]+)"[^>]+stylesheet|<link[^>]+stylesheet[^>]+href="([^"]+)"/g)].map(match => match[1] || match[2]);
+  expect(scripts.length).toBeGreaterThan(0);
+  expect(styles.length).toBeGreaterThan(0);
+  expect(new Set(scripts).size).toBe(scripts.length);
+  expect(new Set(styles).size).toBe(styles.length);
+  for (const relative of [...scripts, ...styles]) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
+  const catalogPath = path.join(projectRoot, 'src', 'data', 'exercise-catalog.js');
+  delete require.cache[require.resolve(catalogPath)];
+  const catalog = require(catalogPath).exerciseCatalog;
+  const referencedGifs = catalog.map(item => path.basename(decodeURIComponent(item.gif))).sort();
+  const packagedGifs = fs.readdirSync(path.join(projectRoot, 'assets', 'gifs')).filter(name => name.endsWith('.gif')).sort();
+  expect(packagedGifs).toEqual(referencedGifs);
 });
 
 test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', async ({ page }) => {
@@ -52,6 +62,8 @@ test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', a
   expect(state.plan.status).toBe('pending_review');
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '检查今天状态' }).click();
+  await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await expect.poll(() => page.locator('#guideBody img').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
   const audio = page.locator('#workoutAudio');
@@ -91,6 +103,8 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
     window.Move28.ui.setPlanContext({ mode: 'generated', plan: saved.plan, logs: saved.logs || {} });
   });
   await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '检查今天状态' }).click();
+  await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await expect(page.locator('#guideBody .guide-action')).toBeVisible();
   await expect(page.locator('.guide-stop')).toBeVisible();
