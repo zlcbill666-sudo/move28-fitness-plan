@@ -30,7 +30,7 @@ test.beforeEach(async({page})=>reset(page));
 
 test('generated-plan 未问卷仅显示只读示例且不写用户记录',async({page})=>{
   await expect(page.locator('#todayCard')).toContainText('示例计划');
-  await expect(page.getByRole('button',{name:/开始本节训练|一步一步带我练/})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/开始今天训练|一步一步带我练/})).toHaveCount(0);
   await expect(page.locator('#tracker')).toBeHidden();
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
   await expect(page.getByRole('link',{name:/查看示例计划/})).toBeVisible();
@@ -77,7 +77,7 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
   await expect(page.locator('.plan-explanation')).not.toContainText('independent_controlled');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   await expect(page.locator('#weekView .day-card')).toHaveCount(stored.plan.weeks[0].sessions.length);
-  await expect(page.getByRole('button',{name:'开始本节训练'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toBeVisible();
   const catalogRender=await page.evaluate(()=>{
     const before=document.querySelector('#todayCard .today-value').textContent;
     Move28.data.exerciseCatalog=[{id:'seated-leg-press',name:'EVIL_RUNTIME_CATALOG'}];
@@ -103,14 +103,14 @@ test('generated-plan 正常问卷生成后等待人工复核，放行后持久�
     Move28.ui.setPlanContext({mode:'generated'});
   });
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
 });
 
 test('generated-plan 真实激活路径不执行加载后替换的Object.values',async({page})=>{
   await completeOnboarding(page);await approvePendingPlan(page);
   const calls=await page.evaluate(()=>{const original=Object.values;let count=0;Object.values=()=>{count+=1;throw new Error('TAMPERED_VALUES')};try{Move28.ui.setPlanContext({mode:'generated'})}finally{Object.values=original}return count});
   expect(calls).toBe(0);
-  await expect(page.getByRole('button',{name:'▶ 开始本节训练'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'▶ 开始今天训练'})).toBeVisible();
 });
 
 test('generated-plan context accessor在Object原型污染下不执行getter',async({page})=>{
@@ -148,7 +148,7 @@ test('generated-plan 四天与5+计划把recovery明确显示为恢复训练',as
     await recoveryCard.getByRole('button',{name:'查看此节'}).click();
     await expect(page.locator('#todayCard h3')).toHaveText('恢复训练');
     await expect(page.locator('#todayCard h3')).not.toHaveText('低冲击有氧');
-    await page.getByRole('button',{name:'开始本节训练'}).click();
+    await page.getByRole('button',{name:'开始今天训练'}).click();
     await page.getByRole('button',{name:'检查今天状态'}).click();
     await page.getByRole('button',{name:'按原计划继续'}).click();
     await page.getByRole('button',{name:'开始本节',exact:true}).click();
@@ -167,7 +167,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     const index=Object.fromEntries(Move28.data.exerciseCatalog.map(item=>[item.id,item])),sessions=state.plan.weeks.flatMap(week=>week.sessions),next=sessions[1];
     return{planId:state.plan.id,sessionId:session.id,actions:session.actions.map(action=>({action,exercise:index[action.exerciseId]})),next:`第1周 · ${Move28.data.weekdayLabels?.[next.weekday]||({mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'})[next.weekday]}`};
   });
-  await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();
   await page.getByRole('button',{name:'检查今天状态'}).click();
   await page.getByRole('button',{name:'按原计划继续'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
@@ -207,7 +207,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
 test('generated-plan 完成摘要使用私有步骤快照、捕获单调时钟且伪造完成状态只降级下一节提示',async({page})=>{
   await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
   const expected=await page.evaluate(()=>{const state=Move28.storage.loadState(),session=state.plan.weeks[0].sessions[0],index=Object.fromEntries(Move28.data.exerciseCatalog.map(item=>[item.id,item]));return session.actions.map(action=>index[action.exerciseId].name)});
-  await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const total=await page.evaluate(()=>Move28.state.guideSteps.length);
   await page.evaluate(()=>{
     window.__task7GetterCalls=0;window.__task7ClockCalls=0;
@@ -225,7 +225,7 @@ test('generated-plan 完成摘要使用私有步骤快照、捕获单调时钟�
 test('generated-plan 完成摘要对缺失、非法或额外字段的完成记录统一降级下一节提示',async({page})=>{
   for(const mutation of ['missing_completed_at','invalid_completed_at','extra_field']){
     await reset(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
-    await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+    await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
     const total=await page.evaluate(()=>Move28.state.guideSteps.length);
     await page.evaluate(kind=>{const original=Move28.state.guideOnComplete;Move28.state.guideOnComplete=event=>{const persisted=original(event),record=persisted.logs[`${persisted.plan.id}.${event.sessionId}`];if(kind==='missing_completed_at')delete record.completedAt;else if(kind==='invalid_completed_at')record.completedAt='not-utc';else record.extra='forged';return persisted}},mutation);
     for(let index=0;index<total;index+=1)await page.locator('#guideNext').click();
@@ -236,7 +236,7 @@ test('generated-plan 完成摘要对缺失、非法或额外字段的完成记�
 test('generated-plan 完成摘要对原始持久化state的顶层、日志或审核额外字段统一降级',async({page})=>{
   for(const mutation of ['top_level','completion_log','plan_review']){
     await reset(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
-    await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+    await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
     const total=await page.evaluate(()=>Move28.state.guideSteps.length);
     await page.evaluate(kind=>{const original=Move28.state.guideOnComplete;Move28.state.guideOnComplete=event=>{const persisted=original(event),raw=JSON.parse(localStorage.getItem('move28-pilot-v1'));if(kind==='top_level')raw.extra='forged';else if(kind==='completion_log')raw.logs[`${raw.plan.id}.${event.sessionId}`].extra='forged';else raw.plan.review.extra='forged';localStorage.setItem('move28-pilot-v1',JSON.stringify(raw));return persisted}},mutation);
     for(let index=0;index<total;index+=1)await page.locator('#guideNext').click();
@@ -246,7 +246,7 @@ test('generated-plan 完成摘要对原始持久化state的顶层、日志或审
 
 test('generated-plan 完成写入前intrinsic身份预检阻止后加载Array.some替换且零执行',async({page})=>{
   await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
-  await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const total=await page.evaluate(()=>Move28.state.guideSteps.length);for(let index=1;index<total;index+=1)await page.locator('#guideNext').click();
   await page.evaluate(()=>{window.__task7OriginalSome=Array.prototype.some;window.__task7SomeCalls=0;Array.prototype.some=function(...args){window.__task7SomeCalls+=1;return window.__task7OriginalSome.apply(this,args)}});
   await page.locator('#guideNext').click();
@@ -257,7 +257,7 @@ test('generated-plan 完成写入前intrinsic身份预检阻止后加载Array.so
 test('generated-plan 跟练在390竖屏、844横屏与1280桌面无横向溢出且横屏关键操作可见',async({page})=>{
   await page.setViewportSize({width:844,height:390});
   await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);
-  await page.getByRole('button',{name:'开始本节训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const assertNoOverflow=async()=>expect(await page.evaluate(()=>({doc:document.documentElement.scrollWidth<=innerWidth,body:document.body.scrollWidth<=innerWidth}))).toEqual({doc:true,body:true});
   await assertNoOverflow();
   for(const selector of ['.guide-instruction h3','.guide-dose','.guide-runtime-safety','#guideNext']){const locator=page.locator(selector);await expect(locator).toBeVisible();const box=await locator.boundingBox();expect(box).not.toBeNull();expect(box.x,selector).toBeGreaterThanOrEqual(0);expect(box.x+box.width,selector).toBeLessThanOrEqual(844);expect(box.y,selector).toBeGreaterThanOrEqual(0);expect(box.y+box.height,selector).toBeLessThanOrEqual(390)}
@@ -276,7 +276,7 @@ test('generated-plan 受控能力档案在跟练页显示可信中文变式指�
   await expect(page.locator('.plan-explanation')).not.toContainText('close_wall');
   await expect(page.locator('.plan-explanation')).not.toContainText('hands_supported');
   await expect(page.locator('.plan-explanation')).not.toContainText('limited_range');
-  await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();
   await page.getByRole('button',{name:'检查今天状态'}).click();
   await page.getByRole('button',{name:'按原计划继续'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
@@ -302,7 +302,7 @@ test('generated-plan 缺少审核动作时原子阻断且不回退成用户训�
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await expect(page.locator('#todayCard')).toContainText('暂未生成可执行计划');
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
 });
 
 test('generated-plan 安全顺延只改变本次日历显示并继续使用原sessionId',async({page})=>{
@@ -344,7 +344,7 @@ test('generated-plan 安全顺延只改变本次日历显示并继续使用原se
   await expect(shiftedCard.locator('.num')).toHaveText('周五');
   await expect(shiftedCard.locator('.shift-display-badge')).toHaveText('顺延显示 · 原周一');
   await expect(page.getByRole('button',{name:'恢复原日历'})).toBeVisible();
-  const afterApply=await page.evaluate(()=>({bytes:localStorage.getItem('move28-pilot-v1'),state:Move28.storage.loadState(),actions:document.querySelector('#todayCard .today-value').textContent,minutes:document.querySelector('#todayCard .today-top').textContent}));
+  const afterApply=await page.evaluate(()=>({bytes:localStorage.getItem('move28-pilot-v1'),state:Move28.storage.loadState(),actions:document.querySelector('#todayCard .today-value').textContent,minutes:document.querySelector('#todayCard [data-today-metric="duration"]').textContent}));
   expect(afterApply.bytes).toBe(baseline.bytes);
   expect(afterApply.state.plan).toEqual(baseline.plan);
   expect(afterApply.state.logs).toEqual(baseline.logs);
@@ -356,7 +356,7 @@ test('generated-plan 安全顺延只改变本次日历显示并继续使用原se
     window.__openedShiftSessionId=null;
     window.openSessionReadiness=id=>{window.__openedShiftSessionId=id;return true};
   });
-  await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();
   expect(await page.evaluate(()=>window.__openedShiftSessionId)).toBe(baseline.sessionId);
 
   await page.reload();
@@ -392,7 +392,7 @@ test('generated-plan 顺延确认前重新校验安全状态，失效计划不�
   await page.getByRole('button',{name:'仅更新日历显示'}).click();
   await expect(page.locator('#todayCard')).toContainText('计划未通过有效状态、人工复核或安全校验');
   await expect(page.locator('.shift-display-badge')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'开始本节训练'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
 });
 
 test('generated-plan 完成、疼痛失效与显式stale上下文都不显示顺延入口',async({page})=>{

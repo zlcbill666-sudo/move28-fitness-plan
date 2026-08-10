@@ -11,7 +11,7 @@ async function setup(page){
 }
 
 async function openReadiness(page){
-  await page.getByRole('button',{name:'开始本节训练'}).click();
+  await page.getByRole('button',{name:'开始今天训练'}).click();
   await expect(page.locator('#sessionReadinessView')).toHaveAttribute('aria-hidden','false');
   await expect(page.getByRole('heading',{name:'开始前确认今天的条件'})).toBeVisible();
 }

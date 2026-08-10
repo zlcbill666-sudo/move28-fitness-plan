@@ -61,7 +61,7 @@ test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', a
   expect(state.participantId).toBe(participantId);
   expect(state.plan.status).toBe('pending_review');
   await approvePendingPlan(page);
-  await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '开始今天训练' }).click();
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
@@ -102,7 +102,7 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
     const saved = JSON.parse(localStorage.getItem('move28-pilot-v1'));
     window.Move28.ui.setPlanContext({ mode: 'generated', plan: saved.plan, logs: saved.logs || {} });
   });
-  await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '开始今天训练' }).click();
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();

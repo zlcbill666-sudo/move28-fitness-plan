@@ -77,33 +77,39 @@ function validationCandidate(plan){
   delete candidate.review;delete candidate.staleReason;delete candidate.staleAt;candidate.status='generated';return candidate;
 }
 function validReview(plan,state){const review=plan&&plan.review;return Boolean(review&&review.status==='approved'&&typeof review.reviewerId==='string'&&/^[a-z][a-z0-9._-]{0,63}$/.test(review.reviewerId)&&review.planId===plan.id&&review.intakeRevision===state.intakeRevision&&plan.capabilityRevision===state.capabilityRevision&&review.capabilityRevision===state.capabilityRevision&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(review.reviewedAt))}
+function hasCurrentPainFeedback(state){
+  const plan=state.plan,weeks=plan&&plan.weeks;if(!plan||plan.staleReason!=='workout_feedback_pain'||!safeArrayIsArray(weeks))return false;
+  const sessionIds=new SafeSet();for(let weekIndex=0;weekIndex<weeks.length;weekIndex+=1){const sessions=weeks[weekIndex]&&weeks[weekIndex].sessions;if(!safeArrayIsArray(sessions))return false;for(let sessionIndex=0;sessionIndex<sessions.length;sessionIndex+=1){const session=sessions[sessionIndex];if(session&&typeof session.id==='string')safeSetAdd(sessionIds,session.id)}}
+  const logs=state.logs&&plainRecord(state.logs)?safeObjectValues(state.logs):[];for(let index=0;index<logs.length;index+=1){const record=logs[index];if(record&&record.status==='completed'&&record.planId===plan.id&&record.capabilityRevision===state.capabilityRevision&&record.feedbackCode==='pain'&&safeSetHas(sessionIds,record.sessionId))return true}return false;
+}
 function contextFromState(inputState){
-  if(inputState===null||inputState===undefined)return{mode:'demo',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
+  if(inputState===null||inputState===undefined)return{mode:'demo',workflowStage:'questionnaire',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
   const state=clonePureData(inputState);
-  if(!state)return{mode:'invalid',plan:null,logs:{},message:'本机计划无法安全读取，请重新生成。'};
-  if(!state.intake)return{mode:'demo',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
+  if(!state)return{mode:'invalid',workflowStage:'invalid',plan:null,logs:{},message:'本机计划无法安全读取，请重新生成。'};
+  if(!state.intake)return{mode:'demo',workflowStage:'questionnaire',plan:null,logs:{},message:'尚未完成问卷，当前为只读示例。'};
   const recomputedRisk=trustedRiskForIntake(state.intake);
-  if(!recomputedRisk)return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机风险结果无法安全复核，请重新完成问卷。'};
-  if(!risksMatch(state.risk,recomputedRisk))return{mode:recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review'?'blocked':'invalid',plan:null,logs:state.logs||{},message:'本机风险结果与当前问卷不一致，请重新完成筛查。'};
-  if(recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review')return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
-  if(!state.capabilityProfile||!state.capabilityResult||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1)return{mode:'review',plan:null,logs:state.logs||{},message:'请完成能力校准，再生成与你当前起点匹配的计划。'};
+  if(!recomputedRisk)return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机风险结果无法安全复核，请重新完成问卷。'};
+  if(!risksMatch(state.risk,recomputedRisk))return{mode:recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review'?'blocked':'invalid',workflowStage:recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review'?'risk_blocked':'invalid',plan:null,logs:state.logs||{},message:'本机风险结果与当前问卷不一致，请重新完成筛查。'};
+  if(recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review')return{mode:'blocked',workflowStage:'risk_blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
+  if(!state.capabilityProfile||!state.capabilityResult||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1)return{mode:'review',workflowStage:'capability_required',plan:null,logs:state.logs||{},message:'请完成能力校准，再生成与你当前起点匹配的计划。'};
   const recomputedCapability=trustedCapabilityForProfile(state.capabilityProfile);
-  if(!recomputedCapability||!capabilityResultsMatch(state.capabilityResult,recomputedCapability))return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机能力档案无法安全复核，请重新完成能力校准。'};
-  if(recomputedCapability.status==='stop'||recomputedCapability.status==='manual_review')return{mode:'blocked',plan:null,logs:state.logs||{},message:'当前能力校准结果不开放自动训练，请先重新安全筛查或完成人工复核。'};
-  if(!state.plan)return{mode:'review',plan:null,logs:state.logs||{},message:'档案已保存，但没有通过安全硬门槛的完整计划。'};
+  if(!recomputedCapability||!capabilityResultsMatch(state.capabilityResult,recomputedCapability))return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机能力档案无法安全复核，请重新完成能力校准。'};
+  if(recomputedCapability.status==='stop'||recomputedCapability.status==='manual_review')return{mode:'blocked',workflowStage:'capability_blocked',plan:null,logs:state.logs||{},message:'当前能力校准结果不开放自动训练，请先重新安全筛查或完成人工复核。'};
+  if(!state.plan)return{mode:'review',workflowStage:'plan_required',plan:null,logs:state.logs||{},message:'档案已保存，但没有通过安全硬门槛的完整计划。'};
   const logs=state.logs&&plainRecord(state.logs)?safeObjectValues(state.logs):[];let hasCurrentSafetyEvent=false;
   for(let index=0;index<logs.length;index+=1){const record=logs[index];if(record&&record.status==='safety_stopped'&&record.planId===state.plan.id){hasCurrentSafetyEvent=true;break}}
-  if(hasCurrentSafetyEvent)return{mode:'stale',plan:null,logs:state.logs||{},message:'训练中已记录安全停止事件，旧计划已失效，请重新完成安全筛查。'};
+  if(hasCurrentSafetyEvent)return{mode:'stale',workflowStage:'rescreen_required',plan:null,logs:state.logs||{},message:'训练中已记录安全停止事件，旧计划已失效，请重新完成安全筛查。'};
   let hasWeeklyPainRescreen=false;
   if(safeArrayIsArray(state.weeklyReviews))for(let index=0;index<state.weeklyReviews.length;index+=1){const record=state.weeklyReviews[index];if(record&&record.planId===state.plan.id&&record.decision==='rescreen'){hasWeeklyPainRescreen=true;break}}
-  if(hasWeeklyPainRescreen)return{mode:'stale',plan:null,logs:state.logs||{},message:'每周复盘发现需要重新筛查的疼痛变化，旧计划已失效。'};
-  if(state.plan.status==='stale'||state.plan.intakeRevision!==state.intakeRevision||state.plan.capabilityRevision!==state.capabilityRevision)return{mode:'stale',plan:null,logs:state.logs||{},message:'档案已经变化，旧计划已失效，请重新确认问卷与能力校准后生成。'};
-  if(state.plan.status==='pending_review')return{mode:'review',plan:null,logs:state.logs||{},message:'4周计划已生成，人工一致性复核完成前不会开放训练入口。'};
-  if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或人工复核凭据无效，请等待重新复核。'};
+  if(hasWeeklyPainRescreen)return{mode:'stale',workflowStage:'rescreen_required',plan:null,logs:state.logs||{},message:'每周复盘发现需要重新筛查的疼痛变化，旧计划已失效。'};
+  if(hasCurrentPainFeedback(state))return{mode:'stale',workflowStage:'rescreen_required',plan:null,logs:state.logs||{},message:'训练反馈记录了疼痛，旧计划已失效，请重新完成安全筛查。'};
+  if(state.plan.status==='stale'||state.plan.intakeRevision!==state.intakeRevision||state.plan.capabilityRevision!==state.capabilityRevision)return{mode:'stale',workflowStage:'plan_stale',plan:null,logs:state.logs||{},message:'档案已经变化，旧计划已失效，请重新确认问卷与能力校准后生成。'};
+  if(state.plan.status==='pending_review')return{mode:'review',workflowStage:'human_review',plan:null,logs:state.logs||{},message:'4周计划已生成，人工一致性复核完成前不会开放训练入口。'};
+  if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或人工复核凭据无效，请等待重新复核。'};
   const candidate=validationCandidate(state.plan);
-  if(!candidate)return{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划无法安全读取，请重新生成。'};
+  if(!candidate)return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机计划无法安全读取，请重新生成。'};
   let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,capabilityResult:state.capabilityResult,capabilityRevision:state.capabilityRevision,catalog:trustedCatalog})}catch(_error){validation=null}
-  return validationPassed(validation)?{mode:'generated',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
+  return validationPassed(validation)?{mode:'generated',workflowStage:'ready',plan:state.plan,logs:state.logs||{},message:''}:{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机计划未通过安全复核，请重新生成。'};
 }
 const MACHINE_ID_PATTERN=/^[a-z][a-z0-9._-]{0,63}$/;
 function inspectWeeklyPlanLineage(reviews,currentPlanId,capabilityRevision){

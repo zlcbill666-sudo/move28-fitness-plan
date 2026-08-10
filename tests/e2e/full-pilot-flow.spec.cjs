@@ -37,10 +37,10 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
   expect(dossier.weeks.flatMap(week => week.sessions).flatMap(session => session.actions)
     .every(action => action.reviewStatus === 'approved')).toBe(true);
   await finishSavedScreen(page);
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
 
   await approvePendingPlan(page);
-  await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '开始今天训练' }).click();
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
@@ -55,7 +55,7 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
 
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toBeVisible();
 });
 
 test('居家缺少弹力带时原子受限，不生成或开放训练计划', async ({ page }) => {
@@ -68,7 +68,7 @@ test('居家缺少弹力带时原子受限，不生成或开放训练计划', as
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan).toBeNull();
   await finishSavedScreen(page);
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
 });
 
 test('stop用户计划数严格为0，刷新后仍阻断', async ({ page }) => {
@@ -78,7 +78,7 @@ test('stop用户计划数严格为0，刷新后仍阻断', async ({ page }) => {
   expect(before.plan).toBeNull();
   await finishSavedScreen(page);
   await page.reload();
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
   await expect(page.locator('#todayCard')).toContainText(/不开放自动训练|重新完成筛查/);
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
@@ -103,7 +103,7 @@ test('修改健康答案立即使旧计划失效且刷新后训练入口不恢�
   await completeOnboarding(page);
   await finishSavedScreen(page);
   await approvePendingPlan(page);
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toBeVisible();
 
   await openAndFill(page, { chestSymptoms: 'yes' });
   await page.getByRole('button', { name: /确认并保存结果/ }).click();
@@ -114,7 +114,7 @@ test('修改健康答案立即使旧计划失效且刷新后训练入口不恢�
   expect(state.plan?.staleReason).toBe('intake_changed');
   await finishSavedScreen(page);
   await page.reload();
-  await expect(page.getByRole('button', { name: '开始本节训练' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
 });
 
 test('重复确认不会重复增加intake revision或绕过能力校准提前生成计划', async ({ page }) => {
@@ -135,7 +135,7 @@ test('390×844跟练GIF、音乐区、停止按钮和固定操作区不重叠', 
   await completeOnboarding(page);
   await finishSavedScreen(page);
   await approvePendingPlan(page);
-  await page.getByRole('button', { name: '开始本节训练' }).click();
+  await page.getByRole('button', { name: '开始今天训练' }).click();
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();

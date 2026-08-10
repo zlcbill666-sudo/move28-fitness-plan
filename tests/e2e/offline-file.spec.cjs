@@ -114,7 +114,7 @@ test('双击打开时首屏、GIF和跟练入口均可离线使用', async ({ pa
   });
 
   await expect(page.locator('#todayCard')).toContainText('示例计划');
-  await expect(page.getByRole('button', { name: /一步一步带我练|开始本节训练/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /一步一步带我练|开始今天训练/ })).toHaveCount(0);
   await expect(page.locator('#tracker')).toBeHidden();
   await page.getByRole('button', { name: /生成我的4周计划/ }).click();
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden', 'false');
