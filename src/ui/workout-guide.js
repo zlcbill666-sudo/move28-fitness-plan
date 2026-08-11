@@ -37,7 +37,7 @@ const SAFETY_RULE='胸部不适、晕厥感、异常气短、突发剧痛、无�
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
 const safeArrayIsArray=Array.isArray,safeGetPrototypeOf=Object.getPrototypeOf,safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor,safeObjectKeys=Object.keys,safeOwnKeys=Reflect.ownKeys;
 const safeHasOwn=Function.prototype.call.bind(Object.prototype.hasOwnProperty),safeArraySome=Function.prototype.call.bind(Array.prototype.some),safeArrayEvery=Function.prototype.call.bind(Array.prototype.every),safeArrayIncludes=Function.prototype.call.bind(Array.prototype.includes),safeArrayMap=Function.prototype.call.bind(Array.prototype.map),safeArrayJoin=Function.prototype.call.bind(Array.prototype.join),safeArrayFind=Function.prototype.call.bind(Array.prototype.find),safeArrayPush=Function.prototype.call.bind(Array.prototype.push),safeArrayPop=Function.prototype.call.bind(Array.prototype.pop),safeSetHas=Function.prototype.call.bind(Set.prototype.has),safeMapGet=Function.prototype.call.bind(Map.prototype.get),safeMapSet=Function.prototype.call.bind(Map.prototype.set),safeWeakSetHas=Function.prototype.call.bind(WeakSet.prototype.has),safeWeakSetAdd=Function.prototype.call.bind(WeakSet.prototype.add),safeRegexTest=Function.prototype.call.bind(RegExp.prototype.test),safeDateToISOString=Function.prototype.call.bind(Date.prototype.toISOString);
-const safeNumberIsFinite=Number.isFinite,safeNumberIsSafeInteger=Number.isSafeInteger,safeObjectIs=Object.is,safeMathFloor=Math.floor,SafeArray=Array,SafeObject=Object,SafeSet=Set,SafeWeakSet=WeakSet,SafeMap=Map,SafeWeakMap=WeakMap,SafeDate=Date,SafeString=String,SafeNumber=Number,SafeRegExp=RegExp,SafeFunction=Function,SafeSymbol=Symbol,SafeBoolean=Boolean,SafeError=Error,SafeTypeError=TypeError,SafeUint8Array=Uint8Array,SafeJSON=JSON,SafeReflect=Reflect,SafeMath=Math,nativeObjectPrototype=Object.prototype;
+const safeNumberIsFinite=Number.isFinite,safeNumberIsSafeInteger=Number.isSafeInteger,safeObjectIs=Object.is,safeObjectFreeze=Object.freeze,safeMathFloor=Math.floor,SafeArray=Array,SafeObject=Object,SafeSet=Set,SafeWeakSet=WeakSet,SafeMap=Map,SafeWeakMap=WeakMap,SafeDate=Date,SafeString=String,SafeNumber=Number,SafeRegExp=RegExp,SafeFunction=Function,SafeSymbol=Symbol,SafeBoolean=Boolean,SafeError=Error,SafeTypeError=TypeError,SafeUint8Array=Uint8Array,SafeJSON=JSON,SafeReflect=Reflect,SafeMath=Math,nativeObjectPrototype=Object.prototype;
 const safePerformanceNow=root.performance&&typeof root.performance.now==='function'?root.performance.now.bind(root.performance):null;
 const COMPLETION_INTRINSICS=[
   [root,'Array',SafeArray],[root,'Object',SafeObject],[root,'Set',SafeSet],[root,'Map',SafeMap],[root,'WeakSet',SafeWeakSet],[root,'WeakMap',SafeWeakMap],[root,'Date',SafeDate],[root,'String',SafeString],[root,'Number',SafeNumber],[root,'RegExp',SafeRegExp],[root,'Function',SafeFunction],[root,'Symbol',SafeSymbol],[root,'Boolean',SafeBoolean],[root,'Error',SafeError],[root,'TypeError',SafeTypeError],[root,'Uint8Array',SafeUint8Array],[root,'JSON',SafeJSON],[root,'Reflect',SafeReflect],[root,'Math',SafeMath],
@@ -123,6 +123,34 @@ function buildWorkoutSteps(session,catalog){
   }
   return steps;
 }
+function deriveCompletionTiming(session){
+  const safeSession=clonePureData(session),maximumElapsedMs=86400000;
+  if(!safeSession||!plainRecord(safeSession)||!safeNumberIsSafeInteger(safeSession.estimatedMinutes)||safeSession.estimatedMinutes<=0||!safeArrayIsArray(safeSession.actions)||safeSession.actions.length===0)return null;
+  const estimateFloorMs=safeSession.estimatedMinutes*15000;let doseFloorMs=0;
+  if(!safeNumberIsFinite(estimateFloorMs)||estimateFloorMs<=0||estimateFloorMs>maximumElapsedMs)return null;
+  for(let index=0;index<safeSession.actions.length;index+=1){
+    const action=safeSession.actions[index];let actionFloorMs=0;
+    if(!plainRecord(action)||typeof action.phase!=='string')return null;
+    if(action.phase==='main'){
+      if(!safeNumberIsSafeInteger(action.sets)||action.sets<=0||!safeNumberIsSafeInteger(action.reps)||action.reps<=0||!safeNumberIsSafeInteger(action.restSec)||action.restSec<0)return null;
+      actionFloorMs=(action.sets*action.reps+(action.sets-1)*action.restSec)*1000;
+    }else{
+      if(!safeNumberIsSafeInteger(action.durationMin)||action.durationMin<=0||!safeNumberIsSafeInteger(action.restSec)||action.restSec<0)return null;
+      actionFloorMs=action.durationMin*60000;
+    }
+    doseFloorMs+=actionFloorMs;
+    if(!safeNumberIsFinite(actionFloorMs)||actionFloorMs<=0||!safeNumberIsFinite(doseFloorMs)||doseFloorMs>maximumElapsedMs)return null;
+  }
+  const minimumElapsedMs=doseFloorMs>estimateFloorMs?doseFloorMs:estimateFloorMs;
+  if(!safeNumberIsFinite(minimumElapsedMs)||minimumElapsedMs<=0||minimumElapsedMs>maximumElapsedMs)return null;
+  return safeObjectFreeze({minimumElapsedMs,maximumElapsedMs});
+}
+function isPlausibleCompletionElapsed(timing,startedAtMs,endedAtMs){
+  const safeTiming=clonePureData(timing);
+  if(!safeTiming||!plainRecord(safeTiming)||!safeNumberIsFinite(safeTiming.minimumElapsedMs)||safeTiming.minimumElapsedMs<=0||!safeNumberIsFinite(safeTiming.maximumElapsedMs)||safeTiming.maximumElapsedMs<safeTiming.minimumElapsedMs||!safeNumberIsFinite(startedAtMs)||!safeNumberIsFinite(endedAtMs)||endedAtMs<startedAtMs)return false;
+  const elapsedMs=endedAtMs-startedAtMs;
+  return elapsedMs>=safeTiming.minimumElapsedMs&&elapsedMs<=safeTiming.maximumElapsedMs;
+}
 const getWorkoutAudio=()=>$('#workoutAudio');
 function persistMusicPreference(key,value){try{storage.setItem(key,value);return true}catch(_error){Move28.ui.showToast?.('音乐偏好未能保存；训练和安全停止仍可继续');return false}}
 function updateMusicUI(){
@@ -178,6 +206,11 @@ function renderExitConfirm(){
   getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='ORDINARY EXIT';$('#guideTitle').textContent='普通退出';
   $('#guideBody').innerHTML='<section class="guide-state"><h3>普通退出训练？</h3><p>普通退出不会记录安全事件，也不会使计划失效。你之后仍可重新开始本节。</p></section>';
   setGuideFoot({label:'继续训练'},{label:'确认普通退出'});
+}
+function renderDurationBlocked(){
+  getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='NOT COMPLETED';$('#guideTitle').textContent='完成记录保护';
+  $('#guideBody').innerHTML=`<section class="guide-state guide-warning"><h3>本节还不能记为完成</h3><p>本次跟练时间短于已审核的预计时长和动作剂量，或计时不可用。为避免生成不真实的完成记录，本节尚未保存为完成。</p><p>你可以继续本节训练，或普通退出并保留为未完成；如有不适，请优先使用安全停止。</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></section>`;
+  setGuideFoot({label:'继续本节训练'},{label:'普通退出（本节未完成）'});
 }
 function renderSafetySelect(){
   getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='SAFETY FIRST';$('#guideTitle').textContent='因不适暂停';
@@ -250,18 +283,24 @@ function formatElapsedDuration(elapsedMs){
   const minutes=safeMathFloor(seconds/60),remainder=seconds%60;
   return remainder?`${minutes}分${remainder}秒`:`${minutes}分钟`;
 }
-function createCompletionSnapshot(steps){
-  if(!safeArrayIsArray(steps)||steps.length===0)return null;const actions=[];
+function createCompletionSnapshot(session,steps){
+  const timing=deriveCompletionTiming(session);
+  if(!timing||!safeArrayIsArray(steps)||steps.length===0)return null;const actions=[];
   for(let index=0;index<steps.length;index+=1){const step=steps[index];if(!plainRecord(step)||!plainRecord(step.action)||!plainRecord(step.exercise)||typeof step.sessionId!=='string'||typeof step.exercise.name!=='string'||(index>0&&step.sessionId!==steps[0].sessionId))return null;safeArrayPush(actions,{name:step.exercise.name,dose:doseText(step.action)})}
-  return clonePureData({sessionId:steps[0].sessionId,actions});
+  return clonePureData({sessionId:steps[0].sessionId,estimatedMinutes:session.estimatedMinutes,timing,actions});
 }
 
-function buildCompletionSummary(persistedState,allowTrustedNext=true){
+function completionElapsedMs(){
+  const snapshot=clonePureData(activeGuideSnapshot),timing=snapshot&&snapshot.timing;let endedAt=null;
+  if(!snapshot)return null;
+  try{endedAt=safePerformanceNow?safePerformanceNow():null}catch(_error){endedAt=null}
+  return isPlausibleCompletionElapsed(timing,guideStartedAtMs,endedAt)?endedAt-guideStartedAtMs:null;
+}
+function buildCompletionSummary(persistedState,elapsedMs,allowTrustedNext=true){
   const snapshot=clonePureData(activeGuideSnapshot),actions=snapshot&&snapshot.actions;if(!snapshot||typeof snapshot.sessionId!=='string'||!safeArrayIsArray(actions)||actions.length===0)return null;
   for(let index=0;index<actions.length;index+=1){const item=actions[index];if(!plainRecord(item)||typeof item.name!=='string'||typeof item.dose!=='string')return null}
-  let endedAt=null,rawState=null;try{endedAt=safePerformanceNow?safePerformanceNow():null}catch(_error){endedAt=null}
+  let rawState=null;
   if(allowTrustedNext&&trustedReadRawState)try{rawState=trustedReadRawState()}catch(_error){rawState=null}
-  const elapsedMs=safeNumberIsFinite(guideStartedAtMs)&&safeNumberIsFinite(endedAt)&&endedAt>=guideStartedAtMs?endedAt-guideStartedAtMs:null;
   const next=allowTrustedNext&&rawState&&sameData(persistedState,rawState)?deriveNextTraining(rawState,snapshot.sessionId):null;
   return {actions,duration:formatElapsedDuration(elapsedMs),next};
 }
@@ -282,7 +321,7 @@ function renderFeedback(){
   setGuideFoot({label:'稍后反馈',hidden:false,disabled:saving},{label:'',hidden:true});
 }
 function renderGuide(){
-  if(state.guideMode==='ready')renderReady();else if(state.guideMode==='action')renderAction();else if(state.guideMode==='exit_confirm')renderExitConfirm();else if(state.guideMode==='safety_select')renderSafetySelect();else if(state.guideMode==='pain_pause')renderPainPause();else if(state.guideMode==='safety_confirm')renderSafetyConfirm();else if(safeArrayIncludes(['feedback','feedback_saving','feedback_failed'],state.guideMode))renderFeedback();else renderSafetyResult();
+  if(state.guideMode==='ready')renderReady();else if(state.guideMode==='action')renderAction();else if(state.guideMode==='duration_blocked')renderDurationBlocked();else if(state.guideMode==='exit_confirm')renderExitConfirm();else if(state.guideMode==='safety_select')renderSafetySelect();else if(state.guideMode==='pain_pause')renderPainPause();else if(state.guideMode==='safety_confirm')renderSafetyConfirm();else if(safeArrayIncludes(['feedback','feedback_saving','feedback_failed'],state.guideMode))renderFeedback();else renderSafetyResult();
   root.requestAnimationFrame(()=>$('.guide-shell').scrollTo({top:0,behavior:'smooth'}));
 }
 function sameData(left,right){
@@ -316,7 +355,7 @@ function openWorkout(options){
   }else if(adaptationId===undefined&&requestedSession!==undefined){
     session=prepareReviewedSession(requestedSession,catalog);
   }
-  const steps=session&&buildWorkoutSteps(session,trustedCatalog),completionSnapshot=steps&&createCompletionSnapshot(steps);
+  const steps=session&&buildWorkoutSteps(session,trustedCatalog),completionSnapshot=steps&&createCompletionSnapshot(session,steps);
   if(!steps||!completionSnapshot){Move28.ui.showToast('该训练节无法安全打开，请重新生成计划');return false}
   activeGuideSnapshot=completionSnapshot;
   activeAdaptation=guideAdaptation;
@@ -382,7 +421,7 @@ Move28.requestGuideExit=()=>{
 };
 Move28.closeGuide=Move28.requestGuideExit;
 Move28.requestSafetyStop=()=>{
-  if(!safeArrayIncludes(['ready','action'],state.guideMode))return false;
+  if(!safeArrayIncludes(['ready','action','duration_blocked'],state.guideMode))return false;
   state.guideResumeMode=state.guideMode;state.guideMode='safety_select';renderGuide();return true;
 };
 Move28.selectSafetyReason=reason=>{
@@ -412,25 +451,29 @@ Move28.guideRescreen=()=>{
 Move28.guideReturnHome=()=>{if(state.guideMode!=='safety_stopped')return false;hardCloseGuide();return true};
 Move28.guideBack=()=>{
   if(safeArrayIncludes(['feedback','feedback_failed'],state.guideMode)){hardCloseGuide();return}
-  if(state.guideMode==='exit_confirm'){state.guideMode=state.guideResumeMode;renderGuide();return}
+  if(state.guideMode==='exit_confirm'){state.guideMode=state.guideResumeMode==='duration_blocked'?'action':state.guideResumeMode;renderGuide();return}
   if(state.guideMode==='safety_select'){state.guideMode=state.guideResumeMode;renderGuide();return}
   if(state.guideMode==='safety_confirm'||state.guideMode==='pain_pause')return;
   if(state.guideMode==='ready'){Move28.requestGuideExit();return}
+  if(state.guideMode==='duration_blocked'){state.guideMode='action';renderGuide();return}
   if(state.guideMode==='action'&&state.guideStep>0&&!state.guideFinishing){state.guideStep--;renderGuide()}
 };
 Move28.guideNext=()=>{
   if(state.guideMode==='ready'){let startedAt=null;try{startedAt=safePerformanceNow?safePerformanceNow():null}catch(_error){startedAt=null}guideStartedAtMs=safeNumberIsFinite(startedAt)?startedAt:null;state.guideMode='action';renderGuide();return}
   if(state.guideMode==='exit_confirm'){if(activeAdaptation)revokeActiveAdaptation();try{state.guideOnStop({type:'ordinary_exit',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,actionIndex:state.guideStep})}catch(_error){}hardCloseGuide();return}
+  if(state.guideMode==='duration_blocked'){state.guideResumeMode='duration_blocked';state.guideMode='exit_confirm';renderGuide();return}
   if(safeArrayIncludes(['safety_confirm','safety_save_failed'],state.guideMode)){persistGuideStop();return}
   if(state.guideMode!=='action'||state.guideFinishing)return;
   if(state.guideStep<state.guideSteps.length-1){state.guideStep++;renderGuide();return}
   if(!completionIntrinsicsIntact()){Move28.ui.showToast('运行环境已变化，完成记录未保存，请刷新后重试');return}
+  const elapsedMs=completionElapsedMs();
+  if(elapsedMs===null){state.guideMode='duration_blocked';renderGuide();return}
   state.guideFinishing=true;$('#guideNext').disabled=true;
   try{
     let persistedState=null;
     if(activeAdaptation){persistedState=persistAdaptedCompletion();try{state.guideOnComplete({type:'adapted_completed',sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId,persistedState})}catch(_error){}}
     else persistedState=state.guideOnComplete({sessionId:state.guideSession.id,adaptationId:state.guideSession.adaptationId});
-    const allowTrustedNext=completionIntrinsicsIntact();guideCompletionSummary=buildCompletionSummary(persistedState,allowTrustedNext);state.guideFinishing=false;state.guideMode='feedback';renderGuide();
+    const allowTrustedNext=completionIntrinsicsIntact();guideCompletionSummary=buildCompletionSummary(persistedState,elapsedMs,allowTrustedNext);state.guideFinishing=false;state.guideMode='feedback';renderGuide();
   }catch(_error){state.guideFinishing=false;$('#guideNext').disabled=false;Move28.ui.showToast('完成记录保存失败，请检查本机存储后重试')}
 };
 Move28.submitWorkoutFeedback=feedbackCode=>{
@@ -452,5 +495,5 @@ Object.assign(Move28.guide||{},guide);
 Object.defineProperty(Move28.guide,'workoutAudio',{configurable:true,get:getWorkoutAudio});
 const actions={closeGuide:Move28.closeGuide,requestGuideExit:Move28.requestGuideExit,requestSafetyStop:Move28.requestSafetyStop,selectSafetyReason:Move28.selectSafetyReason,resolveGuidePain:Move28.resolveGuidePain,guideRescreen:Move28.guideRescreen,guideReturnHome:Move28.guideReturnHome,guideBack:Move28.guideBack,guideNext:Move28.guideNext,submitWorkoutFeedback:Move28.submitWorkoutFeedback,toggleWorkoutMusic:Move28.toggleWorkoutMusic,setWorkoutVolume:Move28.setWorkoutVolume};
 if(root.window===root)for(const name of Object.keys(actions))root[name]=actions[name];
-return Object.assign({buildWorkoutSteps},guide,actions);
+return Object.assign({buildWorkoutSteps,deriveCompletionTiming,isPlausibleCompletionElapsed},guide,actions);
 });

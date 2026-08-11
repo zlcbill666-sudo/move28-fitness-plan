@@ -4,7 +4,8 @@ const { test, expect } = require('@playwright/test');
 const {
   resetHttp,
   completeOnboarding,
-  approvePendingPlan
+  approvePendingPlan,
+  completeGuideActions
 } = require('./helpers/pilot-flow.cjs');
 
 async function finishSavedScreen(page) {
@@ -49,8 +50,7 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
   await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
   await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作媒体审核中');
 
-  const actionCount = await page.evaluate(() => window.Move28.state.guideSteps.length);
-  for (let index = 0; index < actionCount; index += 1) await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(Object.values(state.logs)).toHaveLength(1);
   expect(Object.values(state.logs)[0].status).toBe('completed');

@@ -56,7 +56,50 @@ const safeCapability = Object.freeze({
   walkTolerance: 'comfortable'
 });
 
+async function installMonotonicClock(page, initialMs = 1000) {
+  if (page.__move28MonotonicClockInstalled) return;
+  page.__move28MonotonicClockInstalled = true;
+  await page.addInitScript(value => {
+    let nowMs = value;
+    Object.defineProperty(performance, 'now', { configurable: true, value: () => nowMs });
+    Object.defineProperty(window, '__move28AdvanceMonotonicClock', {
+      configurable: true,
+      value(deltaMs) {
+        if (!Number.isFinite(deltaMs)) throw new TypeError('INVALID_MONOTONIC_DELTA');
+        nowMs += deltaMs;
+        return nowMs;
+      }
+    });
+  }, initialMs);
+}
+
+async function advanceMonotonicClock(page, deltaMs) {
+  return page.evaluate(value => window.__move28AdvanceMonotonicClock(value), deltaMs);
+}
+
+async function advanceGuideToReviewedDuration(page) {
+  const durationMs = await page.evaluate(() => {
+    const state = window.Move28.storage.loadState();
+    const sessionId = window.Move28.state.guideSession?.id;
+    for (const week of state.plan?.weeks || []) {
+      const session = week.sessions?.find(item => item.id === sessionId);
+      if (session) return session.estimatedMinutes * 60000;
+    }
+    throw new Error('GUIDE_SESSION_NOT_REVIEWED');
+  });
+  return advanceMonotonicClock(page, durationMs);
+}
+
+async function completeGuideActions(page) {
+  const actionCount = await page.evaluate(() => window.Move28.state.guideSteps.length);
+  for (let index = 0; index < actionCount; index += 1) {
+    if (index === actionCount - 1) await advanceGuideToReviewedDuration(page);
+    await page.locator('#guideNext').click();
+  }
+}
+
 async function resetHttp(page) {
+  await installMonotonicClock(page);
   await page.goto('/index.html');
   await page.evaluate(() => {
     localStorage.clear();
@@ -101,4 +144,4 @@ async function approvePendingPlan(page) {
   await page.reload();
 }
 
-module.exports = { gymEquipment, safeIntake, safeCapability, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };
+module.exports = { gymEquipment, safeIntake, safeCapability, installMonotonicClock, advanceMonotonicClock, advanceGuideToReviewedDuration, completeGuideActions, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };

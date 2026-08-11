@@ -1,7 +1,7 @@
 'use strict';
 
 const {test,expect}=require('@playwright/test');
-const {resetHttp,completeOnboarding,approvePendingPlan}=require('./helpers/pilot-flow.cjs');
+const {resetHttp,completeOnboarding,approvePendingPlan,completeGuideActions}=require('./helpers/pilot-flow.cjs');
 
 const SAFE_READINESS=Object.freeze({time:'full',equipment:'unchanged',space:'normal',noise:'normal',energy:'normal',symptom:'none'});
 
@@ -170,7 +170,7 @@ test('已确认适配只能经adaptationId可信加载，完成绑定且不持�
   expect(loaded.sourceSessionId).toBe(loaded.session.id);
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
   const summary=page.locator('.guide-completion');await expect(summary).toBeVisible();await expect(summary).toContainText(`完成动作${actionCount} 项`);await expect(summary).toContainText('下一次训练');
   await page.getByRole('button',{name:'刚刚好'}).click();
@@ -230,7 +230,7 @@ test('公共适配入口不能用自定义回调绕过完成持久化和授权�
   },adaptationId)).toBe(true);
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   const result=await page.evaluate(id=>{
     const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
     return{record:Object.values(state.logs).find(item=>item.adaptationId===id)||null,authorized:Move28.sessionReadiness.loadConfirmedAdaptation(id)};
@@ -315,7 +315,7 @@ test('适配完成保存失败后保留授权且重试只写一条完成记录',
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
   await page.evaluate(()=>{window.__move28OriginalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=()=>{throw new Error('blocked')}});
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
   await expect(page.locator('#toast')).toContainText('完成记录保存失败');
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
@@ -335,7 +335,7 @@ test('适配完成依赖返回畸形状态时不得伪称保存成功',async({pa
   await page.getByRole('button',{name:'确认本次适配'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
   await expect(page.locator('#toast')).toContainText('完成记录保存失败');
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
@@ -362,7 +362,7 @@ test('可信反馈依赖返回畸形状态时不得显示保存成功',async({pa
   await page.getByRole('button',{name:'确认本次适配'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
   await expect(page.getByText('反馈尚未保存，请检查本机存储后重试。')).toBeVisible();
@@ -379,7 +379,7 @@ test('反馈通知回调抛异常不逆转可信保存结果',async({page})=>{
   });
   expect(opened).toBe(true);await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const record=await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).find(item=>item.feedbackCode==='appropriate'));

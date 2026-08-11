@@ -227,6 +227,26 @@ test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配�
   assert.equal(guide.buildWorkoutSteps({...session,actions:[]},catalog.exerciseCatalog),null);
 });
 
+test('workout-guide 从审核时长与固定剂量派生保守完成时长且畸形输入闭门失败',()=>{
+  const {guide,plan}=setup(),session=plan.weeks[0].sessions[0];
+  const timing=guide.deriveCompletionTiming(session);
+  assert.deepEqual(timing,{minimumElapsedMs:380000,maximumElapsedMs:86400000});
+  assert.equal(Object.isFrozen(timing),true);
+  assert.equal(guide.isPlausibleCompletionElapsed(timing,1000,381000),true);
+  for(const [start,end] of [[1000,380999],[1000,999],[1000,Infinity],[NaN,381000],[1000,86401001]])assert.equal(guide.isPlausibleCompletionElapsed(timing,start,end),false);
+  assert.equal(guide.isPlausibleCompletionElapsed(null,1000,381000),false);
+  for(const mutate of [
+    value=>{delete value.estimatedMinutes},
+    value=>{value.estimatedMinutes=0},
+    value=>{value.actions[0].sets=0},
+    value=>{value.actions[0].reps=0},
+    value=>{value.actions[0].restSec=-1},
+    value=>{value.actions=[]}
+  ]){const invalid=structuredClone(session);mutate(invalid);assert.equal(guide.deriveCompletionTiming(invalid),null)}
+  const cardio={id:'cardio',weekday:'mon',intent:'low_impact_cardio',estimatedMinutes:15,actions:[{phase:'cardio',durationMin:10,rpe:4,restSec:0}]};
+  assert.deepEqual(guide.deriveCompletionTiming(cardio),{minimumElapsedMs:600000,maximumElapsedMs:86400000});
+});
+
 test('跟练步骤忠实传递0坡度慢走和无拉力工具坐姿小腿拉伸语义',()=>{
   const {catalog,guide}=setup();
   const session={id:'semantic-contract',weekday:'mon',intent:'recovery',actions:[

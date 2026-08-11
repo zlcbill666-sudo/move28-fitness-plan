@@ -1,8 +1,8 @@
 const {test,expect}=require('@playwright/test');
-const {resetHttp,completeOnboarding,approvePendingPlan}=require('./helpers/pilot-flow.cjs');
+const {resetHttp,completeOnboarding,approvePendingPlan,completeGuideActions}=require('./helpers/pilot-flow.cjs');
 async function setupActive(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page)}
 async function openReview(page){await page.getByRole('button',{name:'第1周复盘'}).click();await expect(page.getByRole('heading',{name:'每周复盘'})).toBeVisible()}
-async function finishFirstWorkout(page){await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();const count=await page.evaluate(()=>Move28.state.guideSteps.length);for(let index=0;index<count;index+=1)await page.locator('#guideNext').click();await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible()}
+async function finishFirstWorkout(page){await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();await completeGuideActions(page);await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible()}
 
 test('weekly-review demo和pending计划不显示复盘入口',async({page})=>{await resetHttp(page);await expect(page.locator('.weekly-review-open')).toHaveCount(0);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await expect(page.locator('.weekly-review-open')).toHaveCount(0)});
 
