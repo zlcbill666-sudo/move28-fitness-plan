@@ -20,6 +20,7 @@
   // Hostile classic-script peers can replace realm intrinsics after this script loads.
   // Capture every intrinsic used by the plain-data inspection/cloning boundary once.
   const safeArrayIsArray = Array.isArray;
+  const safeObjectIs = Object.is;
   const safeGetPrototypeOf = Object.getPrototypeOf;
   const safeGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
   const safeOwnKeys = Reflect.ownKeys;
@@ -279,6 +280,31 @@
     } catch (_error) {
       throw invalidPlainData();
     }
+  }
+
+  function samePlainData(left, right) {
+    const pending = [[left, right]];
+    let compared = 0;
+    while (pending.length > 0) {
+      const pair = safeArrayPop(pending), first = pair[0], second = pair[1];
+      if (safeObjectIs(first, second)) continue;
+      if (first === null || second === null || typeof first !== 'object' || typeof second !== 'object'
+        || safeArrayIsArray(first) !== safeArrayIsArray(second) || ++compared > MAX_PLAIN_NODES) return false;
+      const firstKeys = [], secondKeys = [], firstOwnKeys = safeOwnKeys(first), secondOwnKeys = safeOwnKeys(second);
+      for (let index = 0; index < firstOwnKeys.length; index += 1) if (firstOwnKeys[index] !== 'length') safeArrayPush(firstKeys, firstOwnKeys[index]);
+      for (let index = 0; index < secondOwnKeys.length; index += 1) if (secondOwnKeys[index] !== 'length') safeArrayPush(secondKeys, secondOwnKeys[index]);
+      if (firstKeys.length !== secondKeys.length) return false;
+      for (let index = 0; index < firstKeys.length; index += 1) {
+        const key = firstKeys[index];
+        if (typeof key !== 'string' || !safeHasOwn(second, key)) return false;
+        const firstDescriptor = safeGetOwnPropertyDescriptor(first, key);
+        const secondDescriptor = safeGetOwnPropertyDescriptor(second, key);
+        if (!firstDescriptor || !secondDescriptor || !safeHasOwn(firstDescriptor, 'value')
+          || !safeHasOwn(secondDescriptor, 'value')) return false;
+        safeArrayPush(pending, [firstDescriptor.value, secondDescriptor.value]);
+      }
+    }
+    return true;
   }
 
   function ownDataValue(object, key) {
@@ -993,6 +1019,8 @@
         })))
       }));
       return Object.freeze({
+        dossierVersion: 'move28.review-dossier.v1',
+        planStatus: plan.status,
         participantId: normalizeParticipantId(state.participantId),
         planId,
         intakeRevision: state.intakeRevision,
@@ -1010,6 +1038,58 @@
         lineage: lineageSummary,
         weeks: Object.freeze(weeks)
       });
+    }
+
+    function validateReviewDossier(dossier) {
+      try {
+        const clean = clonePlainData(dossier);
+        const canonical = buildDetailedReviewDossier();
+        return canonical.planStatus === 'pending_review' && samePlainData(clean, canonical);
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    function applyReviewedPlanDecision(input, decision) {
+      const clean = clonePlainData(input);
+      if (!clean || typeof clean !== 'object' || Array.isArray(clean)
+        || Object.keys(clean).length !== 2
+        || Object.keys(clean).some(key => !['reviewerId', 'dossier'].includes(key))) throw invalidPlainData();
+      const reviewerId = sanitizeMachineId(clean.reviewerId);
+      if (!reviewerId || !clean.dossier || typeof clean.dossier !== 'object' || Array.isArray(clean.dossier)) throw invalidPlainData();
+      const canonical = buildDetailedReviewDossier();
+      if (canonical.planStatus !== 'pending_review' || !samePlainData(clean.dossier, canonical)) throw createStorageError();
+      const state = loadStateForWrite(), plan = state.plan;
+      const trustedRisk = state.intake && recomputeTrustedRisk(state.intake);
+      if (!plan || plan.status !== 'pending_review' || plan.id !== canonical.planId
+        || plan.intakeRevision !== canonical.intakeRevision || state.intakeRevision !== canonical.intakeRevision
+        || state.capabilityRevision !== canonical.capabilityRevision
+        || !hasCurrentCapabilityBinding(plan, state, { requireReview: false })
+        || !trustedRisk || !risksEqual(state.risk, trustedRisk)
+        || !['normal', 'conservative'].includes(trustedRisk.level)
+        || !passesTrustedPlanGate(plan, state)) throw createStorageError();
+      const reviewedAt = String(now());
+      if (!UTC_ISO_PATTERN.test(reviewedAt)) throw createStorageError();
+      plan.review = { status: decision, reviewerId, reviewedAt, planId: plan.id, intakeRevision: state.intakeRevision,
+        capabilityRevision: state.capabilityRevision };
+      if (decision === 'approved') {
+        plan.status = 'active';
+        delete plan.staleReason;
+        delete plan.staleAt;
+      } else {
+        plan.status = 'stale';
+        plan.staleReason = 'review_denied';
+        plan.staleAt = reviewedAt;
+      }
+      return persist(state);
+    }
+
+    function approveReviewedPlan(input) {
+      return applyReviewedPlanDecision(input, 'approved');
+    }
+
+    function denyReviewedPlan(input) {
+      return applyReviewedPlanDecision(input, 'denied');
     }
 
     function approvePlanReview(input) {
@@ -1476,7 +1556,7 @@
       return buildReviewSummary(loadState());
     }
 
-    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, approvePlanReview, recordWorkoutCompletion, recordWorkoutFeedback, recordWorkoutStop, previewScheduleShift, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
+    return Object.freeze({ loadState, saveIntake, saveCapabilityProfile, saveCapabilityProfileWithPlan, savePlan, buildDetailedReviewDossier, validateReviewDossier, approveReviewedPlan, denyReviewedPlan, approvePlanReview, recordWorkoutCompletion, recordWorkoutFeedback, recordWorkoutStop, previewScheduleShift, recordWeeklyReview, resolveWeeklyReview, clearAll, clearAllDetailed, buildReviewSummary, exportReviewSummary });
   }
 
   function createLocalParticipantId() {
@@ -1507,6 +1587,9 @@
     saveCapabilityProfileWithPlan: defaultStore.saveCapabilityProfileWithPlan,
     savePlan: defaultStore.savePlan,
     buildDetailedReviewDossier: defaultStore.buildDetailedReviewDossier,
+    validateReviewDossier: defaultStore.validateReviewDossier,
+    approveReviewedPlan: defaultStore.approveReviewedPlan,
+    denyReviewedPlan: defaultStore.denyReviewedPlan,
     approvePlanReview: defaultStore.approvePlanReview,
     recordWorkoutCompletion: defaultStore.recordWorkoutCompletion,
     recordWorkoutFeedback: defaultStore.recordWorkoutFeedback,

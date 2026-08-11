@@ -146,6 +146,55 @@ test('正式复核API拒绝错误计划、revision、复核人和非pending计�
   assert.throws(()=>store.approvePlanReview({reviewerId:'pilot-reviewer',planId:plan.id,intakeRevision:1}),error=>error.name==='StorageError');
 });
 
+test('受控复核API只接受与当前pending会话完全一致的canonical dossier',()=>{
+  const{store,storage,moduleApi,plan}=boundPlanStore(),dossier=store.buildDetailedReviewDossier();
+  assert.equal(dossier.dossierVersion,'move28.review-dossier.v1');
+  assert.equal(dossier.planStatus,'pending_review');
+  assert.equal(store.validateReviewDossier(dossier),true);
+  const serialized=JSON.stringify(dossier);
+  for(const forbidden of ['chestSymptoms','RAW HEALTH','exception','stack','healthUrl','locationHref']){
+    assert.equal(serialized.includes(forbidden),false,forbidden);
+  }
+  const before=storage.raw(moduleApi.STORAGE_KEY),tampered=structuredClone(dossier);
+  tampered.planId='other-plan';
+  assert.equal(store.validateReviewDossier(tampered),false);
+  assert.throws(()=>store.approveReviewedPlan({reviewerId:'pilot-reviewer',dossier:tampered}),error=>error.name==='StorageError');
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  assert.throws(()=>store.approveReviewedPlan({reviewerId:'pilot-reviewer',dossier,extra:true}),error=>error.name==='TypeError');
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+  const approved=store.approveReviewedPlan({reviewerId:'pilot-reviewer',dossier});
+  assert.equal(approved.plan.id,plan.id);
+  assert.equal(approved.plan.status,'active');
+  assert.equal(approved.plan.review.status,'approved');
+  assert.equal(store.validateReviewDossier(dossier),false);
+});
+
+test('复核拒绝路径只把canonical pending计划标记为返工且继续关闭训练硬门',()=>{
+  const{store,storage,moduleApi,plan}=boundPlanStore(),dossier=store.buildDetailedReviewDossier();
+  const denied=store.denyReviewedPlan({reviewerId:'pilot-reviewer',dossier});
+  assert.equal(denied.plan.id,plan.id);
+  assert.equal(denied.plan.status,'stale');
+  assert.equal(denied.plan.staleReason,'review_denied');
+  assert.equal(denied.plan.staleAt,'2030-01-02T03:04:05.000Z');
+  assert.deepEqual(denied.plan.review,{status:'denied',reviewerId:'pilot-reviewer',reviewedAt:'2030-01-02T03:04:05.000Z',planId:plan.id,intakeRevision:1,capabilityRevision:1});
+  assert.equal(store.validateReviewDossier(dossier),false);
+  const before=storage.raw(moduleApi.STORAGE_KEY);
+  assert.throws(()=>store.denyReviewedPlan({reviewerId:'pilot-reviewer',dossier}),error=>error.name==='StorageError');
+  assert.equal(storage.raw(moduleApi.STORAGE_KEY),before);
+});
+
+test('canonical dossier比较不信任加载后篡改的Object.is或Array.filter',()=>{
+  const{store}=boundPlanStore(),dossier=store.buildDetailedReviewDossier(),tampered=structuredClone(dossier);
+  tampered.planId='foreign-plan';
+  const originalIs=Object.is,originalFilter=Array.prototype.filter;
+  try{
+    Object.is=()=>true;
+    assert.equal(store.validateReviewDossier(tampered),false);
+    Object.is=originalIs;Array.prototype.filter=function(){return[]};
+    assert.equal(store.validateReviewDossier(tampered),false);
+  }finally{Object.is=originalIs;Array.prototype.filter=originalFilter}
+});
+
 test('空存储返回完整默认状态、独立副本且只使用唯一自有 key', () => {
   const storage = memoryStorage();
   const moduleApi = api();

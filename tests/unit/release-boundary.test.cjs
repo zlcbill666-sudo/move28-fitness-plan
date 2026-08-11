@@ -73,3 +73,17 @@ test('participant artifact physically excludes blocked and research media',()=>{
     assert.equal(allowed.has(required),true,required);
   }
 });
+
+test('ordinary pilot review instructions require visible local handoff and text-only blocked media',()=>{
+  const reviewer=fs.readFileSync(path.join(root,'docs/pilot/reviewer-checklist.md'),'utf8');
+  const participant=fs.readFileSync(path.join(root,'docs/pilot/participant-guide.md'),'utf8');
+  for(const document of [reviewer,participant]){
+    assert.equal(/(?:开发者\s*)?Console|控制台命令/i.test(document),false);
+    assert.match(document,/文字(?:替代|说明|指导)/);
+    assert.match(document,/正式(?:媒体)?批准|媒体.*正式批准/);
+  }
+  assert.match(reviewer,/下载复核 dossier/);
+  assert.match(reviewer,/导入/);
+  assert.match(reviewer,/拒绝并要求返工/);
+  assert.doesNotMatch(reviewer,/GIF 可加载|跟练时 GIF/);
+});

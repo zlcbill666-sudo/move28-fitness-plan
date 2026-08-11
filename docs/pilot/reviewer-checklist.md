@@ -19,13 +19,9 @@
 
 参与者完成问卷和能力校准后，页面必须显示“人工一致性复核完成前不会开放训练入口”，且没有训练按钮。
 
-在参与者当前浏览器内通过现场操作或一对一屏幕共享打开开发者 Console，执行：
+在页面“计划等待人工复核”区域点击“下载复核 dossier”。该 JSON 只含固定脱敏字段，不含原始健康答案、异常详情、完整浏览器存储或网址健康数据。不要粘贴到普通群聊。
 
-```js
-Move28.storage.buildDetailedReviewDossier()
-```
-
-该对象用于当前会话复核，不要粘贴到普通群聊，不要保存完整 localStorage。至少核对：
+由指定复核人查看文件并至少核对：
 
 - `participantId`、`planId`、`intakeRevision`、`capabilityRevision`；
 - `riskLevel`、`riskCodes`、`ruleVersion`；
@@ -33,9 +29,11 @@ Move28.storage.buildDetailedReviewDossier()
 - `selectedSetting`、`availableEquipment`、`availableWeekdays`；
 - `validationResult === "passed"`；
 - `lineage.validationResult === "passed"`，且 `lineage.currentPlanId === planId`；
-- 4 周计划、每周训练日、动作、场景、器械、剂量和 GIF。
+- 4 周计划、每周训练日、动作、场景、器械、剂量和文字动作指导。
 
-若函数抛错、字段缺失、revision 不一致或 validation 不是 `passed`，立即停止，不批准。
+完成文件检查后，回到参与者生成该计划的同一浏览器，展开“指定复核人入口”，导入刚下载的 dossier。页面必须显示“已匹配当前本机候选计划”。若下载失败、导入失败、字段缺失、revision 不一致或 validation 不是 `passed`，立即停止，不批准。
+
+该流程不上传 dossier，也不能跨浏览器、跨设备或跨 plan/revision 批准。
 
 ## 3. 风险与能力硬门
 
@@ -53,7 +51,8 @@ Move28.storage.buildDetailedReviewDossier()
 
 - [ ] 每节 `setting` 与 dossier 的 `selectedSetting` 一致；当前试用不允许训练当天临时切换场景。
 - [ ] 每个动作至少一组 `equipmentOptions` 能由 dossier 的 `availableEquipment` 满足；没有要求参与者自创替代动作。
-- [ ] 每个动作 ID 来自审核目录，GIF 可加载，动作对象的 `reviewStatus === "approved"`。
+- [ ] 每个动作 ID 来自审核目录，动作内容的 `reviewStatus === "approved"`。
+- [ ] 当前参与者界面使用已复核文字步骤；任何 blocked GIF/视频都不要求“正常”，也不得被本次计划复核视为已获媒体批准。
 - [ ] 禁忌动作已排除，动作模式没有因回退而失真。
 - [ ] `high_seat`、`close_wall` 等变式只用于匹配动作，并在跟练页显示可信中文指导，不显示内部枚举。
 - [ ] 居家计划不混入 dossier 未列出的健身房器械；健身房计划不假设 `availableEquipment` 未列出的器械。
@@ -69,23 +68,21 @@ Move28.storage.buildDetailedReviewDossier()
 
 ## 6. 批准
 
-只有第 2–5 节全部通过时执行：
+只有第 2–5 节全部通过时：
 
-```js
-const state = Move28.storage.loadState();
-Move28.storage.approvePlanReview({
-  reviewerId: 'pilot-reviewer',
-  planId: state.plan.id,
-  intakeRevision: state.intakeRevision
-});
-```
+1. 在“指定复核人入口”填写受控复核人编号；
+2. 逐项勾选页面上的三项批准确认；
+3. 点击“批准并开放当前计划”。
+
+页面会在保存决定前再次比对导入 dossier 与当前本机 canonical plan、intake revision、capability revision 和 lineage。任一字段变化都会固定失败并保持训练锁定。
 
 随后刷新并确认：
 
 - [ ] `plan.status === "active"`；
 - [ ] `plan.review.capabilityRevision === state.capabilityRevision`；
 - [ ] 首页出现“开始本节训练”；
-- [ ] 打开首节跟练时 GIF、剂量、受控变式、安全停止按钮正常；
+- [ ] 打开首节跟练时文字动作指导、剂量、受控变式、安全停止按钮正常；
+- [ ] 动作媒体继续使用文字替代，直到媒体另行通过正式批准；
 - [ ] 刷新后训练入口仍存在。
 
 ## 7. 周调整重新复核
@@ -102,7 +99,7 @@ Move28.storage.approvePlanReview({
 
 任一项失败：
 
-1. 不执行批准命令；
+1. 在已匹配当前会话的复核面板点击“拒绝并要求返工”；若 dossier 无法匹配，则保持 pending 并停止；
 2. 在 `issue-log-template.md` 记录固定错误提示、Plan ID、revision、步骤和复现条件；
 3. 不记录完整健康答案；
 4. 修复后使用新构建重新跑完整门禁和本清单。
