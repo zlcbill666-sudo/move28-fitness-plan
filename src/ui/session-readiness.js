@@ -80,12 +80,12 @@ function sessionSummary(session){
   return `<h4>${escapeHtml(sessionIntentLabel(session.intent))}</h4><ul>${safeArrayJoin(rows,'')}</ul><small>${Number.isSafeInteger(session.estimatedMinutes)?session.estimatedMinutes:'—'}分钟</small>`;
 }
 const FIELD_CONFIG=Object.freeze([
-  ['time','可用时间',[['full','按原计划时长'],['20_min','只有20分钟'],['15_min','只有15分钟']]],
-  ['equipment','器械条件',[['unchanged','与计划一致'],['bodyweight_only','仅徒手与支持条件']]],
-  ['space','空间条件',[['normal','空间正常'],['limited','空间有限']]],
-  ['noise','噪声条件',[['normal','噪声不受限'],['quiet_only','只能安静训练']]],
-  ['energy','今日精力',[['normal','正常'],['low','偏低']]],
-  ['symptom','身体信号',[['none','没有新发不适'],['pain','出现疼痛'],['warning','出现警示信号']]]
+  ['time','可用时间',[['','请选择'],['full','按原计划时长'],['20_min','只有20分钟'],['15_min','只有15分钟']]],
+  ['equipment','器械条件',[['','请选择'],['unchanged','与计划一致'],['bodyweight_only','仅徒手与支持条件']]],
+  ['space','空间条件',[['','请选择'],['normal','空间正常'],['limited','空间有限']]],
+  ['noise','噪声条件',[['','请选择'],['normal','噪声不受限'],['quiet_only','只能安静训练']]],
+  ['energy','今日精力',[['','请选择'],['normal','正常'],['low','偏低']]],
+  ['symptom','身体信号',[['','请选择'],['none','没有新发不适'],['pain','出现疼痛'],['warning','出现警示信号']]]
 ]);
 function readinessFormMarkup(){
   const fields=FIELD_CONFIG.map(field=>`<label>${escapeHtml(field[1])}<select name="${field[0]}">${field[2].map(option=>`<option value="${option[0]}">${escapeHtml(option[1])}</option>`).join('')}</select></label>`).join('');
@@ -96,6 +96,11 @@ function readForm(form){
   const input={};
   for(let index=0;index<READINESS_FIELDS.length;index+=1){const field=READINESS_FIELDS[index],control=form.elements.namedItem(field),value=control&&control.value;if(typeof value!=='string'||!safeArrayIncludes(READINESS_VALUES[field],value))return null;input[field]=value}
   return input;
+}
+function showIncomplete(form,resultSlot){
+  resultSlot.innerHTML=`<section class='readiness-status warning readiness-incomplete'><b>信息未完成</b><h3>请先完成全部 6 项选择</h3><p>每一项都需要由你主动选择后才能检查今天状态。</p></section>`;
+  for(let index=0;index<READINESS_FIELDS.length;index+=1){const field=READINESS_FIELDS[index],control=form.elements.namedItem(field),value=control&&control.value;if(typeof value!=='string'||!safeArrayIncludes(READINESS_VALUES[field],value)){try{if(control&&typeof control.focus==='function')control.focus()}catch(_error){}break}}
+  return false;
 }
 function selectedSupport(form){const result=[];for(let index=0;index<BODYWEIGHT_SUPPORT.length;index+=1){const item=BODYWEIGHT_SUPPORT[index],control=form.querySelector(`input[name="support"][value="${item.id}"]`);if(control&&control.checked)safeArrayPush(result,item.id)}return result}
 function blockedMarkup(route){
@@ -131,7 +136,7 @@ function createSessionReadiness(options){
     };
   }
   function check(){
-    pendingRecord=null;resultSlot.innerHTML='';const readinessInput=readForm(form);if(!readinessInput||!trustedRoute){resultSlot.innerHTML=blockedMarkup('unavailable');return false}
+    pendingRecord=null;resultSlot.innerHTML='';const readinessInput=readForm(form);if(!readinessInput)return showIncomplete(form,resultSlot);if(!trustedRoute){resultSlot.innerHTML=blockedMarkup('unavailable');return false}
     let route;try{route=clonePureData(trustedRoute(readinessInput))}catch(_error){route=null}if(!route||route.version!=='session-readiness.v1'){resultSlot.innerHTML=blockedMarkup('unavailable');return false}
     if(route.route==='keep_session'){renderKeep(readinessInput);return true}
     if(route.route!=='adapt_candidate'){resultSlot.innerHTML=blockedMarkup(route.route);return false}
@@ -145,7 +150,7 @@ function createSessionReadiness(options){
     form.reset();supportSlot.hidden=true;resultSlot.innerHTML='';lastFocus=root.document&&root.document.activeElement;rootElement.classList.add('open');rootElement.setAttribute('aria-hidden','false');if(root.document&&root.document.body)root.document.body.classList.add('body-readiness-open');const first=form.querySelector('select');if(first&&typeof first.focus==='function')first.focus();return true;
   }
   form.addEventListener('submit',event=>{event.preventDefault();check()});
-  form.elements.namedItem('equipment').addEventListener('change',event=>{supportSlot.hidden=event.target.value!=='bodyweight_only';pendingRecord=null;resultSlot.innerHTML=''});
+  for(let index=0;index<READINESS_FIELDS.length;index+=1){const field=READINESS_FIELDS[index],control=form.elements.namedItem(field);control.addEventListener('change',event=>{if(field==='equipment')supportSlot.hidden=event.target.value!=='bodyweight_only';pendingRecord=null;resultSlot.innerHTML=''})}
   closeButton.addEventListener('click',close);
   rootElement.addEventListener('click',event=>{if(event.target===rootElement)close()});
   rootElement.addEventListener('keydown',event=>{if(event.key==='Escape'){close();return}if(event.key!=='Tab')return;const focusable=[...rootElement.querySelectorAll('button:not([hidden]),select:not([hidden]),input:not([hidden])')].filter(item=>!item.disabled);if(!focusable.length)return;const first=focusable[0],last=focusable[focusable.length-1];if(event.shiftKey&&root.document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&root.document.activeElement===last){event.preventDefault();first.focus()}});

@@ -53,6 +53,17 @@ test('缺失、未知字段、错误类型和非法枚举统一固定fail closed
   assert.deepEqual(api.routeSessionReadiness(missingPain),failed);
 });
 
+test('六个安全敏感字段的空值或原始非法值统一固定fail closed且不回显',()=>{
+  clearMove28ModuleCache();const api=loadScript('sessionReadiness'),failed=expected('stop',['input_invalid']);
+  for(const field of Object.keys(BASE)){
+    const unanswered={...BASE,[field]:''},raw={...BASE,[field]:'RAW_SECRET_EXCEPTION'};
+    assert.deepEqual(api.routeSessionReadiness(unanswered),failed);
+    const result=api.routeSessionReadiness(raw);
+    assert.deepEqual(result,failed);
+    assert.equal(JSON.stringify(result).includes(raw[field]),false);
+  }
+});
+
 test('继承字段和Object.prototype污染不能补齐输入',()=>{
   clearMove28ModuleCache();const api=loadScript('sessionReadiness');const failed=expected('stop',['input_invalid']);
   const inherited=Object.assign(Object.create({symptom:'none'}),{time:'full',equipment:'unchanged',space:'normal',noise:'normal',energy:'normal'});
