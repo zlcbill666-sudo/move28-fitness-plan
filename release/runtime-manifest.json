@@ -46,6 +46,7 @@
     ".git/",
     "assets/exercises/",
     "assets/gifs/",
+    "dist/",
     "docs/handoff/",
     "docs/handoffs/",
     "docs/plans/",

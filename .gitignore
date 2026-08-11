@@ -1,6 +1,7 @@
 node_modules/
 playwright-report/
 test-results/
+/dist/
 
 # Local research/build outputs are never participant release inputs.
 media-build/
