@@ -156,6 +156,8 @@ test('空存储返回完整默认状态、独立副本且只使用唯一自有 k
   first.consent.version = 'changed';
   assert.deepEqual(store.loadState(), DEFAULT_STATE);
   assert.deepEqual(moduleApi.OWNED_KEYS, ['move28-pilot-v1','move28-tracker-v1','move28-current-day','move28-music-enabled','move28-music-volume']);
+  assert.deepEqual(moduleApi.LOCAL_STORAGE_KEYS, moduleApi.OWNED_KEYS);
+  assert.deepEqual(moduleApi.SESSION_STORAGE_KEYS, ['move28-onboarding-draft-v1','move28-capability-draft-v1']);
   assert.ok(storage.calls.every(([, key]) => key === moduleApi.STORAGE_KEY));
   assert.equal(storage.length, 0);
 });

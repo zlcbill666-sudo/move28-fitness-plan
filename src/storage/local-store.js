@@ -56,7 +56,10 @@
   const SCHEMA_VERSION = 1;
   const CONSENT_VERSION = 'pilot-v1';
   const OWNED_KEYS = Object.freeze([STORAGE_KEY, 'move28-tracker-v1', 'move28-current-day', 'move28-music-enabled', 'move28-music-volume']);
+  const LOCAL_STORAGE_KEYS = OWNED_KEYS;
   const ONBOARDING_DRAFT_KEY = 'move28-onboarding-draft-v1';
+  const CAPABILITY_DRAFT_KEY = 'move28-capability-draft-v1';
+  const SESSION_STORAGE_KEYS = Object.freeze([ONBOARDING_DRAFT_KEY, CAPABILITY_DRAFT_KEY]);
   const INVALID_DATA_MESSAGE = 'Invalid plain data';
   const READ_ERROR_MESSAGE = 'Unable to read local participant state';
   const SAVE_ERROR_MESSAGE = 'Unable to save local participant state';
@@ -1490,7 +1493,10 @@
     SCHEMA_VERSION,
     CONSENT_VERSION,
     OWNED_KEYS,
+    LOCAL_STORAGE_KEYS,
     ONBOARDING_DRAFT_KEY,
+    CAPABILITY_DRAFT_KEY,
+    SESSION_STORAGE_KEYS,
     RUNTIME_STOP_REASON_CODES,
     createLocalStore,
     migrateState,

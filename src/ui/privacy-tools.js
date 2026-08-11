@@ -7,9 +7,14 @@
 'use strict';
 const trustedExport=typeof storageApi.exportReviewSummary==='function'?storageApi.exportReviewSummary:null;
 const trustedClear=typeof storageApi.clearAllDetailed==='function'?storageApi.clearAllDetailed:null;
-const DRAFT_KEY=typeof storageApi.ONBOARDING_DRAFT_KEY==='string'?storageApi.ONBOARDING_DRAFT_KEY:'move28-onboarding-draft-v1';
+const LOCAL_FAILURE_SCOPES=Object.freeze(['local.pilot','local.tracker','local.currentDay','local.musicEnabled','local.musicVolume']);
+const LOCAL_FAILURE_SCOPE_SET=new Set(LOCAL_FAILURE_SCOPES);
+const SESSION_STORAGE_ENTRIES=Object.freeze([
+  Object.freeze({key:'move28-onboarding-draft-v1',scope:'session.onboardingDraft'}),
+  Object.freeze({key:'move28-capability-draft-v1',scope:'session.capabilityDraft'})
+]);
 let trustedSession=null;
-try{const candidate=root.sessionStorage;if(candidate&&typeof candidate.getItem==='function'&&typeof candidate.removeItem==='function'){candidate.getItem(DRAFT_KEY);trustedSession=candidate}}catch(_error){trustedSession=null}
+try{const candidate=root.sessionStorage;if(candidate&&typeof candidate.getItem==='function'&&typeof candidate.removeItem==='function')trustedSession=candidate}catch(_error){trustedSession=null}
 function fixedFailure(status='failed'){return Object.freeze({ok:false,status})}
 function summaryFilename(summary){const id=summary&&typeof summary.participantId==='string'&&/^pilot-[a-z0-9]{1,12}$/.test(summary.participantId)?summary.participantId:'pilot-local';return`move28-review-summary-${id}.json`}
 function downloadReviewSummary(summary,environment=root){
@@ -26,11 +31,16 @@ function downloadReviewSummary(summary,environment=root){
 function clearAllLocalData(){
   const failed=new Set();let localResult=null;
   try{localResult=trustedClear&&trustedClear()}catch(_error){localResult=null}
-  if(!localResult||localResult.ok!==true){for(const scope of localResult&&Array.isArray(localResult.failedScopes)?localResult.failedScopes:['local'])failed.add(scope)}
-  if(!trustedSession)failed.add('session.onboardingDraft');
-  else{
-    try{trustedSession.removeItem(DRAFT_KEY)}catch(_error){failed.add('session.onboardingDraft')}
-    try{if(trustedSession.getItem(DRAFT_KEY)!==null)failed.add('session.onboardingDraft')}catch(_error){failed.add('session.onboardingDraft')}
+  if(!localResult||localResult.ok!==true){
+    const reported=localResult&&Array.isArray(localResult.failedScopes)?localResult.failedScopes:[];
+    for(const scope of LOCAL_FAILURE_SCOPES)if(reported.includes(scope))failed.add(scope);
+    if(!reported.some(scope=>LOCAL_FAILURE_SCOPE_SET.has(scope)))for(const scope of LOCAL_FAILURE_SCOPES)failed.add(scope);
+  }
+  if(!trustedSession){
+    for(const entry of SESSION_STORAGE_ENTRIES)failed.add(entry.scope);
+  }else{
+    for(const entry of SESSION_STORAGE_ENTRIES){try{trustedSession.removeItem(entry.key)}catch(_error){failed.add(entry.scope)}}
+    for(const entry of SESSION_STORAGE_ENTRIES){try{if(trustedSession.getItem(entry.key)!==null)failed.add(entry.scope)}catch(_error){failed.add(entry.scope)}}
   }
   const failedScopes=Object.freeze([...failed]);
   return Object.freeze({ok:failedScopes.length===0,status:failedScopes.length===0?'deleted':'partial_failure',failedScopes});
