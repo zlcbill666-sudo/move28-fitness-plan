@@ -1,7 +1,9 @@
 'use strict';
 
 const {test,expect}=require('@playwright/test');
-const {resetHttp,completeOnboarding,approvePendingPlan}=require('./helpers/pilot-flow.cjs');
+const {resetHttp,completeOnboarding,approvePendingPlan,completeGuideActions}=require('./helpers/pilot-flow.cjs');
+
+const SAFE_READINESS=Object.freeze({time:'full',equipment:'unchanged',space:'normal',noise:'normal',energy:'normal',symptom:'none'});
 
 async function setup(page){
   await resetHttp(page);
@@ -21,10 +23,15 @@ async function selectCardio(page){
   await expect(page.locator('#todayCard h3')).toHaveText('低冲击有氧');
 }
 
+async function selectReadiness(page,overrides={}){
+  const answers={...SAFE_READINESS,...overrides};
+  for(const [field,value] of Object.entries(answers))await page.locator(`select[name=${field}]`).selectOption(value);
+}
+
 async function previewBodyweight(page){
   await selectCardio(page);
   await openReadiness(page);
-  await page.getByLabel('器械条件').selectOption('bodyweight_only');
+  await selectReadiness(page,{equipment:'bodyweight_only'});
   await page.getByRole('button',{name:'检查今天状态'}).click();
   await expect(page.locator('.readiness-comparison')).toBeVisible();
 }
@@ -43,21 +50,54 @@ async function setupWithMalformedStorageResult(page,method){
 
 test.beforeEach(async({page})=>setup(page));
 
-test('默认保持原计划，只有显式检查后才开放原session跟练',async({page})=>{
+test('六项默认均为显式请选择，未回答提交固定阻断并聚焦首项',async({page})=>{
   await openReadiness(page);
-  await expect(page.getByLabel('可用时间')).toHaveValue('full');
-  await expect(page.getByLabel('器械条件')).toHaveValue('unchanged');
-  await expect(page.getByLabel('空间条件')).toHaveValue('normal');
-  await expect(page.getByLabel('噪声条件')).toHaveValue('normal');
-  await expect(page.getByLabel('今日精力')).toHaveValue('normal');
-  await expect(page.getByLabel('身体信号')).toHaveValue('none');
-  await expect(page.getByRole('button',{name:'按原计划继续'})).toHaveCount(0);
-  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
+  const fields=['time','equipment','space','noise','energy','symptom'];
+  for(const field of fields){
+    const select=page.locator(`select[name=${field}]`);
+    await expect(select).toHaveValue('');
+    await expect(select.locator('option:checked')).toHaveText('请选择');
+  }
   await page.getByRole('button',{name:'检查今天状态'}).click();
+  await expect(page.getByRole('heading',{name:'请先完成全部 6 项选择'})).toBeVisible();
+  await expect(page.locator('select[name=time]')).toBeFocused();
+  await expect(page.locator('.readiness-result button')).toHaveCount(0);
+  await expect(page.locator('.readiness-comparison')).toHaveCount(0);
+  await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
+  await page.locator('select[name=time]').selectOption('full');
+  await page.locator('select[name=equipment]').selectOption('unchanged');
+  await page.getByRole('button',{name:'检查今天状态'}).click();
+  await expect(page.getByRole('heading',{name:'请先完成全部 6 项选择'})).toBeVisible();
+  await expect(page.locator('select[name=space]')).toBeFocused();
+  await expect(page.locator('.readiness-result button')).toHaveCount(0);
+  await page.evaluate(()=>{
+    const select=document.querySelector('select[name=time]'),option=document.createElement('option');
+    option.value='RAW_SECRET_EXCEPTION';option.textContent='未知选项';select.append(option);select.value=option.value;
+  });
+  await page.getByRole('button',{name:'检查今天状态'}).click();
+  await expect(page.getByRole('heading',{name:'请先完成全部 6 项选择'})).toBeVisible();
+  await expect(page.locator('.readiness-result')).not.toContainText('RAW_SECRET_EXCEPTION');
+});
+
+test('键盘主动完成六项后保持原路线，刷新重开恢复六项空值',async({page})=>{
+  await openReadiness(page);
+  const expected=Object.entries(SAFE_READINESS);
+  for(const [field,value] of expected){
+    await expect(page.locator(`select[name=${field}]`)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator(`select[name=${field}]`)).toHaveValue(value);
+    await page.keyboard.press('Tab');
+  }
+  await expect(page.getByRole('button',{name:'检查今天状态'})).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(page.locator('.readiness-result')).toContainText('今天可以按原计划进行');
   await page.getByRole('button',{name:'按原计划继续'}).click();
   await expect(page.locator('#sessionReadinessView')).toHaveAttribute('aria-hidden','true');
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
+  await page.reload();
+  await openReadiness(page);
+  for(const [field] of expected)await expect(page.locator(`select[name=${field}]`)).toHaveValue('');
+  await expect(page.getByRole('button',{name:'按原计划继续'})).toHaveCount(0);
 });
 
 test('警示、疼痛和不可用路由都不显示任何继续训练入口',async({page})=>{
@@ -68,6 +108,7 @@ test('警示、疼痛和不可用路由都不显示任何继续训练入口',asy
   ];
   for(const [label,value,message] of cases){
     await openReadiness(page);
+    await selectReadiness(page);
     await page.getByLabel(label).selectOption(value);
     await page.getByRole('button',{name:'检查今天状态'}).click();
     await expect(page.locator('.readiness-result')).toContainText(message);
@@ -129,7 +170,7 @@ test('已确认适配只能经adaptationId可信加载，完成绑定且不持�
   expect(loaded.sourceSessionId).toBe(loaded.session.id);
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
   const summary=page.locator('.guide-completion');await expect(summary).toBeVisible();await expect(summary).toContainText(`完成动作${actionCount} 项`);await expect(summary).toContainText('下一次训练');
   await page.getByRole('button',{name:'刚刚好'}).click();
@@ -189,7 +230,7 @@ test('公共适配入口不能用自定义回调绕过完成持久化和授权�
   },adaptationId)).toBe(true);
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   const result=await page.evaluate(id=>{
     const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
     return{record:Object.values(state.logs).find(item=>item.adaptationId===id)||null,authorized:Move28.sessionReadiness.loadConfirmedAdaptation(id)};
@@ -249,6 +290,7 @@ test('适配训练启动抛异常时关闭授权且不开放跟练',async({page}
 
 test('安全停止流程不依赖模块加载后的数组迭代器',async({page})=>{
   await openReadiness(page);
+  await selectReadiness(page);
   await page.getByRole('button',{name:'检查今天状态'}).click();
   await page.getByRole('button',{name:'按原计划继续'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
@@ -273,7 +315,7 @@ test('适配完成保存失败后保留授权且重试只写一条完成记录',
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
   await page.evaluate(()=>{window.__move28OriginalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=()=>{throw new Error('blocked')}});
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
   await expect(page.locator('#toast')).toContainText('完成记录保存失败');
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
@@ -293,7 +335,7 @@ test('适配完成依赖返回畸形状态时不得伪称保存成功',async({pa
   await page.getByRole('button',{name:'确认本次适配'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','false');
   await expect(page.locator('#toast')).toContainText('完成记录保存失败');
   expect(await page.evaluate(id=>Move28.sessionReadiness.loadConfirmedAdaptation(id),adaptationId)).not.toBeNull();
@@ -320,7 +362,7 @@ test('可信反馈依赖返回畸形状态时不得显示保存成功',async({pa
   await page.getByRole('button',{name:'确认本次适配'}).click();
   await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
   await expect(page.getByText('反馈尚未保存，请检查本机存储后重试。')).toBeVisible();
@@ -337,7 +379,7 @@ test('反馈通知回调抛异常不逆转可信保存结果',async({page})=>{
   });
   expect(opened).toBe(true);await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const actionCount=await page.evaluate(()=>Move28.state.guideSteps.length);
-  for(let index=0;index<actionCount;index+=1)await page.locator('#guideNext').click();
+  await completeGuideActions(page);
   await page.getByRole('button',{name:'刚刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const record=await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('move28-pilot-v1')).logs).find(item=>item.feedbackCode==='appropriate'));

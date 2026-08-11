@@ -5,8 +5,11 @@
     "node": ">=20"
   },
   "scripts": {
+    "build": "node scripts/build-release.cjs",
     "test": "node --test",
+    "test:artifact": "node --test tests/release-artifact.invariant.cjs",
     "test:unit": "node --test",
+    "test:release": "node --test tests/unit/pages-workflow.test.cjs tests/unit/release-boundary.test.cjs tests/unit/release-build.test.cjs",
     "test:e2e": "playwright test",
     "test:all": "npm test && npm run test:e2e"
   },

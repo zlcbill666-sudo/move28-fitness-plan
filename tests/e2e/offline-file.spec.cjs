@@ -73,6 +73,7 @@ test('双击打开时首屏、纯文字动作库和跟练入口均可离线使�
     'src/ui/workout-guide.js',
     'src/ui/weekly-review.js',
     'src/ui/privacy-tools.js',
+    'src/ui/review-handoff.js',
     'src/app.js'
   ]);
 

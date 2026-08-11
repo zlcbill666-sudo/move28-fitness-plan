@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const fs = require('node:fs');
-const { safeIntake, completeCapability, completeOnboarding, approvePendingPlan, resetHttp } = require('./helpers/pilot-flow.cjs');
+const { safeIntake, completeCapability, completeOnboarding, approvePendingPlan, resetHttp, answerSafeReadiness } = require('./helpers/pilot-flow.cjs');
 
 const projectRoot = process.env.MOVE28_OFFLINE_ROOT
   ? path.resolve(process.env.MOVE28_OFFLINE_ROOT)
@@ -63,6 +63,7 @@ test('file://完成问卷、生成、刷新、审核和纯文字跟练音乐加�
   expect(state.plan.status).toBe('pending_review');
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始今天训练' }).click();
+  await answerSafeReadiness(page);
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
@@ -91,7 +92,7 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
   await page.getByRole('button', { name: /确认并保存结果/ }).click();
   await expect(page.locator('.ob-saved')).toContainText('请完成能力校准');
   await completeCapability(page);
-  await expect(page.locator('.cap-result')).toContainText('已保存到本机');
+  await expect(page.locator('.cap-result')).toContainText('待人工复核（pending_review）');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityRevision).toBe(1);
   expect(state.plan.status).toBe('pending_review');
@@ -106,6 +107,7 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
     window.Move28.ui.setPlanContext({ mode: 'generated', plan: saved.plan, logs: saved.logs || {} });
   });
   await page.getByRole('button', { name: '开始今天训练' }).click();
+  await answerSafeReadiness(page);
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();

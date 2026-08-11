@@ -121,6 +121,9 @@ test('all static modules load through CommonJS with useful exports', async (t) =
     assert.equal(typeof api.saveIntake, 'function');
     assert.equal(typeof api.saveCapabilityProfileWithPlan, 'function');
     assert.equal(typeof api.savePlan, 'function');
+    assert.equal(typeof api.validateReviewDossier, 'function');
+    assert.equal(typeof api.approveReviewedPlan, 'function');
+    assert.equal(typeof api.denyReviewedPlan, 'function');
     assert.equal(typeof api.recordWeeklyReview, 'function');
     assert.equal(typeof api.resolveWeeklyReview, 'function');
     assert.equal(typeof api.previewScheduleShift, 'function');
@@ -192,6 +195,11 @@ test('all static modules load through CommonJS with useful exports', async (t) =
   await t.test('privacy tools export local-only controls without a DOM',()=>{
     clearMove28ModuleCache();const api=require(modules.privacyTools);
     assert.equal(typeof api.createPrivacyTools,'function');assert.equal(typeof api.downloadReviewSummary,'function');
+  });
+
+  await t.test('review handoff exports local dossier and decision controls without a DOM',()=>{
+    clearMove28ModuleCache();const api=require(modules.reviewHandoff);
+    assert.equal(typeof api.createReviewHandoff,'function');assert.equal(typeof api.downloadReviewDossier,'function');
   });
 
   await t.test('app exports init without initializing the DOM', () => {

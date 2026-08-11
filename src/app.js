@@ -3,7 +3,7 @@ const isCommonJS=typeof module==='object'&&module.exports;
 const Move28=isCommonJS?require('./namespace.js'):(root.Move28=root.Move28||{});
 if(isCommonJS){
   Move28.data=Move28.data||{};Move28.domain=Move28.domain||{};Move28.storage=Move28.storage||{};
-  Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};Move28.capabilityAssessment=Move28.capabilityAssessment||{};Move28.privacy=Move28.privacy||{};Move28.sessionReadiness=Move28.sessionReadiness||{};
+  Move28.ui=Move28.ui||{};Move28.guide=Move28.guide||{};Move28.onboarding=Move28.onboarding||{};Move28.capabilityAssessment=Move28.capabilityAssessment||{};Move28.privacy=Move28.privacy||{};Move28.reviewHandoff=Move28.reviewHandoff||{};Move28.sessionReadiness=Move28.sessionReadiness||{};
   Object.assign(Move28.data,require('./data/exercise-catalog.js'),require('./data/legacy-demo-plan.js'),require('./data/tracker-fields.js'));
   Object.assign(Move28.domain,require('./domain/risk-engine.js'),require('./domain/capability-engine.js'),require('./domain/movement-matcher.js'),require('./domain/plan-validator.js'),require('./domain/plan-generator.js'),require('./domain/plan-explanation.js'),require('./domain/weekly-adaptation.js'),require('./domain/schedule-shift.js'),require('./domain/session-readiness.js'),require('./domain/daily-execution-validator.js'),require('./domain/session-adaptation.js'));
   Object.assign(Move28.storage,require('./storage/local-store.js'));
@@ -14,6 +14,7 @@ if(isCommonJS){
   Move28.capabilityAssessment=require('./ui/capability-assessment.js');
   Move28.weeklyReview=require('./ui/weekly-review.js');
   Move28.privacy=require('./ui/privacy-tools.js');
+  Move28.reviewHandoff=require('./ui/review-handoff.js');
 }
 const api=factory(root,Move28);Move28.init=api.init;if(isCommonJS)module.exports=api;else api.init();
 })(globalThis,function(root,Move28){
@@ -51,6 +52,7 @@ const trustedSaveCapabilityProfile=typeof Move28.storage.saveCapabilityProfile==
 const trustedSaveCapabilityProfileWithPlan=typeof Move28.storage.saveCapabilityProfileWithPlan==='function'?Move28.storage.saveCapabilityProfileWithPlan:null;
 const trustedResolveWeeklyReview=typeof Move28.storage.resolveWeeklyReview==='function'?Move28.storage.resolveWeeklyReview:null;
 const trustedCreatePrivacyTools=Move28.privacy&&typeof Move28.privacy.createPrivacyTools==='function'?Move28.privacy.createPrivacyTools:null;
+const trustedCreateReviewHandoff=Move28.reviewHandoff&&typeof Move28.reviewHandoff.createReviewHandoff==='function'?Move28.reviewHandoff.createReviewHandoff:null;
 const RESCREEN_STEP_BY_REASON=Object.freeze({sudden_severe_pain:6,unable_to_bear_weight:6,joint_pain_persisted_or_worsened:6,chest_pain_or_pressure:7,near_faint_or_faint:7,abnormal_shortness_of_breath:7,neurologic_or_consciousness_change:7});
 function rescreenStepForReason(reasonCode){return RESCREEN_STEP_BY_REASON[reasonCode]??7}
 function plainRecord(value){
@@ -186,7 +188,7 @@ function renderWeeklyEntry(state,context){
   const target=weeklyReviewTarget(state,context);slot.innerHTML=target?`<button class="cta weekly-review-open" type="button">${target.reviewId?'继续决定':'第'+target.weekNumber+'周复盘'}</button><small>调整需由你确认，并重新经过人工一致性复核。</small>`:'';
   const button=slot.querySelector('button');if(button)button.onclick=()=>Move28.weeklyReviewController&&Move28.weeklyReviewController.open(target);
 }
-function activatePlanView(state){const context=contextFromState(state);Move28.ui.setPlanContext(context);renderWeeklyEntry(state,context);return context}
+function activatePlanView(state){const context=contextFromState(state);Move28.ui.setPlanContext(context);renderWeeklyEntry(state,context);if(Move28.reviewHandoffController)Move28.reviewHandoffController.render(state);return context}
 function handoffToCapability(){
   if(!Move28.capabilityController)return;
   const launch=()=>{
@@ -224,7 +226,7 @@ function handleCapabilityComplete(profile){
   const capabilityBoundPlan=Object.assign({},generated,{capabilityRevision:current.capabilityRevision+1});
   const persisted=trustedSaveCapabilityProfileWithPlan(profile,capabilityBoundPlan);
   activatePlanView(persisted);
-  return{message:'能力档案与4周计划已保存到本机；人工一致性复核完成前不会开放训练入口。'};
+  return{message:'待人工复核（pending_review）：候选4周计划已保存到当前浏览器。为避免未经复核的动作、器械或剂量直接进入训练，人工一致性复核完成前不会开放训练入口，训练入口保持锁定。下一步请联系指定复核人或备用联系人；复核后回到同一台设备和同一个浏览器，刷新状态。'};
 }
 function revokeAdaptation(adaptationId){
   const revoke=Move28.sessionReadiness&&Move28.sessionReadiness.revokeConfirmedAdaptation;
@@ -339,6 +341,8 @@ function init(){
   }
   const privacyRoot=$('#privacyTools');
   if(privacyRoot&&trustedCreatePrivacyTools)Move28.privacyController=trustedCreatePrivacyTools({rootElement:privacyRoot});
+  const reviewRoot=$('#reviewHandoff');
+  if(reviewRoot&&trustedCreateReviewHandoff)Move28.reviewHandoffController=trustedCreateReviewHandoff({rootElement:reviewRoot,onDecision:activatePlanView,state:Move28.storage.loadState()});
   activatePlanView(Move28.storage.loadState());
   ui.renderExercises();ui.renderDayList();ui.renderForm();ui.renderOverview();ui.renderSafety();ui.reveal();
   return Move28;
