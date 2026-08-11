@@ -175,15 +175,25 @@ Move28.toggleWorkoutMusic=()=>{
   updateMusicUI();
 };
 Move28.setWorkoutVolume=value=>{const workoutAudio=getWorkoutAudio(),numeric=Number(value);state.musicVolume=Number.isFinite(numeric)?Math.max(0,Math.min(1,numeric/100)):0.32;workoutAudio.volume=state.musicVolume;persistMusicPreference('move28-music-volume',String(Math.round(state.musicVolume*100)))};
+function ensureGuideStopButton(){
+  let button=$('#guideStop');if(button)return button;
+  const foot=root.document&&root.document.querySelector('.guide-foot'),next=$('#guideNext');
+  if(!foot||!next)return null;
+  button=root.document.createElement('button');button.id='guideStop';button.type='button';
+  button.className='btn danger-outline guide-stop guide-stop-fixed';button.dataset.safetyAction='stop';
+  button.textContent='暂停 / 停止训练';button.hidden=true;
+  button.onclick=()=>Move28.requestSafetyStop();foot.insertBefore(button,next);return button;
+}
 function setGuideFoot(back,next){
-  const backButton=$('#guideBack'),nextButton=$('#guideNext');
-  backButton.textContent=back.label;backButton.style.visibility=back.hidden?'hidden':'visible';backButton.disabled=Boolean(back.disabled);
-  nextButton.textContent=next.label;nextButton.disabled=Boolean(next.disabled);nextButton.style.visibility=next.hidden?'hidden':'visible';
+  const backButton=$('#guideBack'),nextButton=$('#guideNext'),stopButton=ensureGuideStopButton();
+  backButton.textContent=back.label;backButton.hidden=Boolean(back.hidden);backButton.disabled=Boolean(back.disabled);
+  nextButton.textContent=next.label;nextButton.disabled=Boolean(next.disabled);nextButton.hidden=Boolean(next.hidden);
+  if(stopButton)stopButton.hidden=!safeArrayIncludes(['ready','action'],state.guideMode);
 }
 function renderReady(){
   getWorkoutAudio().pause();updateMusicUI();
   $('#guideEyebrow').textContent='BEFORE YOU START';$('#guideTitle').textContent='开始前安全确认';$('#guideBar').style.width='0%';
-  $('#guideBody').innerHTML=`<section class="guide-state guide-ready"><span class="guide-state-mark">!</span><h3>先确认身体状态，再开始本节</h3><p>${esc(SAFETY_RULE)}</p><div class="guide-safe-note">如果已经出现上述任一信号，请不要开始训练，直接使用下方停止入口。</div><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></section>`;
+  $('#guideBody').innerHTML=`<section class="guide-state guide-ready"><span class="guide-state-mark">!</span><h3>先确认身体状态，再开始本节</h3><p>${esc(SAFETY_RULE)}</p><div class="guide-safe-note">如果已经出现上述任一信号，请不要开始训练，直接使用底部常驻的“暂停 / 停止训练”。</div></section>`;
   setGuideFoot({label:'退出',hidden:false},{label:'开始本节',hidden:false});
 }
 function guideMediaHtml(exercise){
@@ -199,7 +209,7 @@ function renderAction(){
   $('#guideTitle').textContent=`${WEEKDAY_LABELS[state.guideSession.weekday]||state.guideSession.weekday} · ${sessionIntentLabel(state.guideSession.intent)}`;
   $('#guideBar').style.width=`${(state.guideStep+1)/total*100}%`;
   const variantHtml=variantGuidance?`<section class="guide-variant"><b>受控变式 · ${esc(variantGuidance.label)}</b><p><strong>设置指导</strong>${esc(variantGuidance.setup)}</p><p><strong>幅度指导</strong>${esc(variantGuidance.range)}</p></section>`:'';
-  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}">${guideMediaHtml(exercise)}<div class="guide-instruction"><span class="guide-phase">${state.guideSession.intent==='recovery'?'恢复训练':action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div>${variantHtml}<div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)}</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></div></div></div>`;
+  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}">${guideMediaHtml(exercise)}<div class="guide-instruction"><span class="guide-phase">${state.guideSession.intent==='recovery'?'恢复训练':action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div>${variantHtml}<div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)} 安全停止入口固定在底部，与下一步同时可见。</p></div></div></div>`;
   setGuideFoot({label:'← 上一步',hidden:state.guideStep===0},{label:state.guideStep===total-1?'完成本节并记录 ✓':'完成此项，下一项 →'});
 }
 function renderExitConfirm(){
@@ -366,6 +376,7 @@ function openWorkout(options){
   state.guideOnStop=typeof onStop==='function'?onStop:()=>{};
   state.guideFinishing=false;state.guideMode='ready';state.guideResumeMode='ready';state.guideStopReason='';guideStartedAtMs=null;guideCompletionSummary=null;
   $('#guideModal').classList.add('open');$('#guideModal').setAttribute('aria-hidden','false');root.document.body.classList.add('body-guide-open');
+  const close=$('.guide-close');if(close)close.setAttribute('aria-label','普通退出训练');
   renderGuide();setTimeout(()=>$('.guide-close').focus(),0);return true;
 }
 function hardCloseGuide(){

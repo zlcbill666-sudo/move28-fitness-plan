@@ -64,6 +64,13 @@ function renderWorkflowStatus(){
   slot.dataset.stage=stage;slot.className=`workflow-status workflow-${info.tone}`;
   slot.innerHTML=`<div class="workflow-copy"><div><span class="workflow-kicker">PLAN STATUS</span><h3>${esc(info.title)}</h3></div><p>${esc(planContext.message||info.detail)}</p></div><div class="workflow-steps">${WORKFLOW_STEPS.map((step,index)=>{const status=workflowStepState(stage,index),current=status==='current'||status==='attention';return`<div class="workflow-step ${status}" data-workflow-step data-step="${step.key}"${current?' aria-current="step"':''}><span>${status==='done'?'✓':String(index+1).padStart(2,'0')}</span><b>${step.label}</b><small>${status==='done'?'已完成':current?'当前':'未开放'}</small></div>`}).join('')}</div>`;
 }
+function renderPendingReviewHero(){
+  const pending=planContext.workflowStage==='human_review',defaultHero=root.document&&root.document.querySelector('.hero');
+  const pendingHero=$('#pendingReviewHero'),refresh=$('#pendingReviewRefresh');
+  if(defaultHero)defaultHero.hidden=pending;
+  if(pendingHero)pendingHero.hidden=!pending;
+  if(refresh)refresh.onclick=()=>{if(root.location&&typeof root.location.reload==='function')root.location.reload()};
+}
 function applyAppMode(){const body=root.document&&root.document.body;if(body)body.classList.toggle('app-mode-generated',planContext.mode==='generated')}
 function dayClass(t){return /力量/.test(t)?'strength':/有氧/.test(t)?'cardio':'recovery'}
 function generatedSessionLabel(intent){return intent==='full_body_strength'?'全身力量':intent==='low_impact_cardio'?'低冲击有氧':intent==='recovery'?'恢复训练':'计划受限'}
@@ -150,7 +157,14 @@ function renderGeneratedToday(){
   $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${displayedWeek}周</span><strong>${String(displayedWeek).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[displayedWeekday]||displayedWeekday)}</span>${shiftBadge}<span class="chip">已人工复核</span></div><h3>${generatedSessionLabel(session.intent)}</h3><div class="today-summary-grid"><div data-today-metric="duration"><small>预计时长</small><strong>${session.estimatedMinutes}分钟</strong></div><div data-today-metric="actions"><small>本节安排</small><strong>${session.actions.length}个动作</strong></div><div data-today-metric="setting"><small>训练地点</small><strong>${settingLabel}</strong></div><div data-today-metric="rpe"><small>计划强度</small><strong>${rpeLabel}</strong></div></div><div class="day-controls">${startControl}${shiftControl}</div><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div>${shiftPanel}${explanationMarkup(planContext.explanation)}<div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
 }
 function renderDemoToday(){const d=DATA.days[state.currentDay-1],p=legacyProgress();$('#todayCard').innerHTML=`<div class="today-day"><span>只读示例 / 第${d.week}周</span><strong>${String(d.day).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">示例计划</span><span class="chip">${esc(d.weekday)} · ${esc(d.place)}</span><span class="chip">${esc(d.duration)}</span></div><h3>${esc(d.type)}</h3><div class="today-grid"><div class="today-block"><div class="label">热身与力量</div><div class="today-value">${esc(d.strength)}</div></div><div class="today-block"><div class="label">有氧 / 步行</div><div class="today-value">${esc(d.cardio)}</div></div></div><div class="progress-text">示例只用于了解结构，不会写入训练记录。旧示例记录：${p.done}/28。</div><div class="day-controls"><button class="btn" onclick="moveDay(-1)">← 前一天</button><button class="btn" onclick="moveDay(1)">后一天 →</button></div></div>`}
-function renderToday(){if(planContext.mode==='generated')renderGeneratedToday();else if(planContext.mode==='demo')renderDemoToday();else $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要复核'}</span><h3>暂未生成可执行计划</h3><p>${esc(planContext.message||'请修改问卷或等待人工复核；当前不会开放训练入口。')}</p></div>`}
+function renderToday(){
+  if(planContext.mode==='generated'){renderGeneratedToday();return}
+  if(planContext.mode==='demo'){renderDemoToday();return}
+  if(planContext.workflowStage==='human_review'){
+    $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">pending_review · 待人工复核</span><h3>候选计划已生成，训练暂未开放</h3><p>${esc(planContext.message||'人工一致性复核完成前不会开放训练入口。')}</p><p class="tiny-help">联系指定复核人或备用联系人；批准后请在同一台设备和同一个浏览器刷新页面。</p></div>`;return
+  }
+  $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要复核'}</span><h3>${planContext.mode==='stale'?'当前计划不可继续训练':'当前没有可执行计划'}</h3><p>${esc(planContext.message||'请修改问卷或等待人工复核；当前不会开放训练入口。')}</p></div>`
+}
 function persistLocal(key,value){try{storage.setItem(key,value);return true}catch(_error){showToast('本机保存失败，请检查浏览器存储权限后重试');return false}}
 Move28.moveDay=n=>{if(planContext.mode!=='demo')return;const next=Math.min(28,Math.max(1,state.currentDay+n));if(persistLocal('move28-current-day',next))state.currentDay=next;renderToday()};
 function renderWeeks(){
@@ -216,7 +230,7 @@ function setPlanContext(context){
   }
   const tracker=$('#tracker');if(tracker)tracker.hidden=true;
   const trackerLinks=root.document&&root.document.querySelectorAll('a[href="#tracker"]');if(trackerLinks)for(let index=0;index<trackerLinks.length;index+=1)trackerLinks[index].hidden=true;
-  applyAppMode();renderWorkflowStatus();renderToday();renderWeeks();
+  renderPendingReviewHero();applyAppMode();renderWorkflowStatus();renderToday();renderWeeks();
 }
 
 function exerciseMediaHtml(exercise){

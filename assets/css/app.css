@@ -46,3 +46,30 @@
 .media-review-card strong,.media-blocked>span,.guide-media-blocked>span{color:var(--lime);font:900 12px/1 var(--body);letter-spacing:.16em}.media-review-card span,.media-blocked>b,.guide-media-blocked>b{display:block;margin-top:12px;font:900 clamp(21px,3vw,34px)/1.08 var(--display)}.media-review-card small,.media-blocked>p,.guide-media-blocked>p{margin:10px 0 0;max-width:32rem;color:#aebbc6;font-size:12px;line-height:1.6}.media-review-card:after{display:none}.exercise-media.media-blocked{min-height:260px}.guide-demo.guide-media-blocked{min-height:320px;aspect-ratio:auto}.text-only-stage .motion-card{overflow:hidden}
 @media(max-width:760px){.exercise-media.media-blocked{min-height:190px}.guide-demo.guide-media-blocked{min-height:180px}}
 @media print{.media-review-card,.media-blocked,.guide-media-blocked{background:#fff!important;color:#111!important;border:1px solid #bbb}.media-review-card small,.media-blocked>p,.guide-media-blocked>p{color:#333}}
+
+/* Task D: canonical pending-review handoff */
+.pending-review-hero{min-height:calc(100dvh - 68px);display:grid;align-items:center;background:#0d141f;color:var(--ink)}
+.pending-review-layout{padding:56px 0}.pending-review-hero h1{max-width:920px;margin:18px 0 24px;font:900 clamp(58px,8vw,108px)/.88 var(--display);text-wrap:balance}
+.pending-review-hero h1 em{display:block;color:var(--lime);font-style:normal}.pending-review-hero .hero-copy{font-size:18px;text-wrap:pretty}
+.pending-review-hero .hero-next-step{max-width:760px}.pending-review-boundary{max-width:720px;margin:12px 0 0;color:#8795a3;font-size:11px;text-wrap:pretty}
+
+/* Task D: safety stop shares the always-visible workout action rail */
+.guide-foot{z-index:4}.guide-foot .guide-stop-fixed{margin-left:auto}.guide-foot #guideNext{margin-left:0}
+@media(max-width:760px){
+  .pending-review-hero{min-height:calc(100dvh - 60px);align-items:start}.pending-review-layout{padding:38px 0 28px}
+  .pending-review-hero h1{margin:14px 0 18px;font-size:48px}.pending-review-hero .hero-copy{margin:0;font-size:14px;line-height:1.55}
+  .pending-review-hero .equipment-note{margin-top:18px;padding:13px 14px;font-size:12px;line-height:1.5}
+  .pending-review-hero .hero-actions{margin-top:18px}.pending-review-hero .hero-actions .cta{min-height:48px;padding:11px 15px}
+  .guide-shell{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden}
+  .music-dock{margin:6px 14px 0;padding:7px 9px;gap:8px}.music-toggle{width:38px;height:38px}.music-meta span,.music-volume,.music-note{display:none}
+  .guide-body{min-height:0;overflow:auto;padding:12px 14px}.guide-action{gap:10px}.guide-action .guide-demo{height:132px;min-height:132px;max-height:132px;aspect-ratio:auto}
+  .guide-foot{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;padding:9px 12px calc(9px + env(safe-area-inset-bottom))}
+  .guide-foot #guideStop{grid-column:1;grid-row:1;margin:0;white-space:normal}.guide-foot #guideNext{grid-column:2;grid-row:1;width:100%;margin:0;white-space:normal}
+  .guide-foot #guideBack{grid-column:1/-1;grid-row:2;justify-self:start;min-height:40px}
+}
+@media (orientation:landscape) and (max-height:560px){
+  .guide-shell{grid-template-rows:auto minmax(0,1fr) auto}.guide-foot{display:flex;align-items:center}
+  .guide-foot #guideBack,.guide-foot #guideStop,.guide-foot #guideNext{width:auto;min-height:42px;margin:0;white-space:nowrap}
+  .guide-foot #guideStop{margin-left:auto}.guide-action .guide-demo{height:100%;min-height:0;max-height:218px}
+}
+@media print{.pending-review-hero{display:none!important}.guide-stop-fixed{display:none!important}}

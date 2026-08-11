@@ -224,7 +224,7 @@ function handleCapabilityComplete(profile){
   const capabilityBoundPlan=Object.assign({},generated,{capabilityRevision:current.capabilityRevision+1});
   const persisted=trustedSaveCapabilityProfileWithPlan(profile,capabilityBoundPlan);
   activatePlanView(persisted);
-  return{message:'能力档案与4周计划已保存到本机；人工一致性复核完成前不会开放训练入口。'};
+  return{message:'待人工复核（pending_review）：候选4周计划已保存到当前浏览器。为避免未经复核的动作、器械或剂量直接进入训练，人工一致性复核完成前不会开放训练入口，训练入口保持锁定。下一步请联系指定复核人或备用联系人；复核后回到同一台设备和同一个浏览器，刷新状态。'};
 }
 function revokeAdaptation(adaptationId){
   const revoke=Move28.sessionReadiness&&Move28.sessionReadiness.revokeConfirmedAdaptation;
