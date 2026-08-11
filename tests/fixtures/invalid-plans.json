@@ -1,7 +1,6 @@
 [
   {"name":"duration-exceeded","mutation":"duration","expectedCode":"SESSION_DURATION_EXCEEDED"},
   {"name":"non-approved-exercise","mutation":"review-status","expectedCode":"EXERCISE_NOT_APPROVED"},
-  {"name":"gif-missing","mutation":"gif","expectedCode":"GIF_UNAVAILABLE"},
   {"name":"dose-out-of-range","mutation":"dose","expectedCode":"DOSE_OUT_OF_RANGE"},
   {"name":"contraindication-unfiltered","mutation":"contraindication","expectedCode":"CONTRAINDICATED_EXERCISE"},
   {"name":"consecutive-strength-days","mutation":"recovery","expectedCode":"STRENGTH_RECOVERY_CONFLICT"},

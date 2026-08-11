@@ -200,6 +200,19 @@ test('workout-guide加载后篡改安全边界intrinsic不会执行外部代码�
   assert.deepEqual(after,before);assert.equal(calls,0);
 });
 
+test('媒体发布受阻时动作库与跟练仅输出文字占位且不泄漏GIF路径',()=>{
+  const {catalog,guide}=setup();
+  const dashboard=require('../../src/ui/dashboard.js'),exercise=catalog.exerciseCatalog[0];
+  const libraryHtml=dashboard.exerciseMediaHtml(exercise),guideHtml=guide.guideMediaHtml(exercise);
+  for(const html of [libraryHtml,guideHtml]){
+    assert.match(html,/动作媒体审核中/);
+    assert.doesNotMatch(html,/<img|<picture|<video|<source/i);
+    assert.doesNotMatch(html,/assets\/gifs\//);
+  }
+  assert.match(libraryHtml,/TEXT GUIDE/);
+  assert.match(guideHtml,/TEXT-ONLY MODE/);
+});
+
 test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配或提供任选项',()=>{
   const {catalog,guide,plan}=setup();
   const session=plan.weeks[0].sessions[0];
@@ -213,6 +226,21 @@ test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配�
   assert.equal(guide.buildWorkoutSteps(session,structuredClone(catalog.exerciseCatalog)),null);
   assert.equal(guide.buildWorkoutSteps({...session,actions:[]},catalog.exerciseCatalog),null);
 });
+
+test('跟练步骤忠实传递0坡度慢走和无拉力工具坐姿小腿拉伸语义',()=>{
+  const {catalog,guide}=setup();
+  const session={id:'semantic-contract',weekday:'mon',intent:'recovery',actions:[
+    {phase:'cardio',pattern:'locomotion',exerciseId:'flat-walk',durationMin:10,rpe:3,restSec:0},
+    {phase:'cooldown',pattern:'mobility',exerciseId:'calf-stretch',durationMin:1,rpe:2,restSec:0}
+  ]};
+  const steps=guide.buildWorkoutSteps(session,catalog.exerciseCatalog);
+  assert.ok(steps);
+  assert.equal(steps[0].exercise.cues.setup,'跑步机坡度必须设为0；若在室内或户外步行，必须选择平整、无坡度、无障碍的路线。先站稳、系好鞋带，再从舒适慢速开始。');
+  assert.match(steps[0].exercise.cues.movement,/不跑步、不爬坡/);
+  assert.equal(steps[1].exercise.cues.setup,'坐在稳固椅子前半部，躯干直立，一腿向前伸，脚跟着地，膝盖保持微屈或自然伸直；双手放在大腿或椅面，不拿毛巾、弹力带等拉力工具。');
+  assert.match(steps[1].exercise.cues.movement,/不要用手或任何器械拉脚尖/);
+});
+
 test('plan-view 只把动作目录审核过的受控变式指导带入跟练步骤',()=>{
   const {catalog,guide,plan}=setup();
   const base=structuredClone(plan.weeks[0].sessions[0]);

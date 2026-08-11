@@ -122,17 +122,17 @@ test('四周计划和安全区保持完整行为基线', async ({ page }) => {
   ]);
 });
 
-test('动作库全部GIF资料均存在并成功加载，包含已审核弹力带划船', async ({ page }) => {
+test('动作库25项完整保留文字指导且不创建或请求受阻GIF', async ({ page }) => {
+  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
   await openCurrentPage(page);
-  const gifs = page.locator('#exerciseGrid img');
   const catalogSize = await page.evaluate(() => Move28.data.exerciseCatalog.length);
-  await expect(gifs).toHaveCount(catalogSize);
-  await expect.poll(async () => gifs.evaluateAll(images =>
-    images.filter(image => image.complete && image.naturalWidth > 0).length
-  )).toBe(catalogSize);
-  const bandRow = page.locator('#exerciseGrid img[alt="弹力带划船动作GIF"]');
-  await expect(bandRow).toHaveCount(1);
-  await expect(bandRow).toHaveAttribute('src', 'assets/gifs/19_弹力带划船.gif');
+  await expect(page.locator('#exerciseGrid article.exercise')).toHaveCount(catalogSize);
+  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(0);
+  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(catalogSize);
+  await expect(page.locator('#exerciseGrid')).toContainText('弹力带划船');
+  await expect(page.locator('#exerciseGrid')).toContainText('安全保护要点');
+  for(const label of ['力量A','力量B','有氧C','全部'])await page.getByRole('button',{name:label,exact:true}).click();
+  expect(gifRequests).toEqual([]);
 });
 
 test('未问卷的28天示例保持只读，不开放旧跟练或写入记录', async ({ page }) => {

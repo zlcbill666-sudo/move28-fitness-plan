@@ -20,14 +20,13 @@ const WEEKDAYS=Object.freeze(['mon','tue','wed','thu','fri','sat','sun']);
 const STRENGTH_PATTERNS=Object.freeze(['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability']);
 const DOSE_FIELDS=Object.freeze(['sets','reps','rpe','restSec','durationMin']);
 const PROGRESSION_LIMITS=Object.freeze({sets:1,reps:1,rpe:1,restSec:30,durationMin:5});
-const APPROVED_GIFS=new Set(Array.isArray(catalogApi.exerciseCatalog)?catalogApi.exerciseCatalog.filter(item=>item&&item.reviewStatus==='approved').map(item=>item.gif):[]);
 const TRUSTED_EXERCISES=new Map(Array.isArray(catalogApi.exerciseCatalog)?catalogApi.exerciseCatalog.filter(item=>item&&item.reviewStatus==='approved').map(item=>[item.id,item]):[]);
 const MESSAGES=Object.freeze({
   INVALID_VALIDATOR_INPUT:'校验输入不是可安全读取的纯数据。',
   INVALID_PLAN_SCHEMA:'计划结构或必需字段无效。',
   SESSION_DURATION_EXCEEDED:'训练预计时长超过用户上限。',
   EXERCISE_NOT_APPROVED:'计划引用了未审核动作。',
-  GIF_UNAVAILABLE:'动作缺少已审核的离线GIF。',
+
   CUES_UNAVAILABLE:'动作缺少完整教学或疼痛提示。',
   DOSE_OUT_OF_RANGE:'动作剂量超出审核范围。',
   CONTRAINDICATED_EXERCISE:'计划包含已排除或禁忌动作。',
@@ -121,9 +120,6 @@ function add(errors,code,path){errors.push({code,path,message:MESSAGES[code]||ME
 function inRange(value,range,{integer=false}={}){
   return denseArray(range,{min:2,max:2})&&typeof value==='number'&&Number.isFinite(value)&&(!integer||Number.isSafeInteger(value))&&value>=range[0]&&value<=range[1];
 }
-function approvedMedia(exercise){
-  return typeof exercise.gif==='string'&&/^assets\/gifs\/[^/\\?#]+\.gif$/u.test(exercise.gif)&&APPROVED_GIFS.has(exercise.gif);
-}
 function completeCues(exercise){
   return plainRecord(exercise.cues)&&['setup','movement','breathing','pain'].every(key=>typeof exercise.cues[key]==='string'&&exercise.cues[key].trim().length>0);
 }
@@ -140,7 +136,7 @@ function sameData(left,right){
   return true;
 }
 function matchesTrustedExercise(exercise,trusted){
-  const fields=['pattern','difficulty','gif','reviewStatus','settings','equipment','equipmentOptions','contraindications','regressionIds','progressionIds','dose','cues'];
+  const fields=['pattern','difficulty','reviewStatus','settings','equipment','equipmentOptions','contraindications','regressionIds','progressionIds','dose','cues'];
   return fields.every(field=>sameData(exercise[field],trusted[field]));
 }
 function buildCatalogIndex(catalog,errors){
@@ -237,7 +233,6 @@ function validatePlan(rawInput){
         const exercise=catalogById&&catalogById.get(action.exerciseId);
         const trusted=TRUSTED_EXERCISES.get(action.exerciseId);
         if(!exercise||!trusted||exercise.reviewStatus!=='approved'){add(errors,'EXERCISE_NOT_APPROVED',`${actionPath}.exerciseId`);continue}
-        if(exercise.gif!==trusted.gif||!approvedMedia(trusted))add(errors,'GIF_UNAVAILABLE',`${actionPath}.exerciseId`);
         if(!matchesTrustedExercise(exercise,trusted))add(errors,'INVALID_PLAN_SCHEMA',`${actionPath}.exerciseId`);
         if(!completeCues(trusted))add(errors,'CUES_UNAVAILABLE',`${actionPath}.exerciseId`);
         const mapped=matcherApi.CATALOG_PATTERN_TO_INTENT&&matcherApi.CATALOG_PATTERN_TO_INTENT[trusted.pattern];

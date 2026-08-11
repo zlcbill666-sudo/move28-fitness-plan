@@ -1,0 +1,929 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-10",
+  "policy": {
+    "approvedRequires": [
+      "rights",
+      "motion",
+      "visual",
+      "safety"
+    ],
+    "releaseRequiresReplacementFormats": [
+      "webm",
+      "mp4",
+      "poster",
+      "gif"
+    ]
+  },
+  "assets": [
+    {
+      "id": "seated-leg-raise",
+      "name": "坐姿抬腿",
+      "current": {
+        "path": "assets/gifs/02_坐姿抬腿.gif",
+        "sha256": "caa505364dc6460d2706733a0bb7b74d1f2f328b31ffaf6ce0bdb138488d87b1"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "Hgs6Nl1",
+        "exerciseName": "seated leg raise",
+        "sourceUrl": "https://static.exercisedb.dev/media/Hgs6Nl1.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "ankle-circle",
+      "name": "脚踝绕环",
+      "current": {
+        "path": "assets/gifs/03_脚踝绕环.gif",
+        "sha256": "9db2b9ac2818fd4f5de0cbcf18a1bf067e923e6f5ba2c1aeaa8a2eb711d79758"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "uL9CsKm",
+        "exerciseName": "ankle circles",
+        "sourceUrl": "https://static.exercisedb.dev/media/uL9CsKm.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "seated-leg-press",
+      "name": "坐姿腿举",
+      "current": {
+        "path": "assets/gifs/04_坐姿腿举.gif",
+        "sha256": "e1ab1b38a4a0b756e6f69233659c65d897d1611120aa09a2678ed23db4c82079"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "2Qh2J1e",
+        "exerciseName": "sled 45° leg press (side pov)",
+        "sourceUrl": "https://static.exercisedb.dev/media/2Qh2J1e.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "seated-leg-curl",
+      "name": "坐姿腿弯举",
+      "current": {
+        "path": "assets/gifs/05_坐姿腿弯举.gif",
+        "sha256": "83be1db342fcb514086eccd82b6748fe2d957caef22ce1501a9eaded5142d277"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "Zg3XY7P",
+        "exerciseName": "lever seated leg curl",
+        "sourceUrl": "https://static.exercisedb.dev/media/Zg3XY7P.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "glute-bridge",
+      "name": "臀桥",
+      "current": {
+        "path": "assets/gifs/06_臀桥.gif",
+        "sha256": "0488f6ef2f876420c071a2d4243f1f1574d25bba5b5eb72246da4f130d58ad91"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "u0cNiij",
+        "exerciseName": "low glute bridge on floor",
+        "sourceUrl": "https://static.exercisedb.dev/media/u0cNiij.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "wall-hip-hinge",
+      "name": "墙触髋铰链",
+      "current": {
+        "path": "assets/gifs/20_墙触髋铰链.gif",
+        "sha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "chest-press-machine",
+      "name": "推胸机",
+      "current": {
+        "path": "assets/gifs/07_推胸机.gif",
+        "sha256": "aa2b979c98bb26ffcf992bee97987af3ece27d8783563e4b601626f477664ea0"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "DOoWcnA",
+        "exerciseName": "lever chest press",
+        "sourceUrl": "https://static.exercisedb.dev/media/DOoWcnA.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "standing-band-chest-press",
+      "name": "站姿弹力带推胸",
+      "current": {
+        "path": "assets/gifs/21_站姿弹力带推胸.gif",
+        "sha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "seated-row",
+      "name": "坐姿划船",
+      "current": {
+        "path": "assets/gifs/08_坐姿划船.gif",
+        "sha256": "96000790878fe1238847466d0f3b81fbcaf6586e9555df38aad41727759c7cbd"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "7I6LNUG",
+        "exerciseName": "lever seated row",
+        "sourceUrl": "https://static.exercisedb.dev/media/7I6LNUG.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "band-row",
+      "name": "弹力带划船",
+      "current": {
+        "path": "assets/gifs/19_弹力带划船.gif",
+        "sha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "pallof-press",
+      "name": "抗旋转推压",
+      "current": {
+        "path": "assets/gifs/09_抗旋转推压.gif",
+        "sha256": "043e54c19d80a808d7565e96df9369f0c7909c17ccb93eeb930b50cf15fbab9e"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "9pa4H5m",
+        "exerciseName": "band horizontal pallof press",
+        "sourceUrl": "https://static.exercisedb.dev/media/9pa4H5m.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "high-seat-sit-to-stand",
+      "name": "高位坐姿起立",
+      "current": {
+        "path": "assets/gifs/10_高位坐姿起立.gif",
+        "sha256": "524dbd970d8bbe996fa6137b0dff27b2908196e73af38d8c5b48c968f341a13d"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "Gu2rNJd",
+        "exerciseName": "smith chair squat",
+        "sourceUrl": "https://static.exercisedb.dev/media/Gu2rNJd.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "seated-leg-extension",
+      "name": "坐姿腿屈伸",
+      "current": {
+        "path": "assets/gifs/11_坐姿腿屈伸.gif",
+        "sha256": "ad9602e9eb0584cd73ecc5cdf9f9e273ade4d14336d1554bc35b9242dfbb6f0d"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "my33uHU",
+        "exerciseName": "lever leg extension",
+        "sourceUrl": "https://static.exercisedb.dev/media/my33uHU.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "seated-knee-extension-unloaded",
+      "name": "坐姿徒手伸膝",
+      "current": {
+        "path": "assets/gifs/22_坐姿徒手伸膝.gif",
+        "sha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "supported-calf-raise",
+      "name": "扶椅提踵",
+      "current": {
+        "path": "assets/gifs/23_扶椅提踵.gif",
+        "sha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "hip-abduction-machine",
+      "name": "髋外展机",
+      "current": {
+        "path": "assets/gifs/12_髋外展机.gif",
+        "sha256": "f736cf937b8224e209c00d23acf002c74e6a0c94bea1bd7d321650d3a54f0cf5"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "CHpahtl",
+        "exerciseName": "lever seated hip abduction",
+        "sourceUrl": "https://static.exercisedb.dev/media/CHpahtl.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "wall-push-up",
+      "name": "墙壁俯卧撑",
+      "current": {
+        "path": "assets/gifs/13_墙壁俯卧撑.gif",
+        "sha256": "8025415b2ce801699ecf32864a622883bc623ae10cd48653d4bc689b6c7147e0"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "LEH9jxP",
+        "exerciseName": "push-up (wall)",
+        "sourceUrl": "https://static.exercisedb.dev/media/LEH9jxP.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "dead-bug",
+      "name": "死虫式",
+      "current": {
+        "path": "assets/gifs/14_死虫式.gif",
+        "sha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "iny3m5y",
+        "exerciseName": "dead bug",
+        "sourceUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "heel-slide",
+      "name": "仰卧脚跟滑动",
+      "current": {
+        "path": "assets/gifs/25_仰卧脚跟滑动.gif",
+        "sha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "bird-dog-regression",
+      "name": "四点支撑单肢滑动",
+      "current": {
+        "path": "assets/gifs/26_四点支撑单肢滑动.gif",
+        "sha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "elliptical-trainer",
+      "name": "椭圆机／交叉训练机",
+      "current": {
+        "path": "assets/gifs/15_椭圆机.gif",
+        "sha256": "c77b3bb6811b3a6cca1ba8ccd34b1fbdceb699f1c1d70fcd35a480abb63f50b9"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "rjtuP6X",
+        "exerciseName": "walk elliptical cross trainer",
+        "sourceUrl": "https://static.exercisedb.dev/media/rjtuP6X.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "flat-walk",
+      "name": "平地慢走",
+      "current": {
+        "path": "assets/gifs/16_平地慢走.gif",
+        "sha256": "e57e8ade4fff7ad586f0de6dea582a776838e76069923f8bd31ad206b4d33f90"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "rjiM4L3",
+        "exerciseName": "walking on incline treadmill",
+        "sourceUrl": "https://static.exercisedb.dev/media/rjiM4L3.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源为上坡跑步机动作，与目标0坡度平地慢走语义不符；商业媒体授权亦未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "supported-standing-march",
+      "name": "扶椅原地踏步",
+      "current": {
+        "path": "assets/gifs/24_扶椅原地踏步.gif",
+        "sha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed"
+      },
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "rights": {
+        "status": "confirmed",
+        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+      },
+      "production": {
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "hamstring-stretch",
+      "name": "大腿后侧拉伸",
+      "current": {
+        "path": "assets/gifs/17_大腿后侧拉伸.gif",
+        "sha256": "536d069f05a4001b47526656e1349861be60a3f524207ff5a6b9375060f5dd30"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "99rWm7w",
+        "exerciseName": "hamstring stretch",
+        "sourceUrl": "https://static.exercisedb.dev/media/99rWm7w.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    },
+    {
+      "id": "calf-stretch",
+      "name": "小腿拉伸",
+      "current": {
+        "path": "assets/gifs/18_小腿拉伸.gif",
+        "sha256": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799"
+      },
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "17bqEXD",
+        "exerciseName": "seated calf stretch (male)",
+        "sourceUrl": "https://static.exercisedb.dev/media/17bqEXD.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "rights": {
+        "status": "blocked",
+        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+      },
+      "production": {
+        "status": "reference_only",
+        "releaseEligible": false,
+        "reason": "目标为坐姿主动踝背屈且不借助手、毛巾或弹力带，现有候选尚未完成动作语义复核；商业媒体授权亦未确认且分辨率仅180×180"
+      },
+      "reviews": {
+        "rights": "pending",
+        "motion": "pending",
+        "visual": "pending",
+        "safety": "pending"
+      },
+      "replacement": {
+        "source": null,
+        "webm": null,
+        "mp4": null,
+        "poster": null,
+        "gif": null
+      }
+    }
+  ]
+}

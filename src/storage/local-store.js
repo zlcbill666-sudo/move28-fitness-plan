@@ -984,7 +984,6 @@
               contraindications: Object.freeze([...exercise.contraindications]),
               dose: Object.freeze(Object.fromEntries(['sets', 'reps', 'rpe', 'restSec', 'durationMin', 'holdSec']
                 .filter(key => Object.prototype.hasOwnProperty.call(action, key)).map(key => [key, action[key]]))),
-              gif: exercise.gif,
               cues: Object.freeze({ ...exercise.cues })
             });
           }))

@@ -37,7 +37,6 @@ function mutateCase(item,apis){
   const catalogItem=catalog[catalogIndex(catalog,first.exerciseId)];
   if(item.mutation==='duration')plan.weeks[0].sessions[0].estimatedMinutes=31;
   if(item.mutation==='review-status')catalogItem.reviewStatus='draft';
-  if(item.mutation==='gif')catalogItem.gif='assets/gifs/not-reviewed.gif';
   if(item.mutation==='dose')first.reps=99;
   if(item.mutation==='contraindication')intake.avoidMovements=['deep_knee_bend'];
   if(item.mutation==='recovery')plan.weeks[0].sessions[1].weekday='tue';
@@ -67,6 +66,12 @@ test('有效生成计划通过硬门槛且结果确定、深冻结、不修改�
   assert.deepEqual(first,second);
   assert.deepEqual(input,before);
   assert.ok(Object.isFrozen(first)&&Object.isFrozen(first.errors));
+});
+
+test('媒体路径不再是文字训练计划有效性的硬门',()=>{
+  const apis=loadApis(),baseline=generated(apis.generator),catalog=structuredClone(apis.catalog);
+  for(const exercise of catalog)exercise.gif='assets/gifs/release-blocked.gif';
+  assert.deepEqual(apis.validator.validatePlan({...baseline,catalog}),{ok:true,errors:[]});
 });
 
 test('训练日必须属于用户明确选择的可用星期',()=>{
@@ -213,12 +218,11 @@ test('生成器隔离validator异常且不泄漏异常文本',()=>{
 test('生成器强制调用validator，校验失败只返回manual_review且无部分计划',()=>{
   const apis=loadApis();
   const catalog=structuredClone(apis.catalog);
-  const index=catalogIndex(catalog,'seated-leg-press');
-  catalog[index].gif='assets/gifs/not-reviewed.gif';
+  for(const exercise of catalog)exercise.cues.setup='FORGED_UNTRUSTED_CUE';
   const result=apis.generator.generatePlan({intake:baseIntake,risk:risk(),intakeRevision:1,catalog,...capabilityInput()});
   assert.equal(result.status,'manual_review');
   assert.equal(result.plan,null);
-  assert.ok(result.errors.some(error=>error.code==='GIF_UNAVAILABLE'));
+  assert.ok(result.errors.some(error=>error.code==='INVALID_PLAN_SCHEMA'));
 });
 
 test('accessor、Proxy、稀疏数组、循环和危险值统一fail closed且不执行getter',()=>{

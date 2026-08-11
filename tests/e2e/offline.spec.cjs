@@ -29,7 +29,7 @@ test.afterEach(async ({ page }) => {
   }
 });
 
-test('离线资源清单包含全部本地CSS、JS、GIF和四段音乐', async () => {
+test('离线资源清单包含全部本地CSS、JS、内部审计GIF和四段音乐', async () => {
   for (const relative of audioFiles) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
   const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => match[1]);
@@ -47,8 +47,9 @@ test('离线资源清单包含全部本地CSS、JS、GIF和四段音乐', async 
   expect(packagedGifs).toEqual(referencedGifs);
 });
 
-test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', async ({ page }) => {
+test('file://完成问卷、生成、刷新、审核和纯文字跟练音乐加载', async ({ page }) => {
   const issues = [];
+  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
   page.on('pageerror', error => issues.push(`pageerror:${error.message}`));
   page.on('console', message => { if (message.type() === 'error') issues.push(`console:${message.text()}`); });
   await clearFileOrigin(page);
@@ -65,12 +66,14 @@ test('file://完成问卷、生成、刷新、审核和跟练GIF音乐加载', a
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
-  await expect.poll(() => page.locator('#guideBody img').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作媒体审核中');
   const audio = page.locator('#workoutAudio');
   await expect(audio).toHaveAttribute('src', /assets\/audio\/strength-deep-urban\.mp3$/);
   await expect.poll(() => audio.evaluate(node => node.readyState)).toBeGreaterThanOrEqual(1);
   expect(await audio.evaluate(node => node.currentSrc.startsWith('file:'))).toBe(true);
   await expect(page.getByRole('button', { name: /播放音乐|暂停音乐/ })).toBeVisible();
+  expect(gifRequests).toEqual([]);
   expect(issues).toEqual([]);
 });
 

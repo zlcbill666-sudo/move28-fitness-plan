@@ -25,6 +25,7 @@ async function openAndFill(page, overrides = {}) {
 test.beforeEach(async ({ page }) => resetHttp(page));
 
 test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢复', async ({ page }) => {
+  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
   await completeOnboarding(page);
   let state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan.status).toBe('pending_review');
@@ -45,13 +46,15 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
-  await expect.poll(() => page.locator('#guideBody img').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作媒体审核中');
 
   const actionCount = await page.evaluate(() => window.Move28.state.guideSteps.length);
   for (let index = 0; index < actionCount; index += 1) await page.locator('#guideNext').click();
   state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(Object.values(state.logs)).toHaveLength(1);
   expect(Object.values(state.logs)[0].status).toBe('completed');
+  expect(gifRequests).toEqual([]);
 
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
@@ -130,7 +133,7 @@ test('重复确认不会重复增加intake revision或绕过能力校准提前�
   expect(state.plan).toBeNull();
 });
 
-test('390×844跟练GIF、音乐区、停止按钮和固定操作区不重叠', async ({ page }, testInfo) => {
+test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重叠', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile');
   await completeOnboarding(page);
   await finishSavedScreen(page);
@@ -148,23 +151,23 @@ test('390×844跟练GIF、音乐区、停止按钮和固定操作区不重叠', 
     const music = box('#musicDock');
     const footer = box('.guide-foot');
     const stop = box('.guide-stop');
-    const image = box('#guideBody img');
+    const mediaNotice = box('#guideBody .guide-media-blocked');
     return {
       noHorizontalOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       musicFooterOverlap: overlaps(music, footer),
       stopFooterOverlap: overlaps(stop, footer),
-      imageWidth: image.width,
-      imageInside: image.left >= 0 && image.right <= innerWidth
+      noticeWidth: mediaNotice.width,
+      noticeInside: mediaNotice.left >= 0 && mediaNotice.right <= innerWidth
     };
   });
   expect(layout).toEqual({
     noHorizontalOverflow: true,
     musicFooterOverlap: false,
     stopFooterOverlap: false,
-    imageWidth: expect.any(Number),
-    imageInside: true
+    noticeWidth: expect.any(Number),
+    noticeInside: true
   });
-  expect(layout.imageWidth).toBeGreaterThan(0);
+  expect(layout.noticeWidth).toBeGreaterThan(0);
   await page.locator('.guide-stop').click();
   await expect(page.getByRole('heading', { name: '选择最符合当前情况的一项' })).toBeVisible();
 });

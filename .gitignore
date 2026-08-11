@@ -1,3 +1,13 @@
 node_modules/
 playwright-report/
 test-results/
+
+# Local research/build outputs are never participant release inputs.
+media-build/
+media-src/
+
+# Interpreter and operating-system caches.
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db

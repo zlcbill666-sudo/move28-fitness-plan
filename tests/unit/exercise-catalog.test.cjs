@@ -123,6 +123,25 @@ test('替代器械使用any-of方案表达，索引equipment是所有方案的�
   }
 });
 
+test('平地慢走与坐姿小腿拉伸锁定精确动作语义', () => {
+  const { exerciseCatalog } = loadCatalogAndPlan();
+  const byId = Object.fromEntries(exerciseCatalog.map(exercise => [exercise.id, exercise]));
+  const walk = byId['flat-walk'];
+  const calf = byId['calf-stretch'];
+
+  assert.deepEqual(walk.equipmentOptions, [['treadmill'], ['flat_walking_route']]);
+  assert.equal(walk.cues.setup, '跑步机坡度必须设为0；若在室内或户外步行，必须选择平整、无坡度、无障碍的路线。先站稳、系好鞋带，再从舒适慢速开始。');
+  assert.equal(walk.cues.movement, '力量日前慢走8～10分钟热身；有氧阶段保持自然小步幅，结束前逐步降速3～5分钟。全程只走路，不跑步、不爬坡。');
+  assert.equal(walk.errors, '扶住扶手悬挂身体；跨大步；跑步机坡度不是0；选择有坡度或不平整路线；突然下机。');
+  assert.match(walk.cues.pain, /始终保持0坡度/);
+
+  assert.deepEqual(calf.equipmentOptions, [['stable_chair']]);
+  assert.equal(calf.cues.setup, '坐在稳固椅子前半部，躯干直立，一腿向前伸，脚跟着地，膝盖保持微屈或自然伸直；双手放在大腿或椅面，不拿毛巾、弹力带等拉力工具。');
+  assert.equal(calf.cues.movement, '只靠踝关节主动发力，将脚尖缓慢向身体方向勾，至小腿后侧轻微牵拉；保持20秒后放松并换侧。不要用手或任何器械拉脚尖。');
+  assert.equal(calf.errors, '用手、毛巾或弹力带拉脚尖；猛勾或弹震；膝盖锁死；身体后仰代偿；出现疼痛仍继续。');
+  assert.match(calf.cues.pain, /不使用外力辅助/);
+});
+
 test('关系图精确锁定，不允许目录隐式新增关系', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
   assert.deepEqual(exerciseCatalog.map(({ id, regressionIds, progressionIds }) => ({ id, regressionIds, progressionIds })), [

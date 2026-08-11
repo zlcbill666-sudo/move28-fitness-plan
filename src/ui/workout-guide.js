@@ -5,12 +5,14 @@ if(isCommonJS)require('./dashboard.js');
 const trustedCatalog=isCommonJS?require('../data/exercise-catalog.js').exerciseCatalog:Move28.data&&Move28.data.exerciseCatalog;
 const validatorApi=isCommonJS?require('../domain/plan-validator.js'):Move28.domain;
 const storageApi=isCommonJS?require('../storage/local-store.js'):Move28.storage;
+const mediaPolicyApi=isCommonJS?require('../data/exercise-media-policy.js'):Move28.data&&Move28.data.exerciseMediaPolicy;
 const readinessApi=isCommonJS?require('./session-readiness.js'):Move28.sessionReadiness;
 const trustedValidatePlan=validatorApi&&typeof validatorApi.validatePlan==='function'?validatorApi.validatePlan:null;
 const trustedLoadState=storageApi&&typeof storageApi.loadState==='function'?storageApi.loadState:null;
 const trustedRecordWorkoutCompletion=storageApi&&typeof storageApi.recordWorkoutCompletion==='function'?storageApi.recordWorkoutCompletion:null;
 const trustedRecordWorkoutFeedback=storageApi&&typeof storageApi.recordWorkoutFeedback==='function'?storageApi.recordWorkoutFeedback:null;
 const trustedRecordWorkoutStop=storageApi&&typeof storageApi.recordWorkoutStop==='function'?storageApi.recordWorkoutStop:null;
+const trustedMediaPresentation=mediaPolicyApi&&typeof mediaPolicyApi.presentationFor==='function'?mediaPolicyApi.presentationFor:null;
 const trustedLoadConfirmedAdaptation=readinessApi&&typeof readinessApi.loadConfirmedAdaptation==='function'?readinessApi.loadConfirmedAdaptation:null;
 const trustedRevokeConfirmedAdaptation=readinessApi&&typeof readinessApi.revokeConfirmedAdaptation==='function'?readinessApi.revokeConfirmedAdaptation:null;
 const nativeJSONParse=JSON.parse.bind(JSON);
@@ -19,9 +21,9 @@ try{
   const storageKey=storageApi&&storageApi.STORAGE_KEY,adapter=root.localStorage,prototype=root.Storage&&root.Storage.prototype,getItem=prototype&&prototype.getItem;
   if(typeof storageKey==='string'&&adapter&&typeof getItem==='function'){const safeGetItem=Function.prototype.call.bind(getItem);trustedReadRawState=()=>{const serialized=safeGetItem(adapter,storageKey);return typeof serialized==='string'?nativeJSONParse(serialized):null}}
 }catch(_error){trustedReadRawState=null}
-const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation,trustedReadRawState);
+const api=factory(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedMediaPresentation,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation,trustedReadRawState);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation,trustedReadRawState){
+})(globalThis,function(root,Move28,trustedCatalog,trustedValidatePlan,trustedLoadState,trustedRecordWorkoutCompletion,trustedRecordWorkoutFeedback,trustedRecordWorkoutStop,trustedMediaPresentation,trustedLoadConfirmedAdaptation,trustedRevokeConfirmedAdaptation,trustedReadRawState){
 'use strict';
 const state=Move28.state;
 const {$,esc,storage}=Move28.utils;
@@ -112,7 +114,7 @@ function buildWorkoutSteps(session,catalog){
   const steps=[];
   for(let index=0;index<safeSession.actions.length;index+=1){
     const action=safeSession.actions[index],exercise=action&&safeMapGet(exercises,action.exerciseId);
-    if(!exercise||!exercise.cues||typeof exercise.gif!=='string')return null;
+    if(!exercise||!exercise.cues)return null;
     const variantGuidance=trustedVariantGuidance(action,exercise);if(variantGuidance===undefined)return null;
     const strength=action.phase==='main';
     if(strength&&!safeArrayEvery([action.sets,action.reps,action.rpe,action.restSec],safeNumberIsFinite))return null;
@@ -156,6 +158,12 @@ function renderReady(){
   $('#guideBody').innerHTML=`<section class="guide-state guide-ready"><span class="guide-state-mark">!</span><h3>先确认身体状态，再开始本节</h3><p>${esc(SAFETY_RULE)}</p><div class="guide-safe-note">如果已经出现上述任一信号，请不要开始训练，直接使用下方停止入口。</div><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></section>`;
   setGuideFoot({label:'退出',hidden:false},{label:'开始本节',hidden:false});
 }
+function guideMediaHtml(exercise){
+  let presentation=null;try{presentation=trustedMediaPresentation?trustedMediaPresentation(exercise.id):null}catch(_error){presentation=null}
+  if(presentation&&presentation.status==='released'&&typeof presentation.src==='string'&&presentation.src)return`<figure class="guide-demo"><img src="${esc(presentation.src)}" alt="${esc(exercise.name)}动作示范"></figure>`;
+  const title=presentation&&typeof presentation.title==='string'?presentation.title:'动作媒体暂不可用',message=presentation&&typeof presentation.message==='string'?presentation.message:'请仅按文字动作说明和安全提示执行。';
+  return`<aside class="guide-demo guide-media-blocked" role="note" aria-label="${esc(exercise.name)}动作媒体未开放"><span>TEXT-ONLY MODE</span><b>${esc(title)}</b><p>${esc(message)}</p></aside>`;
+}
 function renderAction(){
   const step=state.guideSteps[state.guideStep],total=state.guideSteps.length,exercise=step.exercise,action=step.action,variantGuidance=step.variantGuidance;
   syncGuideMusic(step.music,true);
@@ -163,7 +171,7 @@ function renderAction(){
   $('#guideTitle').textContent=`${WEEKDAY_LABELS[state.guideSession.weekday]||state.guideSession.weekday} · ${sessionIntentLabel(state.guideSession.intent)}`;
   $('#guideBar').style.width=`${(state.guideStep+1)/total*100}%`;
   const variantHtml=variantGuidance?`<section class="guide-variant"><b>受控变式 · ${esc(variantGuidance.label)}</b><p><strong>设置指导</strong>${esc(variantGuidance.setup)}</p><p><strong>幅度指导</strong>${esc(variantGuidance.range)}</p></section>`:'';
-  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}"><figure class="guide-demo"><img src="${esc(exercise.gif)}" alt="${esc(exercise.name)}动作示范GIF"></figure><div class="guide-instruction"><span class="guide-phase">${state.guideSession.intent==='recovery'?'恢复训练':action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div>${variantHtml}<div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)}</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></div></div></div>`;
+  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}">${guideMediaHtml(exercise)}<div class="guide-instruction"><span class="guide-phase">${state.guideSession.intent==='recovery'?'恢复训练':action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div>${variantHtml}<div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)}</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></div></div></div>`;
   setGuideFoot({label:'← 上一步',hidden:state.guideStep===0},{label:state.guideStep===total-1?'完成本节并记录 ✓':'完成此项，下一项 →'});
 }
 function renderExitConfirm(){
@@ -439,7 +447,7 @@ Move28.submitWorkoutFeedback=feedbackCode=>{
     return true;
   }catch(_error){state.guideMode='feedback_failed';renderGuide();return false}
 };
-const guide={openWorkout,doseText,renderGuide,updateMusicUI,syncGuideMusic,getWorkoutAudio,MUSIC,SAFETY_RULE,STOP_REASONS};
+const guide={openWorkout,doseText,guideMediaHtml,renderGuide,updateMusicUI,syncGuideMusic,getWorkoutAudio,MUSIC,SAFETY_RULE,STOP_REASONS};
 Object.assign(Move28.guide||{},guide);
 Object.defineProperty(Move28.guide,'workoutAudio',{configurable:true,get:getWorkoutAudio});
 const actions={closeGuide:Move28.closeGuide,requestGuideExit:Move28.requestGuideExit,requestSafetyStop:Move28.requestSafetyStop,selectSafetyReason:Move28.selectSafetyReason,resolveGuidePain:Move28.resolveGuidePain,guideRescreen:Move28.guideRescreen,guideReturnHome:Move28.guideReturnHome,guideBack:Move28.guideBack,guideNext:Move28.guideNext,submitWorkoutFeedback:Move28.submitWorkoutFeedback,toggleWorkoutMusic:Move28.toggleWorkoutMusic,setWorkoutVolume:Move28.setWorkoutVolume};

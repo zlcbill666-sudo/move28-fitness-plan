@@ -159,6 +159,7 @@ test('generated-plan 四天与5+计划把recovery明确显示为恢复训练',as
 });
 
 test('generated-plan 跟练严格消费session.actions，每屏一个动作并完成记录',async({page})=>{
+  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
   await completeOnboarding(page);
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await approvePendingPlan(page);
@@ -176,11 +177,13 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     const item=expected.actions[index];
     await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
     await expect(page.locator('#guideBody h3')).toHaveText(item.exercise.name);
-    await expect(page.locator('#guideBody img')).toHaveAttribute('src',item.exercise.gif);
+    await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
+    await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作媒体审核中');
     const dose=item.action.phase==='main'?`${item.action.sets}组 × ${item.action.reps}次`: `${item.action.durationMin}分钟`;
     await expect(page.locator('.guide-dose')).toContainText(dose);
     await expect(page.locator('#guideBody input,#guideBody select,#guideBody textarea')).toHaveCount(0);
     await expect(page.locator('#guideBody')).not.toContainText('任选');
+    for(const cue of Object.values(item.exercise.cues))await expect(page.locator('#guideBody')).toContainText(cue);
     await page.locator('#guideNext').click();
   }
   await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
@@ -200,6 +203,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   expect(record.planId).toBe(expected.planId);
   expect(record.sessionId).toBe(expected.sessionId);
   expect(record.status).toBe('completed');
+  expect(gifRequests).toEqual([]);
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
 });
@@ -260,7 +264,10 @@ test('generated-plan 跟练在390竖屏、844横屏与1280桌面无横向溢出�
   await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click();await page.getByRole('button',{name:'开始本节',exact:true}).click();
   const assertNoOverflow=async()=>expect(await page.evaluate(()=>({doc:document.documentElement.scrollWidth<=innerWidth,body:document.body.scrollWidth<=innerWidth}))).toEqual({doc:true,body:true});
   await assertNoOverflow();
-  for(const selector of ['.guide-instruction h3','.guide-dose','.guide-runtime-safety','#guideNext']){const locator=page.locator(selector);await expect(locator).toBeVisible();const box=await locator.boundingBox();expect(box).not.toBeNull();expect(box.x,selector).toBeGreaterThanOrEqual(0);expect(box.x+box.width,selector).toBeLessThanOrEqual(844);expect(box.y,selector).toBeGreaterThanOrEqual(0);expect(box.y+box.height,selector).toBeLessThanOrEqual(390)}
+  for(const selector of ['.guide-instruction h3','.guide-dose','#guideNext']){const locator=page.locator(selector);await expect(locator).toBeVisible();const box=await locator.boundingBox();expect(box).not.toBeNull();expect(box.x,selector).toBeGreaterThanOrEqual(0);expect(box.x+box.width,selector).toBeLessThanOrEqual(844);expect(box.y,selector).toBeGreaterThanOrEqual(0);expect(box.y+box.height,selector).toBeLessThanOrEqual(390)}
+  const cues=page.locator('.guide-cue');await expect(cues).toHaveCount(4);
+  for(let index=0;index<4;index+=1){const cue=cues.nth(index);await cue.scrollIntoViewIfNeeded();await expect(cue).toBeVisible();const box=await cue.boundingBox();expect(box).not.toBeNull();expect(box.y,`guide cue ${index}`).toBeGreaterThanOrEqual(0);expect(box.y+box.height,`guide cue ${index}`).toBeLessThanOrEqual(390)}
+  const safety=page.locator('.guide-runtime-safety');await safety.scrollIntoViewIfNeeded();await expect(safety).toBeVisible();await expect(page.locator('#guideNext')).toBeVisible();
   for(const viewport of [{width:390,height:844},{width:1280,height:800}]){await page.setViewportSize(viewport);await assertNoOverflow()}
 });
 
