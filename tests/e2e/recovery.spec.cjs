@@ -1,7 +1,7 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
-const { resetHttp, safeIntake, completeCapability, completeOnboarding, approvePendingPlan } = require('./helpers/pilot-flow.cjs');
+const { resetHttp, safeIntake, completeCapability, completeOnboarding, approvePendingPlan, answerSafeReadiness } = require('./helpers/pilot-flow.cjs');
 
 async function openFilledConfirmation(page) {
   await page.getByRole('button', { name: /生成我的4周计划/ }).click();
@@ -81,7 +81,7 @@ test('sessionStorage不可用不改变安全结论，最终档案仍可持久保
   await confirm(page);
   await expect(page.locator('.ob-saved')).toContainText('请完成能力校准');
   await completeCapability(page);
-  await expect(page.locator('.cap-result')).toContainText('已保存到本机');
+  await expect(page.locator('.cap-result')).toContainText('待人工复核（pending_review）');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.risk.level).toBe('normal');
   expect(state.capabilityRevision).toBe(1);
@@ -128,6 +128,7 @@ test('tracker与音乐偏好写入失败只显示固定降级提示，不破坏�
   expect(await page.evaluate(() => localStorage.getItem('move28-tracker-v1'))).toBeNull();
 
   await page.getByRole('button', { name: '开始今天训练' }).click();
+  await answerSafeReadiness(page);
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();

@@ -62,8 +62,8 @@ test('invalid or foreign dossier fails closed without changing pending bytes',as
   await page.locator('[data-review-file]').setInputFiles({name:'foreign.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(foreign))});
   await expect(page.locator('.review-import-status')).toContainText('尚未导入');
   await expect(page.locator('.review-handoff-message')).toContainText('无效');
-  await expect(page.getByRole('button',{name:'批准并开放当前计划'})).toBeDisabled();
-  await expect(page.getByRole('button',{name:'拒绝并要求返工'})).toBeDisabled();
+  await expect(page.locator('[data-review-action=approve]')).toBeDisabled();
+  await expect(page.locator('[data-review-action=deny]')).toBeDisabled();
   expect(await page.evaluate(()=>localStorage.getItem('move28-pilot-v1'))).toBe(before);
   expect((await page.evaluate(()=>Move28.storage.loadState())).plan.status).toBe('pending_review');
 });

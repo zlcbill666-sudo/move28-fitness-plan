@@ -278,6 +278,9 @@
       if (!fromPop) releaseHistory();
       if (previousFocus && typeof previousFocus.focus === 'function' && previousFocus.isConnected !== false) previousFocus.focus();
       previousFocus = null;
+      if (finished && typeof root.scrollTo === 'function') {
+        try { root.scrollTo(0, 0); } catch (_error) {}
+      }
       if (!finished) onCancel(getState());
       return true;
     }

@@ -56,6 +56,24 @@ const safeCapability = Object.freeze({
   walkTolerance: 'comfortable'
 });
 
+const safeReadiness = Object.freeze({
+  time: 'full',
+  equipment: 'unchanged',
+  space: 'normal',
+  noise: 'normal',
+  energy: 'normal',
+  symptom: 'none'
+});
+
+async function answerSafeReadiness(page, overrides = {}) {
+  const answers = { ...safeReadiness, ...overrides };
+  const form = page.locator('#sessionReadinessView[aria-hidden="false"] .readiness-form');
+  await form.waitFor({ state: 'visible' });
+  for (const [field, value] of Object.entries(answers)) {
+    await form.locator(`select[name="${field}"]`).selectOption(value);
+  }
+}
+
 async function installMonotonicClock(page, initialMs = 1000) {
   if (page.__move28MonotonicClockInstalled) return;
   page.__move28MonotonicClockInstalled = true;
@@ -144,4 +162,4 @@ async function approvePendingPlan(page) {
   await page.reload();
 }
 
-module.exports = { gymEquipment, safeIntake, safeCapability, installMonotonicClock, advanceMonotonicClock, advanceGuideToReviewedDuration, completeGuideActions, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };
+module.exports = { gymEquipment, safeIntake, safeCapability, safeReadiness, answerSafeReadiness, installMonotonicClock, advanceMonotonicClock, advanceGuideToReviewedDuration, completeGuideActions, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };

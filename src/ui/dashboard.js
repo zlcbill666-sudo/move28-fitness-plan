@@ -65,7 +65,7 @@ function renderWorkflowStatus(){
   slot.innerHTML=`<div class="workflow-copy"><div><span class="workflow-kicker">PLAN STATUS</span><h3>${esc(info.title)}</h3></div><p>${esc(planContext.message||info.detail)}</p></div><div class="workflow-steps">${WORKFLOW_STEPS.map((step,index)=>{const status=workflowStepState(stage,index),current=status==='current'||status==='attention';return`<div class="workflow-step ${status}" data-workflow-step data-step="${step.key}"${current?' aria-current="step"':''}><span>${status==='done'?'✓':String(index+1).padStart(2,'0')}</span><b>${step.label}</b><small>${status==='done'?'已完成':current?'当前':'未开放'}</small></div>`}).join('')}</div>`;
 }
 function renderPendingReviewHero(){
-  const pending=planContext.workflowStage==='human_review',defaultHero=root.document&&root.document.querySelector('.hero');
+  const pending=planContext.workflowStage==='human_review',defaultHero=root.document&&root.document.querySelector('.hero:not(.pending-review-hero)');
   const pendingHero=$('#pendingReviewHero'),refresh=$('#pendingReviewRefresh');
   if(defaultHero)defaultHero.hidden=pending;
   if(pendingHero)pendingHero.hidden=!pending;

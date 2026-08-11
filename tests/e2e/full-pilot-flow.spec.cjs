@@ -5,6 +5,7 @@ const {
   resetHttp,
   completeOnboarding,
   approvePendingPlan,
+  answerSafeReadiness,
   completeGuideActions
 } = require('./helpers/pilot-flow.cjs');
 
@@ -43,6 +44,7 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
 
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始今天训练' }).click();
+  await answerSafeReadiness(page);
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
@@ -139,6 +141,7 @@ test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重
   await finishSavedScreen(page);
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始今天训练' }).click();
+  await answerSafeReadiness(page);
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
@@ -151,11 +154,14 @@ test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重
     const music = box('#musicDock');
     const footer = box('.guide-foot');
     const stop = box('.guide-stop');
+    const next = box('#guideNext');
     const mediaNotice = box('#guideBody .guide-media-blocked');
     return {
       noHorizontalOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       musicFooterOverlap: overlaps(music, footer),
-      stopFooterOverlap: overlaps(stop, footer),
+      stopNextOverlap: overlaps(stop, next),
+      stopInsideFooter: stop.left >= footer.left && stop.right <= footer.right
+        && stop.top >= footer.top && stop.bottom <= footer.bottom,
       noticeWidth: mediaNotice.width,
       noticeInside: mediaNotice.left >= 0 && mediaNotice.right <= innerWidth
     };
@@ -163,7 +169,8 @@ test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重
   expect(layout).toEqual({
     noHorizontalOverflow: true,
     musicFooterOverlap: false,
-    stopFooterOverlap: false,
+    stopNextOverlap: false,
+    stopInsideFooter: true,
     noticeWidth: expect.any(Number),
     noticeInside: true
   });

@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
-const {resetHttp,completeOnboarding,approvePendingPlan,advanceMonotonicClock}=require('./helpers/pilot-flow.cjs');
-async function setup(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);await page.getByRole('button',{name:'开始今天训练'}).click();await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click()}
+const {resetHttp,completeOnboarding,approvePendingPlan,advanceMonotonicClock,answerSafeReadiness}=require('./helpers/pilot-flow.cjs');
+async function setup(page){await resetHttp(page);await completeOnboarding(page);await page.getByRole('button',{name:'完成，返回首页'}).click();await approvePendingPlan(page);await page.getByRole('button',{name:'开始今天训练'}).click();await answerSafeReadiness(page);await page.getByRole('button',{name:'检查今天状态'}).click();await page.getByRole('button',{name:'按原计划继续'}).click()}
 
 test.beforeEach(async({page})=>setup(page));
 

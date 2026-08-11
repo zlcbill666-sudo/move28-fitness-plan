@@ -18,6 +18,7 @@ test.beforeEach(async({page})=>resetHttp(page));
 test('today-workspace 从首次问卷到人工复核再到今日训练只开放可信主操作',async({page})=>{
   const workflow=page.locator('#workflowStatus');
   await expect(page.locator('.hero')).toBeVisible();
+  await expect(page.locator('#pendingReviewHero')).toBeHidden();
   await expect(workflow).toHaveAttribute('data-stage','questionnaire');
   await expect(workflow.locator('[data-workflow-step]')).toHaveCount(4);
   await expect(workflow.locator('[aria-current="step"]')).toContainText('安全问卷');
@@ -32,13 +33,15 @@ test('today-workspace 从首次问卷到人工复核再到今日训练只开放�
   await expect(workflow.locator('[data-step="capability"]')).toHaveClass(/done/);
   await expect(workflow.locator('[data-step="review"]')).toHaveAttribute('aria-current','step');
   await expect(workflow).toContainText('人工一致性复核');
-  await expect(page.locator('.hero')).toBeVisible();
+  await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('#pendingReviewHero')).toBeVisible();
   await expect(page.locator('.today-start')).toHaveCount(0);
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
 
   await approvePendingPlan(page);
   await expect(page.locator('body')).toHaveClass(/app-mode-generated/);
   await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('#pendingReviewHero')).toBeHidden();
   await expect(page.locator('.metric-rail')).toBeHidden();
   await expect(page.locator('.beginner-strip')).toBeHidden();
   await expect(workflow).toHaveAttribute('data-stage','ready');

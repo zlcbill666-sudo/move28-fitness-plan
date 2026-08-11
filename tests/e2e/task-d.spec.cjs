@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
-const { resetHttp, completeOnboarding, approvePendingPlan } = require('./helpers/pilot-flow.cjs');
+const { resetHttp, completeOnboarding, approvePendingPlan, answerSafeReadiness } = require('./helpers/pilot-flow.cjs');
 const fileUrl = pathToFileURL(path.resolve(__dirname, '..', '..', 'index.html')).href;
 
 async function expectInsideViewport(locator, viewport) {
@@ -27,6 +27,7 @@ async function setupAction(page, viewport) {
   await page.getByRole('button', { name: '完成，返回首页' }).click();
   await approvePendingPlan(page);
   await page.getByRole('button', { name: '开始今天训练' }).click();
+  await answerSafeReadiness(page);
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
