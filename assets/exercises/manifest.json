@@ -800,7 +800,7 @@
       "production": {
         "status": "reference_only",
         "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "reason": "来源为上坡跑步机动作，与目标0坡度平地慢走语义不符；商业媒体授权亦未确认且分辨率仅180×180"
       },
       "reviews": {
         "rights": "pending",
@@ -909,7 +909,7 @@
       "production": {
         "status": "reference_only",
         "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "reason": "目标为坐姿主动踝背屈且不借助手、毛巾或弹力带，现有候选尚未完成动作语义复核；商业媒体授权亦未确认且分辨率仅180×180"
       },
       "reviews": {
         "rights": "pending",

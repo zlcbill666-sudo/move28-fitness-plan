@@ -46,6 +46,15 @@ test('ExerciseDB首批17项来源精确、商业权利阻塞且不得作为正�
   }
 });
 
+test('两项历史候选的动作语义缺口在媒体台账中明确阻断', () => {
+  const manifest = loadManifest();
+  const byId = Object.fromEntries(manifest.assets.map(item => [item.id, item]));
+  assert.match(byId['flat-walk'].production.reason, /上坡跑步机.*0坡度平地慢走/);
+  assert.match(byId['calf-stretch'].production.reason, /坐姿主动踝背屈.*不借助手、毛巾或弹力带/);
+  assert.equal(byId['flat-walk'].production.releaseEligible, false);
+  assert.equal(byId['calf-stretch'].production.releaseEligible, false);
+});
+
 test('项目原创简易GIF权利已确认但视觉替换完成前不得发布为正式素材', () => {
   const manifest = loadManifest();
   const originals = manifest.assets.filter(item => item.origin.provider === 'MOVE 28 Pillow');
