@@ -200,6 +200,19 @@ test('workout-guide加载后篡改安全边界intrinsic不会执行外部代码�
   assert.deepEqual(after,before);assert.equal(calls,0);
 });
 
+test('媒体发布受阻时动作库与跟练仅输出文字占位且不泄漏GIF路径',()=>{
+  const {catalog,guide}=setup();
+  const dashboard=require('../../src/ui/dashboard.js'),exercise=catalog.exerciseCatalog[0];
+  const libraryHtml=dashboard.exerciseMediaHtml(exercise),guideHtml=guide.guideMediaHtml(exercise);
+  for(const html of [libraryHtml,guideHtml]){
+    assert.match(html,/动作媒体审核中/);
+    assert.doesNotMatch(html,/<img|<picture|<video|<source/i);
+    assert.doesNotMatch(html,/assets\/gifs\//);
+  }
+  assert.match(libraryHtml,/TEXT GUIDE/);
+  assert.match(guideHtml,/TEXT-ONLY MODE/);
+});
+
 test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配或提供任选项',()=>{
   const {catalog,guide,plan}=setup();
   const session=plan.weeks[0].sessions[0];

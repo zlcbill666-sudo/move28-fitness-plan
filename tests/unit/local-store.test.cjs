@@ -104,7 +104,7 @@ test('正式复核API生成脱敏逐项材料并在全部硬门通过后激活�
   assert.deepEqual(dossier.availableWeekdays,['mon','thu']);
   assert.deepEqual(dossier.lineage,{validationResult:'passed',currentPlanId:plan.id,acceptedEdges:[]});
   assert.deepEqual(dossier.weeks.map(week=>week.number),[1,2,3,4]);
-  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.reviewStatus==='approved'&&action.pattern&&action.gif&&action.dose&&Object.prototype.hasOwnProperty.call(action,'variant')))));
+  assert.ok(dossier.weeks.every(week=>week.sessions.every(session=>session.actions.every(action=>action.id&&action.name&&action.reviewStatus==='approved'&&action.pattern&&action.dose&&action.cues&&Object.prototype.hasOwnProperty.call(action,'variant')&&!Object.prototype.hasOwnProperty.call(action,'gif')))));
   const serialized=JSON.stringify(dossier);
   for(const forbiddenKey of ['chestSymptoms','age','equipmentBySetting','exclusions','chairRise','wallPushup','wallHinge','floorAccess','walkTolerance'])assert.equal(serialized.includes(`"${forbiddenKey}":`),false,forbiddenKey);
   assert.equal(serialized.includes('RAW HEALTH'),false);

@@ -5,15 +5,17 @@ if(isCommonJS){require('../data/legacy-demo-plan.js');require('../data/tracker-f
 const validatorApi=isCommonJS?require('../domain/plan-validator.js'):Move28.domain;
 const explanationApi=isCommonJS?require('../domain/plan-explanation.js'):Move28.domain;
 const catalogApi=isCommonJS?require('../data/exercise-catalog.js'):Move28.data;
+const mediaPolicyApi=isCommonJS?require('../data/exercise-media-policy.js'):Move28.data&&Move28.data.exerciseMediaPolicy;
 const storageApi=isCommonJS?require('../storage/local-store.js'):Move28.storage;
 const trustedValidatePlan=validatorApi&&typeof validatorApi.validatePlan==='function'?validatorApi.validatePlan:null;
 const trustedBuildPlanExplanation=explanationApi&&typeof explanationApi.buildPlanExplanation==='function'?explanationApi.buildPlanExplanation:null;
 const trustedCatalog=catalogApi&&Array.isArray(catalogApi.exerciseCatalog)?catalogApi.exerciseCatalog:null;
+const trustedMediaPresentation=mediaPolicyApi&&typeof mediaPolicyApi.presentationFor==='function'?mediaPolicyApi.presentationFor:null;
 const trustedLoadState=storageApi&&typeof storageApi.loadState==='function'?storageApi.loadState:null;
 const trustedPreviewScheduleShift=storageApi&&typeof storageApi.previewScheduleShift==='function'?storageApi.previewScheduleShift:null;
-const api=factory(root,Move28,trustedValidatePlan,trustedBuildPlanExplanation,trustedCatalog,trustedLoadState,trustedPreviewScheduleShift);
+const api=factory(root,Move28,trustedValidatePlan,trustedBuildPlanExplanation,trustedCatalog,trustedMediaPresentation,trustedLoadState,trustedPreviewScheduleShift);
 if(isCommonJS)module.exports=api;
-})(globalThis,function(root,Move28,trustedValidatePlan,trustedBuildPlanExplanation,trustedCatalog,trustedLoadState,trustedPreviewScheduleShift){
+})(globalThis,function(root,Move28,trustedValidatePlan,trustedBuildPlanExplanation,trustedCatalog,trustedMediaPresentation,trustedLoadState,trustedPreviewScheduleShift){
 'use strict';
 const DATA=Move28.data.legacyDemoPlan;
 const TRACKER_FIELDS=Move28.data.trackerFields;
@@ -217,7 +219,13 @@ function setPlanContext(context){
   applyAppMode();renderWorkflowStatus();renderToday();renderWeeks();
 }
 
-function renderExercises(){const groups=['全部','力量A','力量B','有氧C'];$('#exerciseTabs').innerHTML=groups.map(g=>`<button class="tab ${g===state.exerciseFilter?'active':''}" onclick="pickExercise('${g}')">${g}</button>`).join('');const list=DATA.exercises.filter(e=>state.exerciseFilter==='全部'||e.groups.includes(state.exerciseFilter));$('#exerciseGrid').innerHTML=list.map(e=>`<article class="exercise"><div class="exercise-media"><img src="${esc(e.gif)}" alt="${esc(e.name)}动作GIF"></div><div class="exercise-body"><h3>${esc(e.name)}</h3><div class="tags">${e.groups.map(g=>`<span class="tag">${g}</span>`).join('')}</div><details class="detail" open><summary>起始姿势</summary><p>${esc(e.start)}</p></details><details class="detail"><summary>动作步骤</summary><p>${esc(e.steps)}</p></details><details class="detail"><summary>呼吸与节奏</summary><p>${esc(e.breath)}</p></details><details class="detail"><summary>常见错误</summary><p>${esc(e.errors)}</p></details><details class="detail"><summary>安全保护要点</summary><p class="danger-text">${esc(e.safety)}</p></details></div></article>`).join('')}
+function exerciseMediaHtml(exercise){
+  let presentation=null;try{presentation=trustedMediaPresentation?trustedMediaPresentation(exercise.id):null}catch(_error){presentation=null}
+  if(presentation&&presentation.status==='released'&&typeof presentation.src==='string'&&presentation.src)return`<div class="exercise-media"><img src="${esc(presentation.src)}" alt="${esc(exercise.name)}动作示范"></div>`;
+  const title=presentation&&typeof presentation.title==='string'?presentation.title:'动作媒体暂不可用',message=presentation&&typeof presentation.message==='string'?presentation.message:'请仅按文字动作说明和安全提示执行。';
+  return`<div class="exercise-media media-blocked" role="note" aria-label="${esc(exercise.name)}动作媒体未开放"><span>TEXT GUIDE</span><b>${esc(title)}</b><p>${esc(message)}</p></div>`;
+}
+function renderExercises(){const groups=['全部','力量A','力量B','有氧C'];$('#exerciseTabs').innerHTML=groups.map(g=>`<button class="tab ${g===state.exerciseFilter?'active':''}" onclick="pickExercise('${g}')">${g}</button>`).join('');const list=DATA.exercises.filter(e=>state.exerciseFilter==='全部'||e.groups.includes(state.exerciseFilter));$('#exerciseGrid').innerHTML=list.map(e=>`<article class="exercise">${exerciseMediaHtml(e)}<div class="exercise-body"><h3>${esc(e.name)}</h3><div class="tags">${e.groups.map(g=>`<span class="tag">${g}</span>`).join('')}</div><details class="detail" open><summary>起始姿势</summary><p>${esc(e.start)}</p></details><details class="detail"><summary>动作步骤</summary><p>${esc(e.steps)}</p></details><details class="detail"><summary>呼吸与节奏</summary><p>${esc(e.breath)}</p></details><details class="detail"><summary>常见错误</summary><p>${esc(e.errors)}</p></details><details class="detail"><summary>安全保护要点</summary><p class="danger-text">${esc(e.safety)}</p></details></div></article>`).join('')}
 Move28.pickExercise=g=>{state.exerciseFilter=g;renderExercises()};
 const inputSkip=new Set(['天数','周次','星期','计划训练']);
 function fieldType(label){if(/日期$/.test(label))return'date';if(/备注|异常症状/.test(label))return'textarea';if(/时间/.test(label))return'time';if(/完成状态/.test(label))return'status';if(/精力/.test(label))return'scale';return'number'}
@@ -234,7 +242,7 @@ function exportCSV(){const hs=['天数','周次','星期','计划训练',...TRAC
 function clearTrack(){const b=$('#clearBtn');if(!state.clearArmed){state.clearArmed=true;b.textContent='再点一次确认';showToast(`再次点击即可清空第${state.trackDay}天`);clearTimeout(state.clearArmTimer);state.clearArmTimer=setTimeout(()=>{state.clearArmed=false;b.textContent='清空这天'},3000);return}state.clearArmed=false;clearTimeout(state.clearArmTimer);const next={...state.tracker};delete next[state.trackDay];if(!persistLocal(state.storeKey,JSON.stringify(next))){b.textContent='清空这天';return false}state.tracker=next;renderForm();renderOverview();renderToday();b.textContent='清空这天';showToast(`第${state.trackDay}天记录已清空`);return true}
 function renderSafety(){$('#safetyGrid').innerHTML=DATA.safety.map(x=>`<article class="safety-card"><h3>${esc(x.title)}</h3><div>${esc(x.text)}</div></article>`).join('')}
 function reveal(){const io=new root.IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.08});$$('.reveal').forEach(x=>io.observe(x))}
-const ui={setPlanContext,renderToday,renderWeeks,renderExercises,renderDayList,renderForm,renderOverview,renderSafety,reveal,saveTrack,exportCSV,clearTrack,showToast};
+const ui={setPlanContext,renderToday,renderWeeks,renderExercises,exerciseMediaHtml,renderDayList,renderForm,renderOverview,renderSafety,reveal,saveTrack,exportCSV,clearTrack,showToast};
 Object.assign(Move28.ui||{},ui);
 const actions={moveDay:Move28.moveDay,pickWeek:Move28.pickWeek,selectGeneratedSession:Move28.selectGeneratedSession,previewScheduleShift:Move28.previewScheduleShift,closeScheduleShiftPreview:Move28.closeScheduleShiftPreview,applyScheduleShiftDisplay:Move28.applyScheduleShiftDisplay,restoreScheduleShiftDisplay:Move28.restoreScheduleShiftDisplay,pickExercise:Move28.pickExercise,setStatus:Move28.setStatus,selectTrackDay:Move28.selectTrackDay,openTrack:Move28.openTrack};
 if(root.window===root)for(const name of Object.keys(actions))root[name]=actions[name];

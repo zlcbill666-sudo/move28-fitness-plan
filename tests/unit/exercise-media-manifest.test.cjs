@@ -4,10 +4,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.resolve(__dirname, '..', '..');
 const { exerciseCatalog } = require('../../src/data/exercise-catalog.js');
+const mediaPolicy = require('../../src/data/exercise-media-policy.js');
 const manifestPath = path.join(projectRoot, 'assets', 'exercises', 'manifest.json');
 
 function loadManifest() {
@@ -69,6 +71,37 @@ test('不存在未经四重审核就标记可发布的媒体', () => {
       assert.ok(item.replacement[key] && item.replacement[key].path);
     }
   }
+});
+
+test('参与者媒体策略与正式manifest逐项一致且未知动作失败关闭', () => {
+  const manifest = loadManifest();
+  const eligible = manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id);
+  assert.deepEqual(mediaPolicy.releaseEligibleIds, eligible);
+  assert.equal(mediaPolicy.mode, eligible.length ? 'media_enabled' : 'text_only');
+  for (const item of manifest.assets) {
+    assert.equal(mediaPolicy.isReleaseEligible(item.id), item.production.releaseEligible, item.id);
+    assert.equal(mediaPolicy.presentationFor(item.id).status, item.production.releaseEligible ? 'released' : 'blocked');
+  }
+  assert.equal(mediaPolicy.isReleaseEligible('unknown-exercise'), false);
+  assert.equal(mediaPolicy.presentationFor('unknown-exercise').status, 'blocked');
+  assert.ok(Object.isFrozen(mediaPolicy));
+  assert.ok(Object.isFrozen(mediaPolicy.releaseEligibleIds));
+});
+
+test('经典脚本先加载媒体策略再加载参与者渲染器且首页不引用旧GIF', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
+  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => match[1]);
+  const policyIndex = scripts.indexOf('src/data/exercise-media-policy.js');
+  assert.ok(policyIndex > scripts.indexOf('src/data/exercise-catalog.js'));
+  assert.ok(policyIndex < scripts.indexOf('src/ui/dashboard.js'));
+  assert.ok(policyIndex < scripts.indexOf('src/ui/workout-guide.js'));
+  assert.doesNotMatch(html, /<img[^>]+assets\/gifs\//i);
+  assert.match(html, /参与者界面保持纯文字模式/);
+  const context = {}; vm.createContext(context);
+  for (const relative of ['src/namespace.js', 'src/data/exercise-media-policy.js']) {
+    vm.runInContext(fs.readFileSync(path.join(projectRoot, ...relative.split('/')), 'utf8'), context);
+  }
+  assert.equal(context.Move28.data.exerciseMediaPolicy.presentationFor('unknown').status, 'blocked');
 });
 
 test('媒体校验器审计模式通过、发布模式对25个未完成动作闭门失败', () => {
