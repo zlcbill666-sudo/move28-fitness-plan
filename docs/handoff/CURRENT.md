@@ -11,13 +11,14 @@
 
 1. `glute-bridge-v1`和`supported-standing-march-v2`只作为失败研究原型保留，禁止进入正式manifest。
 2. 不再继续打磨当前MakeHuman角色作为25项统一商业视觉方案。
-3. 当前候选分类：
+3. 冻结源矩阵候选分类（保留采购前决策历史，不回写覆盖）：
    - 16项`purchase-exact-candidate`；
    - 4项`purchase-edit-candidate`；
    - 5项`custom-3d`；
    - 0项`unresolved`。
-4. 当前阶段按用户明确决策暂时忽略版权与授权问题，不得再把版权询证、许可确认或权利门禁作为内部开发前置。
-5. 仍不擅自进行付款、联系供应商或委托第三方等外部动作；内部研究、候选下载评估、转码、动作核验和产品接线可继续推进。
+4. Spike后的当前执行路由：`seated-knee-extension-unloaded`已从“待裁剪验证”转为`custom-3d`，因此后续实际队列为3项继续编辑验证、6项定制；源矩阵仍保留原始采购前分类，No-Go证据以独立Spike报告追加，不篡改历史。
+5. 当前阶段按用户明确决策暂时忽略版权与授权问题，不得再把版权询证、许可确认或权利门禁作为内部开发前置。
+6. 仍不擅自进行付款、联系供应商或委托第三方等外部动作；内部研究、候选下载评估、转码、动作核验和产品接线可继续推进。
 
 ## 当前交付物
 
@@ -94,13 +95,15 @@
 - 20秒保持降级、双手支撑删除、fallback漂移、目录指纹伪造、未知批准字段、候选矩阵完整身份漂移、规格头字段漂移、镜头标准漂移和输出根目录漂移：均失败关闭；
 - 生产包真实临时探针：合法PNG/WebM/MP4/GIF/poster/联系表/QA/四门包通过；额外文件/目录/符号链接/reparse point、PNG篡改、重复尾帧、异源视频、单帧异源或错序、伪联系表、未达标QA指标和NaN/±Infinity数值均失败关闭；WebM/MP4/GIF通过真实解码帧数、逐帧顺序和逐帧感知指纹绑定母版，poster和联系表通过解码像素绑定；每项acceptanceCriteria/qaMetrics均由验证器按冻结运算符执行并绑定已哈希证据；
 - `--verify-production`：当前9项成品尚未制作，按设计失败且不留旧审核台；
-- 当前Task完整测试：401 passed、0 failed；
-- 当前Task规格与质量双审：此前发现4项问题（聚合MAE可稀释单帧异源、非有限QA数值可绕过、测试写仓库审核台、Python探针生成仓库`__pycache__`），均已修复并有回归验证；删除目标`.pyc`后规格测试10/10通过且`PYC_RECREATED=no`；最终冻结版规格终审`PASS`、代码质量终审`APPROVED`。
+- 当前Task完整测试：415 passed、0 failed；
+- 坐姿徒手伸膝Spike：候选SHA-256绑定通过；24个不等时长GIF编码帧、总时长5秒；人工审核确认第一侧编码帧0–12为完整周期、峰值位于帧6；FFprobe逐包证据显示峰值帧持续0.5秒、普通运动帧中位持续0.1秒，即静止5倍；命中`knee-lock-frame-hold`，结论`no-go/custom-3d`；聚焦测试14 passed、0 failed；显式下载复现成功且SHA一致；
+- 当前Task规格与质量双审：历轮审查发现的证据、复现、有限值、事务、浮点、fd、多目标暂存、回滚失败备份保全及输入/输出路径别名问题均已按根因修复并有回归测试；最终版待重新双审。
 
 ## 下一步
 
-1. 下一独立Task优先执行`seated-knee-extension-unloaded`单侧完整循环裁剪Spike和`calf-stretch`20秒保持编码Spike；
-2. `supported-calf-raise`、`high-seat-sit-to-stand`若无可编辑3D源，直接按合同转定制；
-3. 专业定制先做`wall-hip-hinge`与`supported-standing-march`代表原型；
-4. 实际联系供应商、付款、真人录制或委托第三方前需用户授权；
-5. 正式manifest继续25/25阻塞。
+1. `seated-knee-extension-unloaded`裁剪Spike已完成：人工审核确认第一侧编码帧0–12具备完整伸展与回程；逐包时间证据显示峰值编码帧6持续0.5秒，是普通运动帧中位持续时间的5倍，命中`knee-lock-frame-hold`；结论`no-go`，按冻结合同转`custom-3d`；结构化证据见`docs/research/data/seated-knee-extension-unloaded-spike.json`；
+2. 下一独立Task执行`calf-stretch`20秒保持编码Spike；
+3. `supported-calf-raise`、`high-seat-sit-to-stand`若无可编辑3D源，直接按合同转定制；
+4. 专业定制先做`wall-hip-hinge`与`supported-standing-march`代表原型，并把`seated-knee-extension-unloaded`纳入定制队列；
+5. 实际联系供应商、付款、真人录制或委托第三方前需用户授权；
+6. 正式manifest继续25/25阻塞。
