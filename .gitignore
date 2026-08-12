@@ -6,6 +6,22 @@ test-results/
 # Local research/build outputs are never participant release inputs.
 media-build/
 media-src/
+# Keep only the reproducible YouTube research pipeline under version control.
+!media-src/
+media-src/*
+!media-src/scripts/
+media-src/scripts/*
+!media-src/scripts/youtube_channel_pipeline.py
+!media-src/scripts/youtube_preview_pipeline.py
+!media-src/scripts/youtube_apply_visual_audit.py
+!media-src/scripts/youtube_manual_review_page.py
+!media-src/scripts/build_3d_candidate_review.py
+!media-src/scripts/build_supported_march_v2.py
+!media-src/scripts/qa_supported_march.py
+
+# Raw capture, third-party previews, motion exports, Blender sources, caches,
+# and generated renders stay ignored by default. Add one exact !path rule only
+# after that specific original-3D source has passed provenance review.
 
 # Interpreter and operating-system caches.
 __pycache__/

@@ -1,0 +1,60 @@
+{
+  "reviewedAt": "2026-08-12",
+  "assets": [
+    {
+      "id": "seated-leg-raise",
+      "sourceUrl": "https://gymvisual.com/img/p/5/4/2/2/5422.gif",
+      "sha256": "45daa1871a0bc2b608da1c7c3d017fd32d743a7bb6469a20282a98f481a52d8a",
+      "bytes": 100712,
+      "frames": 12,
+      "width": 180,
+      "height": 180,
+      "productUrl": null,
+      "review": "reject"
+    },
+    {
+      "id": "ankle-circle",
+      "sourceUrl": "https://gymvisual.com/img/p/6/6/3/1/6631.gif",
+      "sha256": "5bdf25f29f257ff9cdff4989375cc1311933dd7454290c60ab7bd69118cbd4fe",
+      "bytes": 77348,
+      "frames": 12,
+      "width": 180,
+      "height": 180,
+      "productUrl": null,
+      "review": "reject"
+    },
+    {
+      "id": "high-seat-sit-to-stand",
+      "sourceUrl": "https://gymvisual.com/img/p/2/9/0/0/3/29003.gif",
+      "sha256": "524b58efaa70cf156c13276d180d940906d39645fb4298035b19021e0fbf87f6",
+      "bytes": 83489,
+      "frames": 12,
+      "width": 180,
+      "height": 180,
+      "productUrl": "https://gymvisual.com/animated-gifs/16441-bodyweight-bench-squat-female.html",
+      "review": "purchase-edit-candidate"
+    },
+    {
+      "id": "dead-bug",
+      "sourceUrl": "https://gymvisual.com/img/p/2/0/8/3/5/20835.gif",
+      "sha256": "8159be89633287ff0fac4ae8842d244c5901635854d1cdeca54ee22be303afe4",
+      "bytes": 122868,
+      "frames": 24,
+      "width": 180,
+      "height": 180,
+      "productUrl": null,
+      "review": "reject"
+    },
+    {
+      "id": "calf-stretch",
+      "sourceUrl": "https://gymvisual.com/img/p/6/6/5/3/6653.gif",
+      "sha256": "d188aa4f6fa81ee66798c92303ae857bead09e0bae64ba26ce20c51eccce5322",
+      "bytes": 177482,
+      "frames": 12,
+      "width": 180,
+      "height": 180,
+      "productUrl": null,
+      "review": "reject"
+    }
+  ]
+}
