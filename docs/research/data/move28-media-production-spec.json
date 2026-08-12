@@ -1,0 +1,820 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-13",
+  "scope": "Internal production specification for four controlled edits and five custom 3D actions.",
+  "releaseEligible": false,
+  "externalActionPerformed": false,
+  "sourceMatrix": "docs/research/data/move28-3d-candidate-matrix.json",
+  "visualStandard": {
+    "background": "pure-white-opaque",
+    "figure": "gray-white-anatomical-human",
+    "targetHighlight": "red-surface-bound-muscle-region",
+    "watermark": "none",
+    "camera": "fixed-orthographic-or-long-lens",
+    "subjectHeightPercent": [
+      68,
+      82
+    ],
+    "forbidden": [
+      "floating-muscle-overlay",
+      "camera-cut",
+      "camera-shake",
+      "limb-clipping",
+      "support-object-slide",
+      "instructional-text-baked-into-media"
+    ]
+  },
+  "technicalStandard": {
+    "width": 512,
+    "height": 512,
+    "fps": 24,
+    "master": "png-sequence",
+    "primary": "webm-vp9",
+    "review": "mp4-h264",
+    "fallback": "gif",
+    "poster": "png",
+    "audioTracks": 0,
+    "duplicateTerminalFrame": false,
+    "requiredFiles": [
+      "contract.json",
+      "production-manifest.json",
+      "master.webm",
+      "review.mp4",
+      "fallback.gif",
+      "poster.png",
+      "contact-sheet.png",
+      "qa-report.json",
+      "manual-review.json"
+    ],
+    "requiredGates": [
+      "motionGate",
+      "safetyGate",
+      "visualGate",
+      "technicalGate"
+    ],
+    "outputRoot": "media-build/production-motion",
+    "masterDirectory": "frames",
+    "framePattern": "frame-%04d.png",
+    "requiredDirectories": [
+      "frames"
+    ]
+  },
+  "editPackages": [
+    {
+      "exerciseId": "high-seat-sit-to-stand",
+      "sourceProductUrl": "https://gymvisual.com/animated-gifs/16441-bodyweight-bench-squat-female.html",
+      "sourceEvidenceSha256": "524b58efaa70cf156c13276d180d940906d39645fb4298035b19021e0fbf87f6",
+      "strategy": "conditional-scene-reedit",
+      "inputPrerequisites": [
+        "editable-3d-scene-and-rig",
+        "modifiable-seat-geometry",
+        "full-sit-stand-return-cycle"
+      ],
+      "allowedOperations": [
+        "raise-seat-surface",
+        "retarget-hip-knee-ankle-trajectory",
+        "recompute-seat-contact",
+        "reframe-fixed-camera",
+        "re-encode-from-rendered-frames"
+      ],
+      "forbiddenOperations": [
+        "two-dimensional-seat-overlay",
+        "label-only-high-seat-claim",
+        "retain-ordinary-bench-height",
+        "hand-push-off-thighs",
+        "remove-controlled-return"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "stable-high-seat-visible",
+          "metric": "stable_high_seat_visible",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "id": "full-contact-cycle",
+          "metric": "seat_contact_phases",
+          "operator": "eq",
+          "value": [
+            "seated",
+            "leave",
+            "stand",
+            "descend",
+            "seated"
+          ]
+        },
+        {
+          "id": "no-arm-assist",
+          "metric": "arm_assist_frames",
+          "operator": "eq",
+          "value": 0,
+          "unit": "frames"
+        },
+        {
+          "id": "feet-planted",
+          "metric": "foot_ground_contact_ratio",
+          "operator": "gte",
+          "value": 0.98,
+          "unit": "ratio"
+        },
+        {
+          "id": "high-seat-variant",
+          "metric": "catalog_variant",
+          "operator": "eq",
+          "value": "high_seat"
+        }
+      ],
+      "fallback": "custom-3d",
+      "releaseBlocked": true,
+      "catalogContractSha256": "1de346ae2b84ee555ceaad562284b49d27b781c167d03ddfcad05ee08ab3b119"
+    },
+    {
+      "exerciseId": "seated-knee-extension-unloaded",
+      "sourceProductUrl": "https://gymvisual.com/animated-gifs/24630-seated-alternate-knee-extension-on-chair-male.html",
+      "sourceEvidenceSha256": "6589241da7ec6a8a00b373606ff042d6702199bcbbc2873400db399df93ab6ab",
+      "strategy": "phase-locked-unilateral-trim",
+      "inputPrerequisites": [
+        "one-side-full-extension-visible",
+        "same-side-controlled-return-visible",
+        "upright-chair-seated-setup"
+      ],
+      "allowedOperations": [
+        "trim-at-neutral-pose-boundaries",
+        "retain-one-complete-side",
+        "remove-opposite-side-repetition",
+        "re-encode-without-duplicate-terminal-frame"
+      ],
+      "forbiddenOperations": [
+        "cut-before-neutral-return",
+        "mix-left-and-right-phases",
+        "speed-ramp-return-phase",
+        "knee-lock-frame-hold",
+        "add-external-load"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "single-side",
+          "metric": "active_side_count",
+          "operator": "eq",
+          "value": 1,
+          "unit": "side"
+        },
+        {
+          "id": "phase-order",
+          "metric": "motion_phases",
+          "operator": "eq",
+          "value": [
+            "neutral",
+            "extend",
+            "near-straight",
+            "return",
+            "neutral"
+          ]
+        },
+        {
+          "id": "complete-return",
+          "metric": "return_phase_present",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "id": "unloaded",
+          "metric": "external_load_count",
+          "operator": "eq",
+          "value": 0
+        },
+        {
+          "id": "thigh-stable",
+          "metric": "thigh_seat_contact_ratio",
+          "operator": "gte",
+          "value": 0.95,
+          "unit": "ratio"
+        }
+      ],
+      "fallback": "custom-3d",
+      "releaseBlocked": true,
+      "catalogContractSha256": "0e8eb583e6dec7d61635470d5a154bed72b7f3ba1e9d5e330457e7b1028f93a6"
+    },
+    {
+      "exerciseId": "supported-calf-raise",
+      "sourceProductUrl": "https://gymvisual.com/animated-gifs/6587-standing-calf-raise-with-support-female.html",
+      "sourceEvidenceSha256": "0880cf0843e5c957a38f9c3ebc1e0fa2670e4615ae71df18c017fe20096c7cfa",
+      "strategy": "conditional-support-replacement",
+      "inputPrerequisites": [
+        "editable-3d-scene-and-rig",
+        "replaceable-support-object",
+        "tracked-hand-contact-anchors"
+      ],
+      "allowedOperations": [
+        "replace-gym-support-with-stable-chair",
+        "recompute-bilateral-hand-chair-contact",
+        "preserve-calf-raise-trajectory",
+        "reframe-fixed-camera",
+        "re-encode-from-rendered-frames"
+      ],
+      "forbiddenOperations": [
+        "two-dimensional-chair-overlay",
+        "label-only-chair-claim",
+        "retain-gym-machine-support",
+        "remove-hand-support",
+        "introduce-knee-bounce"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "chair-visible",
+          "metric": "stable_chair_visible",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "id": "continuous-light-support",
+          "metric": "hand_chair_contact_ratio",
+          "operator": "gte",
+          "value": 0.98,
+          "unit": "ratio"
+        },
+        {
+          "id": "bilateral-rise",
+          "metric": "heel_peak_symmetry_mm",
+          "operator": "lte",
+          "value": 12,
+          "unit": "mm"
+        },
+        {
+          "id": "one-second-peak",
+          "metric": "peak_hold_seconds",
+          "operator": "gte",
+          "value": 1,
+          "unit": "seconds"
+        },
+        {
+          "id": "no-bounce",
+          "metric": "ballistic_direction_reversals",
+          "operator": "eq",
+          "value": 0
+        }
+      ],
+      "fallback": "custom-3d",
+      "releaseBlocked": true,
+      "catalogContractSha256": "24c346c11bc4bcc228b27b0588cd8f265496175ca0815c08086288a7961b941a"
+    },
+    {
+      "exerciseId": "calf-stretch",
+      "sourceProductUrl": "https://gymvisual.com/videos/20530-sitting-toe-tapping-stretch-on-a-chair-female.html",
+      "sourceEvidenceSha256": "ca42d32791559d76e71ff50da367618667f1cb90f328605960cd4cd6b5891be7",
+      "strategy": "peak-pose-hold-extension",
+      "inputPrerequisites": [
+        "upright-front-chair-sitting",
+        "one-leg-forward-heel-grounded",
+        "active-dorsiflexion-peak-visible",
+        "no-hand-band-or-towel-assist"
+      ],
+      "allowedOperations": [
+        "select-clean-dorsiflexion-cycle",
+        "extend-peak-pose-to-twenty-seconds",
+        "use-motionless-source-pose-hold",
+        "append-controlled-release",
+        "re-encode-long-form-webm"
+      ],
+      "forbiddenOperations": [
+        "retain-repetitive-toe-tapping",
+        "claim-twenty-second-hold-under-twenty-seconds",
+        "add-hand-towel-or-band-assist",
+        "lift-heel-from-ground",
+        "use-frame-interpolation-during-static-hold"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "heel-grounded",
+          "metric": "heel_ground_contact_ratio",
+          "operator": "gte",
+          "value": 0.99,
+          "unit": "ratio"
+        },
+        {
+          "id": "twenty-second-hold",
+          "metric": "continuous_peak_hold_seconds",
+          "operator": "gte",
+          "value": 20,
+          "unit": "seconds"
+        },
+        {
+          "id": "active-only",
+          "metric": "assistive_tool_count",
+          "operator": "eq",
+          "value": 0
+        },
+        {
+          "id": "static-hold",
+          "metric": "peak_hold_motion_px",
+          "operator": "lte",
+          "value": 1,
+          "unit": "pixels-per-frame"
+        },
+        {
+          "id": "full-sequence",
+          "metric": "motion_phases",
+          "operator": "eq",
+          "value": [
+            "neutral",
+            "dorsiflex",
+            "hold-20s",
+            "release"
+          ]
+        }
+      ],
+      "fallback": "custom-3d",
+      "releaseBlocked": true,
+      "catalogContractSha256": "e7688ca81c46de86e602a32bc8d78f6e516d699c25da3ab57ff557ce8f51c0da"
+    }
+  ],
+  "customPackages": [
+    {
+      "exerciseId": "wall-hip-hinge",
+      "targetRegions": [
+        "gluteals",
+        "hamstrings"
+      ],
+      "scene": [
+        "wall",
+        "flat-floor",
+        "no-pvc-dowel"
+      ],
+      "requiredContacts": [
+        "both-feet-floor",
+        "buttocks-wall-at-peak"
+      ],
+      "phases": [
+        "upright",
+        "hips-back",
+        "light-wall-touch",
+        "return-upright"
+      ],
+      "forbiddenPatterns": [
+        "squat-pattern",
+        "lumbar-rounding",
+        "heel-lift",
+        "wall-impact",
+        "pvc-dowel"
+      ],
+      "cameraRequirements": [
+        "side-three-quarter-view",
+        "wall-contact-visible",
+        "feet-and-head-in-frame"
+      ],
+      "qaMetrics": [
+        {
+          "id": "wall-touch",
+          "metric": "peak_buttocks_wall_distance_mm",
+          "operator": "lte",
+          "value": 5,
+          "unit": "mm"
+        },
+        {
+          "id": "feet-stable",
+          "metric": "foot_slide_mm",
+          "operator": "lte",
+          "value": 5,
+          "unit": "mm"
+        },
+        {
+          "id": "not-squat",
+          "metric": "knee_forward_translation_mm",
+          "operator": "lte",
+          "value": 40,
+          "unit": "mm"
+        },
+        {
+          "id": "neutral-spine",
+          "metric": "trunk_segment_angle_drift_deg",
+          "operator": "lte",
+          "value": 10,
+          "unit": "degrees"
+        }
+      ],
+      "releaseBlocked": true,
+      "catalogContractSha256": "d4d734a9f26e84ef8abb8582d3bef7fb8757e3269188124e5e58dfc1612c2992"
+    },
+    {
+      "exerciseId": "bird-dog-regression",
+      "targetRegions": [
+        "abdominals",
+        "shoulder-stabilizers"
+      ],
+      "scene": [
+        "exercise-mat",
+        "quadruped"
+      ],
+      "requiredContacts": [
+        "both-knees-mat",
+        "support-hand-mat",
+        "sliding-hand-mat"
+      ],
+      "phases": [
+        "quadruped-neutral",
+        "hand-slide-forward",
+        "comfortable-reach",
+        "hand-slide-return",
+        "switch-side"
+      ],
+      "forbiddenPatterns": [
+        "hand-lift",
+        "opposite-leg-extension",
+        "trunk-rotation",
+        "lumbar-sag",
+        "hips-sit-back"
+      ],
+      "cameraRequirements": [
+        "front-side-three-quarter-view",
+        "both-hands-and-knees-visible",
+        "sliding-contact-visible"
+      ],
+      "qaMetrics": [
+        {
+          "id": "hand-contact",
+          "metric": "sliding_hand_mat_contact_ratio",
+          "operator": "gte",
+          "value": 0.99,
+          "unit": "ratio"
+        },
+        {
+          "id": "three-point-stability",
+          "metric": "support_point_loss_frames",
+          "operator": "eq",
+          "value": 0,
+          "unit": "frames"
+        },
+        {
+          "id": "pelvis-stable",
+          "metric": "pelvis_roll_deg",
+          "operator": "lte",
+          "value": 8,
+          "unit": "degrees"
+        },
+        {
+          "id": "no-leg-extension",
+          "metric": "leg_extension_frames",
+          "operator": "eq",
+          "value": 0,
+          "unit": "frames"
+        }
+      ],
+      "releaseBlocked": true,
+      "catalogContractSha256": "ad6eb055cea50e0e9cf43551ad6fa32fa25344adafc0af168469f49638b8ed65"
+    },
+    {
+      "exerciseId": "supported-standing-march",
+      "targetRegions": [
+        "hip-flexors",
+        "quadriceps"
+      ],
+      "scene": [
+        "stable-chair",
+        "flat-floor"
+      ],
+      "requiredContacts": [
+        "left-hand-chair",
+        "right-hand-chair",
+        "support-foot-floor"
+      ],
+      "phases": [
+        "stable-stance",
+        "left-knee-small-lift",
+        "left-foot-return",
+        "right-knee-small-lift",
+        "right-foot-return"
+      ],
+      "forbiddenPatterns": [
+        "one-hand-release",
+        "trunk-lean",
+        "high-knee",
+        "straight-leg-kick",
+        "stomping",
+        "chair-slide"
+      ],
+      "cameraRequirements": [
+        "front-side-three-quarter-view",
+        "both-hand-contacts-visible",
+        "both-feet-visible"
+      ],
+      "qaMetrics": [
+        {
+          "id": "two-hand-support",
+          "metric": "both_hand_chair_contact_ratio",
+          "operator": "gte",
+          "value": 0.99,
+          "unit": "ratio"
+        },
+        {
+          "id": "small-lift",
+          "metric": "foot_clearance_cm",
+          "operator": "between",
+          "value": [
+            5,
+            10
+          ],
+          "unit": "cm"
+        },
+        {
+          "id": "upright",
+          "metric": "trunk_vertical_deviation_deg",
+          "operator": "lte",
+          "value": 8,
+          "unit": "degrees"
+        },
+        {
+          "id": "chair-stable",
+          "metric": "chair_slide_mm",
+          "operator": "lte",
+          "value": 2,
+          "unit": "mm"
+        }
+      ],
+      "releaseBlocked": true,
+      "catalogContractSha256": "8c63228b7310e8332010cd77d950490dac3660588911e2fe20513a47d2dd7c26"
+    },
+    {
+      "exerciseId": "ankle-circle",
+      "targetRegions": [
+        "ankle-mobility-region"
+      ],
+      "scene": [
+        "stable-chair",
+        "flat-floor"
+      ],
+      "requiredContacts": [
+        "pelvis-chair",
+        "support-foot-floor"
+      ],
+      "phases": [
+        "seated-neutral",
+        "working-foot-lift",
+        "one-clear-clockwise-circle",
+        "neutral",
+        "one-clear-counterclockwise-circle",
+        "foot-return",
+        "switch-side"
+      ],
+      "forbiddenPatterns": [
+        "floor-long-sitting",
+        "knee-circling",
+        "large-lower-leg-swing",
+        "toe-only-wiggle",
+        "forced-range",
+        "fast-motion"
+      ],
+      "cameraRequirements": [
+        "front-side-close-view",
+        "chair-and-knee-visible",
+        "working-ankle-and-foot-unobstructed"
+      ],
+      "qaMetrics": [
+        {
+          "id": "knee-quiet",
+          "metric": "working_knee_translation_mm",
+          "operator": "lte",
+          "value": 15,
+          "unit": "mm"
+        },
+        {
+          "id": "foot-clearance",
+          "metric": "working_foot_floor_clearance_cm",
+          "operator": "between",
+          "value": [
+            2,
+            8
+          ],
+          "unit": "cm"
+        },
+        {
+          "id": "clockwise-count",
+          "metric": "clockwise_circle_count",
+          "operator": "eq",
+          "value": 1
+        },
+        {
+          "id": "counterclockwise-count",
+          "metric": "counterclockwise_circle_count",
+          "operator": "eq",
+          "value": 1
+        },
+        {
+          "id": "closed-path",
+          "metric": "circle_path_closure_error_percent",
+          "operator": "lte",
+          "value": 10,
+          "unit": "percent"
+        }
+      ],
+      "releaseBlocked": true,
+      "catalogContractSha256": "ef6e55b3ac755f4a2476eae5d6d0278feb624917e0faf1577b8a1b54289df3c3"
+    },
+    {
+      "exerciseId": "dead-bug",
+      "targetRegions": [
+        "abdominals"
+      ],
+      "scene": [
+        "exercise-mat",
+        "supine"
+      ],
+      "requiredContacts": [
+        "head-mat",
+        "torso-mat",
+        "arms-mat-at-sides",
+        "alternating-heel-mat"
+      ],
+      "phases": [
+        "tabletop-neutral",
+        "left-heel-lower",
+        "left-heel-tap",
+        "left-return",
+        "right-heel-lower",
+        "right-heel-tap",
+        "right-return"
+      ],
+      "forbiddenPatterns": [
+        "toe-tap",
+        "wall-press",
+        "arms-overhead",
+        "simultaneous-leg-lower",
+        "straight-leg-lower",
+        "lumbar-arch",
+        "momentum"
+      ],
+      "cameraRequirements": [
+        "side-three-quarter-view",
+        "both-arms-visible",
+        "heel-contact-and-lumbar-region-visible"
+      ],
+      "qaMetrics": [
+        {
+          "id": "tabletop",
+          "metric": "initial_hip_knee_angle_deg",
+          "operator": "between",
+          "value": [
+            80,
+            100
+          ],
+          "unit": "degrees"
+        },
+        {
+          "id": "heel-not-toe",
+          "metric": "heel_contact_events_per_side",
+          "operator": "eq",
+          "value": 1
+        },
+        {
+          "id": "alternate-only",
+          "metric": "simultaneous_leg_lower_frames",
+          "operator": "eq",
+          "value": 0,
+          "unit": "frames"
+        },
+        {
+          "id": "arms-at-sides",
+          "metric": "arm_mat_contact_ratio",
+          "operator": "gte",
+          "value": 0.99,
+          "unit": "ratio"
+        },
+        {
+          "id": "lumbar-stable",
+          "metric": "lumbar_mat_gap_mm",
+          "operator": "lte",
+          "value": 10,
+          "unit": "mm"
+        }
+      ],
+      "releaseBlocked": true,
+      "catalogContractSha256": "9b5bb95ae9dc084d24aec1a3ef7debdd7ef0e3caeee5e90cbd686a7f14a5d723"
+    }
+  ],
+  "productionPackageSchema": {
+    "schemaVersion": 1,
+    "manifestRequiredFields": [
+      "schemaVersion",
+      "exerciseId",
+      "contractSha256",
+      "sourceFrameSetSha256",
+      "framePattern",
+      "frameCount",
+      "frames",
+      "artifacts",
+      "mediaProbe",
+      "contactSheetCoverage",
+      "gates"
+    ],
+    "frameEntryFields": [
+      "path",
+      "sha256"
+    ],
+    "artifactNames": [
+      "master.webm",
+      "review.mp4",
+      "fallback.gif",
+      "poster.png",
+      "contact-sheet.png",
+      "qa-report.json",
+      "manual-review.json"
+    ],
+    "artifactEntryFields": [
+      "sha256",
+      "sourceFrameSetSha256"
+    ],
+    "mediaProbeContracts": {
+      "master.webm": {
+        "format": "webm",
+        "videoCodec": "vp9",
+        "width": 512,
+        "height": 512,
+        "fps": 24,
+        "audioStreams": 0
+      },
+      "review.mp4": {
+        "format": "mp4",
+        "videoCodec": "h264",
+        "width": 512,
+        "height": 512,
+        "fps": 24,
+        "audioStreams": 0
+      },
+      "fallback.gif": {
+        "format": "gif",
+        "videoCodec": "gif",
+        "width": 512,
+        "height": 512,
+        "audioStreams": 0,
+        "timing": "source-frame-order-preserved"
+      },
+      "poster.png": {
+        "format": "png",
+        "videoCodec": "png",
+        "width": 512,
+        "height": 512,
+        "audioStreams": 0
+      }
+    },
+    "contactSheetCoverage": "exact-zero-based-frame-index-set",
+    "gateNames": [
+      "motionGate",
+      "safetyGate",
+      "visualGate",
+      "technicalGate"
+    ],
+    "gateEntryFields": [
+      "status",
+      "reviewerId",
+      "reviewedAt",
+      "evidenceSha256"
+    ],
+    "gateStatusRequired": "pass",
+    "reviewerIdPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$",
+    "reviewedAtPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+    "qaReportFields": [
+      "sourceFrameSetSha256",
+      "passed",
+      "contactSheetCoverage",
+      "contactSheetSha256",
+      "metricResults"
+    ],
+    "artifactVisualBinding": {
+      "master.webm": {
+        "decodedFrameCount": "exact-source-count",
+        "fingerprintWidth": 32,
+        "fingerprintHeight": 32,
+        "maxMeanAbsoluteError": 12
+      },
+      "review.mp4": {
+        "decodedFrameCount": "exact-source-count",
+        "fingerprintWidth": 32,
+        "fingerprintHeight": 32,
+        "maxMeanAbsoluteError": 12
+      },
+      "fallback.gif": {
+        "decodedFrameCount": "exact-source-count",
+        "fingerprintWidth": 32,
+        "fingerprintHeight": 32,
+        "maxMeanAbsoluteError": 20
+      },
+      "poster.png": {
+        "sourceFrameIndex": 0,
+        "decodedPixelMatch": "exact"
+      }
+    },
+    "contactSheetLayout": {
+      "columns": 4,
+      "thumbnailWidth": 128,
+      "thumbnailHeight": 128,
+      "order": "row-major",
+      "background": "black",
+      "decodedPixelMatch": "exact-generated-from-all-source-frames"
+    },
+    "terminalFrameRule": "first-and-last-decoded-pixels-must-differ",
+    "metricResultFields": [
+      "metricId",
+      "actual",
+      "evidenceSha256"
+    ]
+  }
+}

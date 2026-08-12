@@ -3,9 +3,9 @@
 - 更新时间：2026-08-13
 - Repo：`C:\move28-live`（实际目录`E:\个人用\健身\健身计划公开版`）
 - Branch：`feature/supported-march-media`
-- 本Task基线HEAD：`09e63a0 docs(media): harden 3d candidate review`
-- 当前范围：Move28 25项动作3D媒体候选落地、动作语义核验和缺口补齐
-- 当前结论：停止低质量MakeHuman＋整段手工IK批量路线；商业3D候选优先，专业定制补缺；当前阶段暂时忽略版权与授权问题
+- 本Task基线HEAD：`0230b75 docs(media): resolve final 3d candidates`
+- 当前范围：Move28 4项编辑候选可执行编辑规格与5项定制动作统一生产规格
+- 当前结论：9项生产合同已机器化冻结；本Task不代表素材已采购、编辑、定制或获准发布
 
 ## 当前决策
 
@@ -26,6 +26,10 @@
 - Agent交接手册：`docs/handoff/move28-custom-3d-animation-agent-handoff.md`
 - 本地审核台生成器：`media-src/scripts/build_3d_candidate_review.py`
 - 本地审核台：`media-build/source-research/move28-3d-candidate-review.html`（被Git忽略）
+- 9项生产规格：`docs/research/data/move28-media-production-spec.json`
+- 人工生产手册：`docs/production/move28-media-edit-and-custom-production-spec.md`
+- 生产审核台生成器：`media-src/scripts/build_media_production_review.py`
+- 生产审核台：`media-build/source-research/move28-media-production-review.html`（被Git忽略）
 - GymVisual条款副本与水印comp：`media-build/source-research/`（仅内部研究、被Git忽略）
 
 矩阵为每项候选保存审核时证据：
@@ -77,15 +81,26 @@
 - 媒体审计：25项、0结构错误、25项发布阻塞；
 - 发布模式：按设计退出1，25项全部阻塞；
 - `git diff --check`：通过；
-- `npm run test`：391 passed、0 failed。
+- `npm run test`：395 passed、0 failed。
 - 本轮状态互换、商品URL漂移、证据身份漂移、证据字节篡改、矩阵与文件同步篡改、拒绝候选身份漂移和视频路径伪装：均失败关闭；
 - Dead Bug被拒脚跟候选GymVisual `10147 Wall Press Heel Tap`及其双手推墙冲突已结构化锁定；
 - 本轮最终规格复审：`PASS`；
 - 本轮最终质量复审：`APPROVED`。
 
+当前Task新增验证：
+
+- 生产审核台生成：4项编辑、5项定制，规格文件SHA-256为`db6ec82abf96b9d98fb7382e0be134d4ae2d647db883b87ff3a7f7d5bc461686`，规范化合同SHA-256为`e5ed6ee9c3ea0e5edacdd449d51775fbf2b19eb673a6370f51cd3e1b08cf9d49`；
+- 新增规格测试：10 passed、0 failed；
+- 20秒保持降级、双手支撑删除、fallback漂移、目录指纹伪造、未知批准字段、候选矩阵完整身份漂移、规格头字段漂移、镜头标准漂移和输出根目录漂移：均失败关闭；
+- 生产包真实临时探针：合法PNG/WebM/MP4/GIF/poster/联系表/QA/四门包通过；额外文件/目录/符号链接/reparse point、PNG篡改、重复尾帧、异源视频、单帧异源或错序、伪联系表、未达标QA指标和NaN/±Infinity数值均失败关闭；WebM/MP4/GIF通过真实解码帧数、逐帧顺序和逐帧感知指纹绑定母版，poster和联系表通过解码像素绑定；每项acceptanceCriteria/qaMetrics均由验证器按冻结运算符执行并绑定已哈希证据；
+- `--verify-production`：当前9项成品尚未制作，按设计失败且不留旧审核台；
+- 当前Task完整测试：401 passed、0 failed；
+- 当前Task规格与质量双审：此前发现4项问题（聚合MAE可稀释单帧异源、非有限QA数值可绕过、测试写仓库审核台、Python探针生成仓库`__pycache__`），均已修复并有回归验证；删除目标`.pyc`后规格测试10/10通过且`PYC_RECREATED=no`；最终冻结版规格终审`PASS`、代码质量终审`APPROVED`。
+
 ## 下一步
 
-1. 下一独立Task处理4项编辑候选的可执行编辑规格与5项定制包生产规格；
-2. 实际联系供应商、付款或委托第三方前需用户授权；
-3. 对16项精确候选继续执行动作、安全、视觉和技术门禁；
-4. 暂时忽略版权与授权问题，不再停在许可询证。
+1. 下一独立Task优先执行`seated-knee-extension-unloaded`单侧完整循环裁剪Spike和`calf-stretch`20秒保持编码Spike；
+2. `supported-calf-raise`、`high-seat-sit-to-stand`若无可编辑3D源，直接按合同转定制；
+3. 专业定制先做`wall-hip-hinge`与`supported-standing-march`代表原型；
+4. 实际联系供应商、付款、真人录制或委托第三方前需用户授权；
+5. 正式manifest继续25/25阻塞。

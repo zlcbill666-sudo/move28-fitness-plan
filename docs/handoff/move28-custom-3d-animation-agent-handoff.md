@@ -4,6 +4,9 @@
 - 项目：`C:\move28-live`
 - 面向：接手制作的另一个Agent
 - 当前边界：内部研究、原型、编辑、转码和产品接线暂时忽略版权；正式媒体manifest、发布白名单和`releaseEligible`保持25/25阻塞，直到用户另行确定正式发布政策并完成独立发布批准
+- 9项生产合同：`docs/production/move28-media-edit-and-custom-production-spec.md`
+- 机器规格：`docs/research/data/move28-media-production-spec.json`
+- 生产审核台生成器：`media-src/scripts/build_media_production_review.py`
 
 ## 1. 任务目标
 
@@ -251,12 +254,15 @@ GIF使用`palettegen/paletteuse`两遍；产品最终以WebM优先，GIF只作�
 - 源合同、源take、Blend、96帧、WebM、MP4、GIF、poster均存在；
 - 尺寸、fps、帧数、时长、无音轨符合合同；
 - 每个文件有SHA-256；
-- 首尾帧循环差异在记录阈值内；
+- 首尾母版帧解码像素不得重复；
 - 白底比例、红色比例、人物包围盒符合范围；
 - 目标红色区域不漂移、不闪烁；
 - 关键接触距离逐帧记录；
 - 脚滑、支撑丢失、膝轨迹、躯干倾斜超过阈值时失败；
-- 生成覆盖全部帧的编号联系表，不只抽起中末三帧；
+- 生成覆盖全部帧的全帧联系表，不只抽起中末三帧；验证器按冻结布局从母版重建并比较解码像素；
+- WebM、MP4和GIF必须解码为与PNG母版相同的帧数和顺序，并通过逐帧32×32 RGB感知指纹阈值；manifest中的同源字段不能替代实际内容验证；
+- QA报告必须逐项记录合同metric ID、实测值和包内已哈希证据；验证器执行`eq/gte/lte/between`运算，任一未达标即失败；
+- 项目根以下的输出祖先、动作包、frames及交付文件不得经过符号链接或Windows reparse point；
 - 输出必须位于`media-build/generated-motion/<exercise-id>/`。
 
 安全关键动作建议记录：
@@ -322,10 +328,10 @@ media-build/
 
 ## 10. 接手Agent的第一批任务
 
-只做一个Spike，不批量25项：
+4项编辑与5项定制的逐项合同已冻结。后续只做一个Spike，不批量25项：
 
 1. 阅读本文件、`CURRENT.md`、动作目录和媒体发布边界；
-2. 创建`supported-standing-march`动作合同；
+2. 直接读取已冻结的`supported-standing-march`动作合同，不得另写一套冲突阈值；
 3. 规划自有2～3机位录制，不实际联系或拍摄前先让用户确认；
 4. 对同一take运行FreeMoCap与Pose2Sim；
 5. 生成两套轨迹对比报告；
@@ -339,6 +345,8 @@ media-build/
 13. `ankle-circle`和`dead-bug`已在完整目录核验后转为`custom-3d`，制作时严格遵循本交接的精确动作合同；
 14. `calf-stretch`为`purchase-edit-candidate`，只允许把主动背屈峰值编辑成保持，不得保留动态点脚冒充静态拉伸；
 15. 不再以“扶椅踏步、坐姿抬腿、坐姿腿举三个样例”为批量生产前置；当前主线是商业3D采购优先、专业定制补缺，任何全量自制组件库需重新立项批准。
+16. `supported-calf-raise`和`high-seat-sit-to-stand`只有获得可编辑3D源并重算几何与接触时才可继续编辑；二维遮盖或只改标题禁止。
+17. `calf-stretch`保持段必须连续20秒；`seated-knee-extension-unloaded`必须保留同侧完整返回相位。
 
 ## 11. 验证命令
 
