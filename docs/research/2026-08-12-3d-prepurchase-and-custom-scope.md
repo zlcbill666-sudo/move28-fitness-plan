@@ -1,6 +1,6 @@
-# Move28 3D媒体采购前审核与专业定制范围
+# Move28 3D媒体候选审核与专业定制范围
 
-- 日期：2026-08-12
+- 日期：2026-08-13
 - 状态：内部研究；当前阶段按用户明确决策暂时忽略版权与授权问题
 - 工作区：`C:\move28-live`（映射至`E:\个人用\健身\健身计划公开版`）
 
@@ -19,35 +19,36 @@
 
 | 类别 | 数量 | 下一步 |
 |---|---:|---|
-| 精确采购候选 | 15 | 继续逐帧终审并准备产品落地 |
-| 需编辑候选 | 3 | 锁定受控裁剪或设置说明后落地 |
-| 明确定制 | 3 | 纳入第一批专业定制范围 |
-| 未解决 | 4 | 人工继续找精确商品；找不到则并入定制 |
+| 精确采购候选 | 16 | 继续逐帧终审并准备产品落地 |
+| 需编辑候选 | 4 | 锁定受控裁剪、峰值保持或设置说明后落地 |
+| 明确定制 | 5 | 纳入统一专业定制范围 |
+| 未解决 | 0 | 25项已全部形成可执行决策 |
 | 正式可发布 | 0 | 动作、安全、视觉和技术门禁尚未全部通过 |
 
-机器可读清单：`docs/research/data/move28-3d-candidate-matrix.json`。每项均绑定2026-08-12实际审核证据的`sourceUrl`、SHA-256、字节数、帧数和尺寸；审核台生成时会重新读取本地研究证据并核对字节指纹，不能只靠可变商品URL恢复结论。
+机器可读清单：`docs/research/data/move28-3d-candidate-matrix.json`。每项均绑定实际审核证据的`sourceUrl`、SHA-256、字节数、帧数和尺寸；审核台生成时会重新读取本地研究证据并核对字节指纹，不能只靠可变商品URL恢复结论。
 
-## 3. 15项精确采购候选
+## 3. 16项精确采购候选
 
-1. `seated-leg-press`
-2. `seated-leg-curl`
-3. `glute-bridge`
-4. `chest-press-machine`
-5. `standing-band-chest-press`
-6. `seated-row`
-7. `band-row`
-8. `pallof-press`
-9. `seated-leg-extension`
-10. `hip-abduction-machine`
-11. `wall-push-up`
-12. `heel-slide`
-13. `elliptical-trainer`
-14. `hamstring-stretch`
-15. `flat-walk`：新候选为GymVisual `Walking on Treadmill`，公开预览显示水平跑台、向前步行和完整交替步态。
+1. `seated-leg-raise`：GymVisual视频`19328 Seated Marching on a Chair (male)`；逐帧可见椅上直立、交替抬膝和双脚受控回地，产品继续锁定5～10厘米小幅。
+2. `seated-leg-press`
+3. `seated-leg-curl`
+4. `glute-bridge`
+5. `chest-press-machine`
+6. `standing-band-chest-press`
+7. `seated-row`
+8. `band-row`
+9. `pallof-press`
+10. `seated-leg-extension`
+11. `hip-abduction-machine`
+12. `wall-push-up`
+13. `heel-slide`
+14. `elliptical-trainer`
+15. `hamstring-stretch`
+16. `flat-walk`：GymVisual `Walking on Treadmill`，公开预览显示水平跑台、向前步行和完整交替步态。
 
-这15项仅代表“公开水印预览的动作语义可进入采购前终审”，不代表已授权或正式批准。
+这16项仅代表“公开水印预览的动作语义可进入后续终审”，不代表正式批准。
 
-## 4. 3项需编辑候选
+## 4. 4项需编辑候选
 
 ### `seated-knee-extension-unloaded`
 
@@ -70,9 +71,16 @@
 - 预览使用普通长凳高度，不能证明Move28要求的高位退阶设置；
 - 产品必须继续要求使用更高且稳固的座面，不能照搬预览座面高度。
 
+### `calf-stretch`
+
+- 候选为GymVisual视频`20530 Sitting Toe Tapping Stretch on a Chair (female)`；
+- 椅上直立、一腿前伸、脚跟着地、无手或拉力工具，主动勾脚路径匹配；
+- 原视频是动态点脚，成品必须编辑为背屈峰值的清晰保持段，不能把快速往复当作20秒静态拉伸；
+- 若无法形成稳定保持画面，则转专业定制。
+
 ## 5. 专业定制范围
 
-### 第一批明确3项
+### 明确5项
 
 1. `wall-hip-hinge`
    - 无PVC杆；
@@ -89,15 +97,14 @@
    - 小幅交替抬膝；
    - 躯干直立；
    - 支撑脚持续接地。
+4. `ankle-circle`
+   - 全量GIF和视频目录中，最接近的完整圆周候选是坐地长坐位，不是稳固椅上单脚稍离地；
+   - 定制时必须显示稳固椅、单脚稍离地、膝盖安静、顺逆时针完整圆周。
+5. `dead-bug`
+   - 无手辅助候选`18372 Lying Alternate Toe Tap`是脚尖点地；脚跟候选GymVisual `10147 Wall Press Heel Tap`（https://gymvisual.com/animated-gifs/10147-wall-press-heel-tap-male.html）增加双手推墙；两者均不可改名冒充；
+   - 定制时必须双臂体侧、髋膝约90度、交替单侧脚跟点地并受控收回。
 
-### 第二批暂定4项
-
-1. `seated-leg-raise`
-2. `ankle-circle`
-3. `dead-bug`
-4. `calf-stretch`
-
-若人工检索仍找不到精确商品，则7项作为统一专业定制范围，以同角色、同材质、同镜头和同红肌群风格交付；实际联系或委托第三方前仍需用户授权。
+这5项作为统一专业定制范围，以同角色、同材质、同镜头和同红肌群风格交付；实际联系或委托第三方前仍需用户授权。
 
 ## 6. 当前阶段版权策略
 
@@ -120,10 +127,8 @@
 
 ## 9. 本轮证据
 
-- 16项既有采购候选官方商品页均返回HTTP 200；
-- 16套公开水印预览仅保存于被忽略的研究目录；
-- 生成4张四帧联系表并逐项核验；
-- 14项原精确候选保持精确，2项保持Near/需编辑；
-- 新增核验2个`Walking on Treadmill`男/女候选，男性版本进入精确采购候选；
-- 遵守网站robots声明，不进行sitemap或全站批量爬取；
-- 未联系、未付款、未下载非水印媒体、未修改正式manifest。
+- 对GymVisual公开sitemap中的6,337个GIF和15,290个GIF/视频商品URL做本地标题穷举；
+- 下载并逐帧核验4项剩余动作的公开水印视频/GIF预览，证据均记录SHA-256；
+- `seated-leg-raise`升级为精确候选，`calf-stretch`进入编辑候选；
+- `ankle-circle`和`dead-bug`确认无精确商业候选，转专业定制；
+- 未联系、未付款、未下载付费原件、未修改正式manifest。

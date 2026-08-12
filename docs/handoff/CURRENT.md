@@ -3,7 +3,7 @@
 - 更新时间：2026-08-13
 - Repo：`C:\move28-live`（实际目录`E:\个人用\健身\健身计划公开版`）
 - Branch：`feature/supported-march-media`
-- 本Task基线HEAD：`d8d177c Merge pull request #4 from zlcbill666-sudo/feature/pilot-readiness-media`
+- 本Task基线HEAD：`09e63a0 docs(media): harden 3d candidate review`
 - 当前范围：Move28 25项动作3D媒体候选落地、动作语义核验和缺口补齐
 - 当前结论：停止低质量MakeHuman＋整段手工IK批量路线；商业3D候选优先，专业定制补缺；当前阶段暂时忽略版权与授权问题
 
@@ -12,10 +12,10 @@
 1. `glute-bridge-v1`和`supported-standing-march-v2`只作为失败研究原型保留，禁止进入正式manifest。
 2. 不再继续打磨当前MakeHuman角色作为25项统一商业视觉方案。
 3. 当前候选分类：
-   - 15项`purchase-exact-candidate`；
-   - 3项`purchase-edit-candidate`；
-   - 3项`custom-3d`；
-   - 4项`unresolved`。
+   - 16项`purchase-exact-candidate`；
+   - 4项`purchase-edit-candidate`；
+   - 5项`custom-3d`；
+   - 0项`unresolved`。
 4. 当前阶段按用户明确决策暂时忽略版权与授权问题，不得再把版权询证、许可确认或权利门禁作为内部开发前置。
 5. 仍不擅自进行付款、联系供应商或委托第三方等外部动作；内部研究、候选下载评估、转码、动作核验和产品接线可继续推进。
 
@@ -40,32 +40,28 @@
 
 ## 候选分类
 
-### 15项精确采购候选
+### 16项精确采购候选
 
-`seated-leg-press`、`seated-leg-curl`、`glute-bridge`、`chest-press-machine`、`standing-band-chest-press`、`seated-row`、`band-row`、`pallof-press`、`seated-leg-extension`、`hip-abduction-machine`、`wall-push-up`、`heel-slide`、`elliptical-trainer`、`flat-walk`、`hamstring-stretch`。
+`seated-leg-raise`、`seated-leg-press`、`seated-leg-curl`、`glute-bridge`、`chest-press-machine`、`standing-band-chest-press`、`seated-row`、`band-row`、`pallof-press`、`seated-leg-extension`、`hip-abduction-machine`、`wall-push-up`、`heel-slide`、`elliptical-trainer`、`flat-walk`、`hamstring-stretch`。
 
 `flat-walk`新候选为GymVisual `Walking on Treadmill`，公开水印预览显示视觉上水平跑台、向前步行和完整交替步态。
 
-### 3项编辑候选
+### 4项编辑候选
 
 - `seated-knee-extension-unloaded`：可裁成单侧完整循环，但不能裁掉返回相位；
 - `supported-calf-raise`：支撑物不是椅背，若合同必须显示椅子则转专业定制；
 - `high-seat-sit-to-stand`：`Bodyweight Bench Squat`为徒手坐到长凳再站起，动作路径匹配；画面座面不是高位，产品必须继续要求使用更高稳固座面。
+- `calf-stretch`：椅上直立、前伸腿脚跟着地和主动勾脚匹配；必须把动态点脚编辑为背屈峰值保持。
 
-### 3项明确专业定制
+### 5项明确专业定制
 
 - `wall-hip-hinge`
 - `bird-dog-regression`
 - `supported-standing-march`
-
-### 4项未解决
-
-- `seated-leg-raise`
 - `ankle-circle`
-- `dead-bug`
-- `calf-stretch`
+- `dead-bug`：无手辅助候选`18372 Lying Alternate Toe Tap`为脚尖点地；脚跟候选GymVisual `10147 Wall Press Heel Tap`（https://gymvisual.com/animated-gifs/10147-wall-press-heel-tap-male.html）增加双手推墙，均不符合双臂体侧合同。
 
-找不到精确商品时，与3项明确缺口合并为7项专业定制包。
+25项已全部完成商业候选决策，没有遗留`unresolved`。
 
 ## 当前阶段版权策略
 
@@ -82,14 +78,14 @@
 - 发布模式：按设计退出1，25项全部阻塞；
 - `git diff --check`：通过；
 - `npm run test`：391 passed、0 failed。
-- 高位坐站旧商品、旧证据、旧状态和证据字节篡改：均失败关闭；
-- 最终规格复审：`PASS`；
-- 最终质量复审：`APPROVED`。
+- 本轮状态互换、商品URL漂移、证据身份漂移、证据字节篡改、矩阵与文件同步篡改、拒绝候选身份漂移和视频路径伪装：均失败关闭；
+- Dead Bug被拒脚跟候选GymVisual `10147 Wall Press Heel Tap`及其双手推墙冲突已结构化锁定；
+- 本轮最终规格复审：`PASS`；
+- 本轮最终质量复审：`APPROVED`。
 
 ## 下一步
 
-1. 下一独立Task继续核验4项`unresolved`：`seated-leg-raise`、`ankle-circle`、`dead-bug`、`calf-stretch`；
-2. 可验证者更新矩阵、保存预览指纹并生成审核台；
-3. 仍无法精确匹配者进入专业定制范围，但实际联系或委托第三方前需用户授权；
-4. 对候选执行动作、安全、视觉和技术门禁；
-5. 暂时忽略版权与授权问题，不再停在许可询证。
+1. 下一独立Task处理4项编辑候选的可执行编辑规格与5项定制包生产规格；
+2. 实际联系供应商、付款或委托第三方前需用户授权；
+3. 对16项精确候选继续执行动作、安全、视觉和技术门禁；
+4. 暂时忽略版权与授权问题，不再停在许可询证。

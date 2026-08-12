@@ -14,11 +14,12 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "docs" / "research" / "data" / "move28-3d-candidate-matrix.json"
 CATALOG = ROOT / "assets" / "exercises" / "manifest.json"
 COMP_ROOT = ROOT / "media-build" / "source-research" / "gymvisual-prepurchase-previews"
+FINAL4_EVIDENCE_ROOT = ROOT / "docs" / "research" / "evidence" / "move28-final4"
 OUT = ROOT / "media-build" / "source-research" / "move28-3d-candidate-review.html"
 ALLOWED_STATUSES = {"purchase-exact-candidate", "purchase-edit-candidate", "custom-3d", "unresolved"}
 EXPECTED_STATUS_BY_ID = {
-    "seated-leg-raise": "unresolved",
-    "ankle-circle": "unresolved",
+    "seated-leg-raise": "purchase-exact-candidate",
+    "ankle-circle": "custom-3d",
     "seated-leg-press": "purchase-exact-candidate",
     "seated-leg-curl": "purchase-exact-candidate",
     "glute-bridge": "purchase-exact-candidate",
@@ -34,18 +35,18 @@ EXPECTED_STATUS_BY_ID = {
     "supported-calf-raise": "purchase-edit-candidate",
     "hip-abduction-machine": "purchase-exact-candidate",
     "wall-push-up": "purchase-exact-candidate",
-    "dead-bug": "unresolved",
+    "dead-bug": "custom-3d",
     "heel-slide": "purchase-exact-candidate",
     "bird-dog-regression": "custom-3d",
     "elliptical-trainer": "purchase-exact-candidate",
     "flat-walk": "purchase-exact-candidate",
     "supported-standing-march": "custom-3d",
     "hamstring-stretch": "purchase-exact-candidate",
-    "calf-stretch": "unresolved",
+    "calf-stretch": "purchase-edit-candidate",
 }
 EXPECTED_PRODUCT_URL_BY_ID = {
-    'seated-leg-raise': 'https://gymvisual.com/animated-gifs/2181-seated-leg-raise.html',
-    'ankle-circle': 'https://gymvisual.com/animated-gifs/3138-ankle-circles.html',
+    'seated-leg-raise': 'https://gymvisual.com/videos/19328-seated-marching-on-a-chair-male.html',
+    'ankle-circle': 'https://gymvisual.com/animated-gifs/23889-seated-single-leg-foot-circle-male.html',
     'seated-leg-press': 'https://gymvisual.com/animated-gifs/3210-sled-45o-leg-press-side-pov.html',
     'seated-leg-curl': 'https://gymvisual.com/animated-gifs/2096-lever-seated-leg-curl.html',
     'glute-bridge': 'https://gymvisual.com/animated-gifs/6570-low-glute-bridge-on-floor.html',
@@ -61,19 +62,19 @@ EXPECTED_PRODUCT_URL_BY_ID = {
     'supported-calf-raise': 'https://gymvisual.com/animated-gifs/6587-standing-calf-raise-with-support-female.html',
     'hip-abduction-machine': 'https://gymvisual.com/animated-gifs/2094-lever-seated-hip-abduction.html',
     'wall-push-up': 'https://gymvisual.com/animated-gifs/2152-push-up-wall.html',
-    'dead-bug': 'https://gymvisual.com/animated-gifs/1769-dead-bug.html',
+    'dead-bug': 'https://gymvisual.com/videos/18372-lying-alternate-toe-tap-female.html',
     'heel-slide': 'https://gymvisual.com/animated-gifs/25143-lying-supine-heel-slide-male.html',
     'bird-dog-regression': 'https://gymvisual.com/animated-gifs/13987-sliding-leg-bird-dog.html',
     'elliptical-trainer': 'https://gymvisual.com/animated-gifs/4187-walk-elliptical-cross-trainer.html',
     'flat-walk': 'https://gymvisual.com/animated-gifs/4766-walking-on-treadmill.html',
     'supported-standing-march': 'https://gymvisual.com/animated-gifs/15232-marching-on-spot-female.html',
     'hamstring-stretch': 'https://gymvisual.com/animated-gifs/3374-hamstring-stretch.html',
-    'calf-stretch': 'https://gymvisual.com/animated-gifs/3160-seated-calf-stretch-male.html',
+    'calf-stretch': 'https://gymvisual.com/videos/20530-sitting-toe-tapping-stretch-on-a-chair-female.html',
 }
 
 EXPECTED_EVIDENCE_IDENTITY_BY_ID = {
-    'seated-leg-raise': ('local-reference-current', 'https://static.exercisedb.dev/media/Hgs6Nl1.gif'),
-    'ankle-circle': ('local-reference-current', 'https://static.exercisedb.dev/media/uL9CsKm.gif'),
+    'seated-leg-raise': ('gymvisual-watermarked-video-preview', 'https://gymvisual.com/img/vid/08000/84161201-seated-marching-on-a-chair-male-hips-view.mp4'),
+    'ankle-circle': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/4/0/9/7/8/40978.gif'),
     'seated-leg-press': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/6/6/9/8/6698.gif'),
     'seated-leg-curl': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/1/0/4/8/2/10482.gif'),
     'glute-bridge': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/1/2/4/4/4/12444.gif'),
@@ -89,25 +90,69 @@ EXPECTED_EVIDENCE_IDENTITY_BY_ID = {
     'supported-calf-raise': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/1/2/4/9/8/12498.gif'),
     'hip-abduction-machine': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/1/2/7/1/4/12714.gif'),
     'wall-push-up': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/3/7/5/5/1/37551.gif'),
-    'dead-bug': ('local-reference-current', 'https://static.exercisedb.dev/media/iny3m5y.gif'),
+    'dead-bug': ('gymvisual-watermarked-video-preview', 'https://gymvisual.com/img/vid/07000/76991201-lying-alternate-toe-tap-female-thighs-view.mp4'),
     'heel-slide': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/4/2/7/9/7/42797.gif'),
     'bird-dog-regression': ('local-reference-current', 'project-local:assets/gifs/26_四点支撑单肢滑动.gif'),
     'elliptical-trainer': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/8/7/6/2/8762.gif'),
     'flat-walk': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/9/3/9/6/9396.gif'),
     'supported-standing-march': ('local-reference-current', 'project-local:assets/gifs/24_扶椅原地踏步.gif'),
     'hamstring-stretch': ('gymvisual-watermarked-comp', 'https://gymvisual.com/img/p/6/9/7/8/6978.gif'),
-    'calf-stretch': ('local-reference-current', 'https://static.exercisedb.dev/media/17bqEXD.gif'),
+    'calf-stretch': ('gymvisual-watermarked-video-preview', 'https://gymvisual.com/img/vid/09000/92711201-sitting-toe-tapping-stretch-on-a-chair-female-st-view.mp4'),
+}
+
+EXPECTED_EVIDENCE_FINGERPRINT_BY_ID = {
+    'seated-leg-raise': ('f735450721998ae094ebb3a236879bb70677474e306909427478c0fb91bdf64a', 687688),
+    'ankle-circle': ('0512b3806a4ba4e38da205ce19fd7aa47220e82378fb854fe39c0d7c607467c7', 147085),
+    'seated-leg-press': ('8e0285df1689b6b0d9a25a42c996508f2dccd198d772bc72cd0d7d6708df041a', 106073),
+    'seated-leg-curl': ('427f9adc2381377b87a48256c7c470924ab5c2d2833e7838a2628e2fe840fbe5', 152555),
+    'glute-bridge': ('f961b6ccb89b9200c9af0d426ad805cdc8cffd719d8feb822d8d41c7a2a68885', 99387),
+    'wall-hip-hinge': ('0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a', 74802),
+    'chest-press-machine': ('7404ec756dfffb376fca555ae72d9ca0d780e6e1586a6143b494ad7d9dad041d', 110159),
+    'standing-band-chest-press': ('8af7e42d92b6ac7461112454d46fb0f0b0342c37ef022e7eb4bc47b8b311fb50', 88186),
+    'seated-row': ('5dc3a2cb1b1a476c33bc966e6942e66de44abdeadbf031a46a22c7330799175c', 147674),
+    'band-row': ('ab3057d6932b40d4cfdfc33e708ee6928942940f4e7b810fe949a3e4ed32acf4', 76802),
+    'pallof-press': ('6d221d928db3efa04442ed76e9302bba0b89c2586b31e620050eaa70735e1653', 83423),
+    'high-seat-sit-to-stand': ('524b58efaa70cf156c13276d180d940906d39645fb4298035b19021e0fbf87f6', 83489),
+    'seated-leg-extension': ('f28298054ae2622ec27c911bf8129d14893b3be3f0db42b1e39058172ca5fdab', 129522),
+    'seated-knee-extension-unloaded': ('6589241da7ec6a8a00b373606ff042d6702199bcbbc2873400db399df93ab6ab', 211369),
+    'supported-calf-raise': ('0880cf0843e5c957a38f9c3ebc1e0fa2670e4615ae71df18c017fe20096c7cfa', 103517),
+    'hip-abduction-machine': ('c7ce2c1ee534c5975409b3bb2478e70e81c6940e7c992752ec28b4776a9dd5d7', 190803),
+    'wall-push-up': ('55476617ace73f0d22467d2eff79acc4d0300e70fddb562a0cc0a7e26ad7d86e', 97645),
+    'dead-bug': ('98c1a15e7d8c0ac16ee88f73179f056178f785470293640cf9165e10e8c4ddc2', 682574),
+    'heel-slide': ('5bc148e1ac79cefb22ed1c493b40ff68a71fd0ddac519a72002a9d710bb4ec1e', 69567),
+    'bird-dog-regression': ('496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49', 89851),
+    'elliptical-trainer': ('a63a176e8cfe231fb9047be034babe6e2559beecb59768e8b458c50cc2857a28', 131683),
+    'flat-walk': ('ddb13742ad39be153289f5676ef0527272c3f270a8ac115a202ebfb60c3a333e', 228377),
+    'supported-standing-march': ('4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed', 93827),
+    'hamstring-stretch': ('7933571d02a426fdb22affcddbfd6430c3572d4b1cd094aa8631862b50b16fc0', 98326),
+    'calf-stretch': ('ca42d32791559d76e71ff50da367618667f1cb90f328605960cd4cd6b5891be7', 304310),
 }
 
 EXPECTED_STATUS_COUNTS = {
-    "purchase-exact-candidate": 15,
-    "purchase-edit-candidate": 3,
-    "custom-3d": 3,
-    "unresolved": 4,
+    "purchase-exact-candidate": 16,
+    "purchase-edit-candidate": 4,
+    "custom-3d": 5,
+    "unresolved": 0,
 }
 REQUIRED_FIELDS = {"id", "name", "status", "source", "url", "risk", "evidence"}
 EVIDENCE_FIELDS = {"reviewedAt", "kind", "sourceUrl", "sha256", "bytes", "frames", "width", "height"}
-EVIDENCE_KINDS = {"gymvisual-watermarked-comp", "local-reference-current"}
+EVIDENCE_KINDS = {"gymvisual-watermarked-comp", "gymvisual-watermarked-video-preview", "local-reference-current"}
+FINAL4_IDS = {"seated-leg-raise", "ankle-circle", "dead-bug", "calf-stretch"}
+EVIDENCE_FILE_BY_ID = {
+    "seated-leg-raise": "seated-leg-raise.mp4",
+    "ankle-circle": "ankle-circle.gif",
+    "dead-bug": "dead-bug.mp4",
+    "calf-stretch": "calf-stretch.mp4",
+}
+EXPECTED_REJECTED_CANDIDATES = {
+    "dead-bug": [{
+        "productId": "10147",
+        "title": "Wall Press Heel Tap (male)",
+        "productUrl": "https://gymvisual.com/animated-gifs/10147-wall-press-heel-tap-male.html",
+        "previewUrl": "https://gymvisual.com/img/p/1/8/5/7/5/18575.gif",
+        "reasonCode": "wall_press_conflicts_with_arms_at_sides",
+    }],
+}
 
 
 def is_canonical_gymvisual_url(value: str, path_prefix: str) -> bool:
@@ -134,6 +179,8 @@ def evidence_path(asset: dict[str, object], catalog_by_id: dict[str, dict[str, o
     evidence = asset["evidence"]
     if evidence["kind"] == "local-reference-current":
         return ROOT / catalog_by_id[asset["id"]]["current"]["path"]
+    if asset["id"] in EVIDENCE_FILE_BY_ID:
+        return FINAL4_EVIDENCE_ROOT / EVIDENCE_FILE_BY_ID[asset["id"]]
     filename = "flat-walk-male.gif" if asset["id"] == "flat-walk" else f"{asset['id']}.gif"
     return COMP_ROOT / filename
 
@@ -143,13 +190,18 @@ def verify_evidence_bytes(assets: list[dict[str, object]], catalog_by_id: dict[s
         path = evidence_path(asset, catalog_by_id)
         payload = path.read_bytes()
         evidence = asset["evidence"]
-        if len(payload) != evidence["bytes"] or hashlib.sha256(payload).hexdigest() != evidence["sha256"]:
+        actual = (hashlib.sha256(payload).hexdigest(), len(payload))
+        matrix_fingerprint = (evidence["sha256"], evidence["bytes"])
+        expected = EXPECTED_EVIDENCE_FINGERPRINT_BY_ID.get(asset["id"])
+        if matrix_fingerprint != expected or actual != expected:
             raise ValueError(f"asset {asset['id']} evidence bytes do not match the reviewed fingerprint")
 
 
 def validate(data: object, expected_ids: list[str]) -> list[dict[str, object]]:
     if not isinstance(data, dict) or data.get("schemaVersion") != 1 or data.get("releaseEligible") is not False:
         raise ValueError("matrix header is invalid or releaseEligible is not false")
+    if data.get("rejectedCandidates") != EXPECTED_REJECTED_CANDIDATES:
+        raise ValueError("matrix rejected-candidate identities have drifted from the reviewed baseline")
     assets = data.get("assets")
     if not isinstance(assets, list) or len(assets) != len(expected_ids):
         raise ValueError("matrix asset count does not match the release catalog")
@@ -168,7 +220,8 @@ def validate(data: object, expected_ids: list[str]) -> list[dict[str, object]]:
         expected_evidence_identity = EXPECTED_EVIDENCE_IDENTITY_BY_ID.get(asset["id"])
         if (evidence.get("kind"), evidence.get("sourceUrl")) != expected_evidence_identity:
             raise ValueError(f"asset {asset['id']} evidence identity has drifted from the reviewed baseline")
-        if evidence.get("kind") not in EVIDENCE_KINDS or evidence.get("reviewedAt") != "2026-08-12":
+        expected_reviewed_at = "2026-08-13" if asset["id"] in FINAL4_IDS else "2026-08-12"
+        if evidence.get("kind") not in EVIDENCE_KINDS or evidence.get("reviewedAt") != expected_reviewed_at:
             raise ValueError(f"asset {asset['id']} has invalid evidence identity")
         if not isinstance(evidence.get("sha256"), str) or len(evidence["sha256"]) != 64 or any(c not in "0123456789abcdef" for c in evidence["sha256"]):
             raise ValueError(f"asset {asset['id']} has an invalid evidence hash")
@@ -178,11 +231,17 @@ def validate(data: object, expected_ids: list[str]) -> list[dict[str, object]]:
         if evidence["kind"] == "gymvisual-watermarked-comp":
             if not is_canonical_gymvisual_url(source_url, "/img/p/") or not source_url.endswith(".gif"):
                 raise ValueError(f"asset {asset['id']} has an invalid GymVisual evidence source URL")
+        elif evidence["kind"] == "gymvisual-watermarked-video-preview":
+            if not is_canonical_gymvisual_url(source_url, "/img/vid/") or not source_url.endswith(".mp4"):
+                raise ValueError(f"asset {asset['id']} has an invalid GymVisual video evidence source URL")
         elif not isinstance(source_url, str) or not (source_url.startswith("https://static.exercisedb.dev/media/") or source_url.startswith("project-local:assets/gifs/")):
             raise ValueError(f"asset {asset['id']} has an invalid local-reference source identity")
         if asset["url"] != EXPECTED_PRODUCT_URL_BY_ID.get(asset["id"]):
             raise ValueError(f"asset {asset['id']} product URL has drifted from the reviewed baseline")
-        if not is_canonical_gymvisual_url(asset["url"], "/animated-gifs/") or not asset["url"].endswith(".html"):
+        if not (
+            is_canonical_gymvisual_url(asset["url"], "/animated-gifs/")
+            or is_canonical_gymvisual_url(asset["url"], "/videos/")
+        ) or not asset["url"].endswith(".html"):
             raise ValueError(f"asset {asset['id']} has a noncanonical GymVisual product URL")
         ids.append(asset["id"])
     if len(ids) != len(set(ids)) or ids != expected_ids:

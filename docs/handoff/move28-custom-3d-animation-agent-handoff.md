@@ -44,25 +44,25 @@ Blender不在PATH，必须使用绝对路径。
 
 当前分类：
 
-- 15项：GymVisual精确采购候选；
-- 3项：需要受控裁剪或设置说明的编辑候选；
-- 3项：没有精确商业候选，优先专业定制3D；
-- 4项：现有候选与动作合同分叉，保持未解决，优先寻找新商品，找不到则纳入专业定制。
+- 16项：GymVisual精确采购候选；
+- 4项：需要受控裁剪、峰值保持或设置说明的编辑候选；
+- 5项：没有精确商业候选，优先专业定制3D；
+- 0项未解决：25项均已形成可执行决策。
 
-确定优先自制/定制的3项：
+确定优先自制/定制的5项：
 
 1. `wall-hip-hinge`：臀部后移轻触墙，无PVC杆；
 2. `bird-dog-regression`：一只手全程贴垫前滑，另外三点支撑；
-3. `supported-standing-march`：双手持续扶稳固椅背，小幅交替抬膝。
+3. `supported-standing-march`：双手持续扶稳固椅背，小幅交替抬膝；
+4. `ankle-circle`：稳固椅上单脚稍离地、膝盖安静、顺逆时针完整圆周；现有完整圆周候选是坐地长坐位；
+5. `dead-bug`：双臂体侧、髋膝约90度、交替脚跟点地；无手辅助候选`18372 Lying Alternate Toe Tap`是脚尖点地；脚跟候选GymVisual `10147 Wall Press Heel Tap`（https://gymvisual.com/animated-gifs/10147-wall-press-heel-tap-male.html）增加双手推墙。
 
-保持未解决、不得采用当前商品的4项：
+本轮已收敛的2项：
 
-1. `seated-leg-raise`：需证明有靠背坐姿、直立躯干、交替小幅抬膝；
-2. `ankle-circle`：需坐稳、一脚稍离地且膝盖不动；
-3. `dead-bug`：标准对侧伸展不是屈膝脚跟点地退阶；
-4. `calf-stretch`：需椅上、脚跟着地、无拉力工具、主动勾脚保持。
+- `seated-leg-raise`：GymVisual视频`19328 Seated Marching on a Chair (male)`，椅上直立、交替抬膝和受控回地匹配，产品继续锁定5～10厘米小幅；
+- `calf-stretch`：GymVisual视频`20530 Sitting Toe Tapping Stretch on a Chair (female)`，设置和主动勾脚匹配，但必须编辑为背屈峰值保持，不能保留动态点脚作为20秒静态拉伸。
 
-新增编辑候选：`high-seat-sit-to-stand`使用GymVisual `16441 Bodyweight Bench Squat (female)`；逐帧动作路径为徒手坐到长凳再站起，但普通凳高不能替代本地`high_seat`合同，产品必须继续要求更高稳固座面。证据SHA-256：`524b58efaa70cf156c13276d180d940906d39645fb4298035b19021e0fbf87f6`。
+既有编辑候选：`high-seat-sit-to-stand`使用GymVisual `16441 Bodyweight Bench Squat (female)`；逐帧动作路径为徒手坐到长凳再站起，但普通凳高不能替代本地`high_seat`合同，产品必须继续要求更高稳固座面。证据SHA-256：`524b58efaa70cf156c13276d180d940906d39645fb4298035b19021e0fbf87f6`。
 
 `flat-walk`已在2026-08-12找到并逐帧核验GymVisual `Walking on Treadmill`：跑台水平、向前步行、步态完整，转为精确候选。
 
@@ -335,8 +335,10 @@ media-build/
 9. 生成全帧联系表和QA报告；
 10. 请求人工动作、安全、视觉审核；
 11. 通过后可继续`wall-hip-hinge`，但仍须单独取得用户对专业定制/录制的明确授权；
-12. `seated-leg-raise`保持`unresolved`：先继续检索精确商品；只有检索失败、矩阵正式改为`custom-3d`、更新证据并取得用户授权后，才允许制作；
-13. 不再以“扶椅踏步、坐姿抬腿、坐姿腿举三个样例”为批量生产前置；当前主线是商业3D采购优先、专业定制补缺，任何全量自制组件库需重新立项批准。
+12. `seated-leg-raise`已收敛为`purchase-exact-candidate`，不得回退到旧的后仰双腿高抬商品；
+13. `ankle-circle`和`dead-bug`已在完整目录核验后转为`custom-3d`，制作时严格遵循本交接的精确动作合同；
+14. `calf-stretch`为`purchase-edit-candidate`，只允许把主动背屈峰值编辑成保持，不得保留动态点脚冒充静态拉伸；
+15. 不再以“扶椅踏步、坐姿抬腿、坐姿腿举三个样例”为批量生产前置；当前主线是商业3D采购优先、专业定制补缺，任何全量自制组件库需重新立项批准。
 
 ## 11. 验证命令
 

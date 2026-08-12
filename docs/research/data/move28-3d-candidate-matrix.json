@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-12",
+  "updatedAt": "2026-08-13",
   "scope": "Internal 3D sourcing and production planning only; no item is release-approved.",
   "visualTarget": "white background, gray anatomical figure, red target muscles, clean loop",
   "statusDefinitions": {
@@ -14,35 +14,35 @@
     {
       "id": "seated-leg-raise",
       "name": "坐姿抬腿",
-      "status": "unresolved",
-      "source": "GymVisual",
-      "url": "https://gymvisual.com/animated-gifs/2181-seated-leg-raise.html",
-      "risk": "Existing same-source asset has not been proven to satisfy upright supported seating, alternating 5–10 cm knee lift and conservative range; inspect exact product frame-by-frame before purchase.",
+      "status": "purchase-exact-candidate",
+      "source": "GymVisual video",
+      "url": "https://gymvisual.com/videos/19328-seated-marching-on-a-chair-male.html",
+      "risk": "Public video preview shows upright chair-seated alternating knee lifts with feet returning under control. Product cues must retain the reviewed 5–10 cm conservative range and prohibit trunk lean or momentum.",
       "evidence": {
-        "reviewedAt": "2026-08-12",
-        "kind": "local-reference-current",
-        "sourceUrl": "https://static.exercisedb.dev/media/Hgs6Nl1.gif",
-        "sha256": "caa505364dc6460d2706733a0bb7b74d1f2f328b31ffaf6ce0bdb138488d87b1",
-        "bytes": 103447,
-        "frames": 12,
-        "width": 180,
-        "height": 180
+        "reviewedAt": "2026-08-13",
+        "kind": "gymvisual-watermarked-video-preview",
+        "sourceUrl": "https://gymvisual.com/img/vid/08000/84161201-seated-marching-on-a-chair-male-hips-view.mp4",
+        "sha256": "f735450721998ae094ebb3a236879bb70677474e306909427478c0fb91bdf64a",
+        "bytes": 687688,
+        "frames": 244,
+        "width": 400,
+        "height": 224
       }
     },
     {
       "id": "ankle-circle",
       "name": "脚踝绕环",
-      "status": "unresolved",
-      "source": "GymVisual",
-      "url": "https://gymvisual.com/animated-gifs/3138-ankle-circles.html",
-      "risk": "Known candidate uses standing/cross-leg or extra-support setup; Move28 requires stable seated posture, one foot slightly raised and a quiet knee.",
+      "status": "custom-3d",
+      "source": "GymVisual reference only",
+      "url": "https://gymvisual.com/animated-gifs/23889-seated-single-leg-foot-circle-male.html",
+      "risk": "The closest complete-circle preview is long-sitting on the floor with both legs extended, not stable chair sitting with one foot slightly raised and a quiet knee. Do not relabel it as the Move28 regression.",
       "evidence": {
-        "reviewedAt": "2026-08-12",
-        "kind": "local-reference-current",
-        "sourceUrl": "https://static.exercisedb.dev/media/uL9CsKm.gif",
-        "sha256": "9db2b9ac2818fd4f5de0cbcf18a1bf067e923e6f5ba2c1aeaa8a2eb711d79758",
-        "bytes": 67960,
-        "frames": 12,
+        "reviewedAt": "2026-08-13",
+        "kind": "gymvisual-watermarked-comp",
+        "sourceUrl": "https://gymvisual.com/img/p/4/0/9/7/8/40978.gif",
+        "sha256": "0512b3806a4ba4e38da205ce19fd7aa47220e82378fb854fe39c0d7c607467c7",
+        "bytes": 147085,
+        "frames": 24,
         "width": 180,
         "height": 180
       }
@@ -320,19 +320,19 @@
     {
       "id": "dead-bug",
       "name": "死虫脚跟点地",
-      "status": "unresolved",
+      "status": "custom-3d",
       "source": "GymVisual reference only",
-      "url": "https://gymvisual.com/animated-gifs/1769-dead-bug.html",
-      "risk": "Known standard contralateral dead bug is harder than the bent-knee heel-tap regression; require an exact heel-tap product.",
+      "url": "https://gymvisual.com/videos/18372-lying-alternate-toe-tap-female.html",
+      "risk": "The closest unassisted preview alternates toe taps, not heel taps. GymVisual 10147 Wall Press Heel Tap (https://gymvisual.com/animated-gifs/10147-wall-press-heel-tap-male.html) uses heel contact but adds a two-hand wall press. Move28 requires arms at the sides and alternating bent-knee heel contact, so neither may be relabelled.",
       "evidence": {
-        "reviewedAt": "2026-08-12",
-        "kind": "local-reference-current",
-        "sourceUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
-        "sha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21",
-        "bytes": 74568,
-        "frames": 12,
-        "width": 180,
-        "height": 180
+        "reviewedAt": "2026-08-13",
+        "kind": "gymvisual-watermarked-video-preview",
+        "sourceUrl": "https://gymvisual.com/img/vid/07000/76991201-lying-alternate-toe-tap-female-thighs-view.mp4",
+        "sha256": "98c1a15e7d8c0ac16ee88f73179f056178f785470293640cf9165e10e8c4ddc2",
+        "bytes": 682574,
+        "frames": 180,
+        "width": 400,
+        "height": 224
       }
     },
     {
@@ -446,20 +446,31 @@
     {
       "id": "calf-stretch",
       "name": "坐姿主动勾脚小腿拉伸",
-      "status": "unresolved",
-      "source": "GymVisual reference only",
-      "url": "https://gymvisual.com/animated-gifs/3160-seated-calf-stretch-male.html",
-      "risk": "Known seated calf stretch uses hand/strap assistance or a different posture; require chair-seated, heel-grounded active dorsiflexion hold without tools.",
+      "status": "purchase-edit-candidate",
+      "source": "GymVisual video",
+      "url": "https://gymvisual.com/videos/20530-sitting-toe-tapping-stretch-on-a-chair-female.html",
+      "risk": "Chair, upright trunk, forward leg, grounded heel and active dorsiflexion match. Convert the dynamic toe-tapping cycle into a reviewed dorsiflexed hold; do not add hand, strap or resistance assistance.",
       "evidence": {
-        "reviewedAt": "2026-08-12",
-        "kind": "local-reference-current",
-        "sourceUrl": "https://static.exercisedb.dev/media/17bqEXD.gif",
-        "sha256": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799",
-        "bytes": 161588,
-        "frames": 12,
-        "width": 180,
-        "height": 180
+        "reviewedAt": "2026-08-13",
+        "kind": "gymvisual-watermarked-video-preview",
+        "sourceUrl": "https://gymvisual.com/img/vid/09000/92711201-sitting-toe-tapping-stretch-on-a-chair-female-st-view.mp4",
+        "sha256": "ca42d32791559d76e71ff50da367618667f1cb90f328605960cd4cd6b5891be7",
+        "bytes": 304310,
+        "frames": 281,
+        "width": 400,
+        "height": 224
       }
     }
-  ]
+  ],
+  "rejectedCandidates": {
+    "dead-bug": [
+      {
+        "productId": "10147",
+        "title": "Wall Press Heel Tap (male)",
+        "productUrl": "https://gymvisual.com/animated-gifs/10147-wall-press-heel-tap-male.html",
+        "previewUrl": "https://gymvisual.com/img/p/1/8/5/7/5/18575.gif",
+        "reasonCode": "wall_press_conflicts_with_arms_at_sides"
+      }
+    ]
+  }
 }
