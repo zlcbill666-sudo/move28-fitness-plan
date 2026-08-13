@@ -17,6 +17,7 @@ media-src/scripts/*
 !media-src/scripts/youtube_manual_review_page.py
 !media-src/scripts/build_3d_candidate_review.py
 !media-src/scripts/build_media_production_review.py
+!media-src/scripts/build_local_exercisedb_mapping.py
 !media-src/scripts/build_supported_march_v2.py
 !media-src/scripts/qa_supported_march.py
 

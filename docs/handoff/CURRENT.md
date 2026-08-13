@@ -4,21 +4,16 @@
 - Repo：`C:\move28-live`（实际目录`E:\个人用\健身\健身计划公开版`）
 - Branch：`feature/supported-march-media`
 - 本Task基线HEAD：`0230b75 docs(media): resolve final 3d candidates`
-- 当前范围：Move28 4项编辑候选可执行编辑规格与5项定制动作统一生产规格
-- 当前结论：9项生产合同已机器化冻结；本Task不代表素材已采购、编辑、定制或获准发布
+- 当前范围：按当前25项动作合同严格复核用户本地ExerciseDB 1,500项GIF，冻结本地候选映射
+- 当前结论：停止自制3D路线；本地库严格结果为10项exact、5项near、10项reject；本Task不开放正式媒体
 
 ## 当前决策
 
-1. `glute-bridge-v1`和`supported-standing-march-v2`只作为失败研究原型保留，禁止进入正式manifest。
-2. 不再继续打磨当前MakeHuman角色作为25项统一商业视觉方案。
-3. 冻结源矩阵候选分类（保留采购前决策历史，不回写覆盖）：
-   - 16项`purchase-exact-candidate`；
-   - 4项`purchase-edit-candidate`；
-   - 5项`custom-3d`；
-   - 0项`unresolved`。
-4. Spike后的当前执行路由：`seated-knee-extension-unloaded`已从“待裁剪验证”转为`custom-3d`，因此后续实际队列为3项继续编辑验证、6项定制；源矩阵仍保留原始采购前分类，No-Go证据以独立Spike报告追加，不篡改历史。
-5. 当前阶段按用户明确决策暂时忽略版权与授权问题，不得再把版权询证、许可确认或权利门禁作为内部开发前置。
-6. 仍不擅自进行付款、联系供应商或委托第三方等外部动作；内部研究、候选下载评估、转码、动作核验和产品接线可继续推进。
+1. 用户已明确放弃自制3D动作路线；后续优先使用`E:\个人用\健身\健身动作动画`中的本地ExerciseDB素材。
+2. 本地库必须按当前动作合同逐帧审核，不能按名称直接匹配；当前冻结为10项`exact`、5项`near`、10项`reject`。
+3. 本地研究映射不修改正式manifest，参与者界面继续25/25纯文字阻塞。
+4. 当前阶段按用户明确决策暂时忽略版权与授权问题，不得再把版权询证、许可确认或权利门禁作为内部开发前置。
+5. 仍不擅自进行付款、联系供应商或委托第三方等外部动作；内部研究、候选拷贝、转码、动作核验和产品接线可继续推进。
 
 ## 当前交付物
 
@@ -100,12 +95,13 @@
 - 小腿拉伸20秒保持Spike：完整规格SHA-256冻结通过；冻结MP4为30fps、281帧、9.3667秒；人工审核确认坐姿直立、前伸腿脚跟着地、主动背屈、无手/毛巾/弹力带辅助；逐帧证据确认帧90–120及121–194为静止峰值区，选择帧121作为唯一母帧，方案为保留帧1–89进入、复制600帧形成20秒保持、接回帧195–281释放；真实GBR无损VP9探针为776帧、25.8667秒，保持区只有一个唯一像素帧且解码RGB哈希与源母帧完全一致；结论`go/controlled-edit-production`但`releaseEligible:false`；专项9 passed、0 failed；
 - 小腿拉伸Spike已在指纹`71067cc2a62bd1bb16c867c3d2037d0790c64527`取得规格`PASS`与质量`APPROVED`，独立本地提交`07d9ff0`；
 - 扶椅提踵支撑替换Spike：冻结水印GIF为180×180、12帧、3秒；动作本身具备双侧提踵、自然伸膝、连续手部支撑且峰值编码帧6持续1秒，但支撑物为健身长凳/器械而非稳定椅子；输入不含可编辑3D场景/Rig、可替换支撑对象或手部接触锚点，替换只能依赖合同禁止的2D覆盖或文字宣称；结论`no-go/custom-3d`且`releaseEligible:false`；专项8 passed、0 failed；
-- 当前Task规格与质量双审：扶椅提踵Spike最终增量待双审。
+- 本地ExerciseDB严格映射：完整检查1,500条元数据与1,500个本地GIF；按当前25项动作合同逐帧复核后冻结为10项`exact`、5项`near`、10项`reject`，纠正旧报告中`dead-bug`、`heel-slide`和`hamstring-stretch`的语义误判，并以`T0yTjgW`替换上斜推胸候选；生成器和双输出事务专项测试8 passed、0 failed；完整测试440 passed、0 failed；媒体审计通过，正式manifest未修改且发布门禁仍25/25阻塞。
+- 当前Task规格与质量双审：待执行。
 
 ## 下一步
 
-1. `seated-knee-extension-unloaded`、`calf-stretch`与`supported-calf-raise`三个Spike均已形成冻结结论；
-2. 下一独立Task执行`high-seat-sit-to-stand`条件场景重编辑Spike；
-3. 专业定制先做`wall-hip-hinge`与`supported-standing-march`代表原型，并把`seated-knee-extension-unloaded`与`supported-calf-raise`纳入定制队列；
-4. 实际联系供应商、付款、真人录制或委托第三方前需用户授权；
-5. 正式manifest继续25/25阻塞。
+1. 下一独立Task只处理10项`exact`候选：复制到内部发布候选目录，使用稳定英文文件名并生成SHA台账；
+2. 对10项候选执行逐项安全复核、技术校验和产品UI预览；
+3. 5项`near`与10项`reject`不得进入接入包，继续保留文字动作说明；
+4. 正式manifest继续25/25阻塞，只有独立接入审查通过后才允许逐项开放；
+5. 推送、PR和公开HTTPS部署前仍需用户明确授权。
