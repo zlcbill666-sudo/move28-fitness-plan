@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "exerciseId": "supported-calf-raise",
+  "frozenInputs": {
+    "sourceSha256": "0880cf0843e5c957a38f9c3ebc1e0fa2670e4615ae71df18c017fe20096c7cfa",
+    "productionSpecSha256": "db6ec82abf96b9d98fb7382e0be134d4ae2d647db883b87ff3a7f7d5bc461686",
+    "candidateMatrixSha256": "69d8c340163f311a645be99feba0ffea1df2acedf0e981e9c3fa7f38d43813c8",
+    "exerciseCatalogSha256": "d375039f0e56528a46113149c32f4bb08e235d596195e3ad7dbff3bc03c41c8e"
+  },
+  "source": {
+    "kind": "gymvisual-watermarked-comp",
+    "width": 180,
+    "height": 180,
+    "frameCount": 12,
+    "durationSeconds": 3.0
+  },
+  "manualMotionReview": {
+    "basis": "numbered-contact-sheet-plus-key-frame-review",
+    "contactSheetSha256": "c16672018862c1403b3ddafbd04ed1a2b058da4314b0cb67f13f572a77576365",
+    "bilateralCalfRaiseVisible": true,
+    "kneesRemainNaturallyExtended": true,
+    "handsRemainOnExistingSupport": true,
+    "existingSupportIsStableChair": false,
+    "existingSupportClassification": "gym-bench-or-machine-support",
+    "ballisticBounceVisible": false
+  },
+  "automatedTimingEvidence": {
+    "peakEncodedFrame": 6,
+    "peakDurationSeconds": 1.0,
+    "meetsOneSecondPeak": true,
+    "packetDurationsSeconds": [
+      1.0,
+      0.1,
+      0.1,
+      0.1,
+      0.1,
+      0.1,
+      1.0,
+      0.1,
+      0.1,
+      0.1,
+      0.1,
+      0.1
+    ]
+  },
+  "editPrerequisites": {
+    "editable3dSceneAndRig": false,
+    "replaceableSupportObject": false,
+    "trackedHandContactAnchors": false
+  },
+  "allEditPrerequisitesMet": false,
+  "prohibitedShortcutAssessment": {
+    "twoDimensionalChairOverlayWouldBeRequired": true,
+    "labelOnlyChairClaimWouldBeRequired": true,
+    "bothForbiddenByContract": true
+  },
+  "decision": "no-go",
+  "nextStage": "custom-3d",
+  "releaseEligible": false,
+  "conclusion": "The raster preview preserves the calf-raise motion and a one-second peak, but it contains no editable 3D scene, replaceable support object or tracked hand anchors. Replacing the gym support with a stable chair would require a forbidden 2D overlay or label-only claim, so route to custom 3D."
+}
