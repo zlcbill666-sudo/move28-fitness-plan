@@ -3,9 +3,9 @@
 - 更新时间：2026-08-13
 - Repo：`C:\move28-live`（实际目录`E:\个人用\健身\健身计划公开版`）
 - Branch：`feature/supported-march-media`
-- 本Task基线HEAD：`0230b75 docs(media): resolve final 3d candidates`
-- 当前范围：按当前25项动作合同严格复核用户本地ExerciseDB 1,500项GIF，冻结本地候选映射
-- 当前结论：停止自制3D路线；本地库严格结果为10项exact、5项near、10项reject；本Task不开放正式媒体
+- 本Task基线HEAD：`3667507 docs(media): map local exercisedb candidates`
+- 当前范围：将本地ExerciseDB严格映射中的10项`exact`构建为内部产品接入候选包
+- 当前结论：10项候选已使用稳定英文名、SHA台账和响应式内部预览冻结；正式manifest仍25/25阻塞
 
 ## 当前决策
 
@@ -96,12 +96,13 @@
 - 小腿拉伸Spike已在指纹`71067cc2a62bd1bb16c867c3d2037d0790c64527`取得规格`PASS`与质量`APPROVED`，独立本地提交`07d9ff0`；
 - 扶椅提踵支撑替换Spike：冻结水印GIF为180×180、12帧、3秒；动作本身具备双侧提踵、自然伸膝、连续手部支撑且峰值编码帧6持续1秒，但支撑物为健身长凳/器械而非稳定椅子；输入不含可编辑3D场景/Rig、可替换支撑对象或手部接触锚点，替换只能依赖合同禁止的2D覆盖或文字宣称；结论`no-go/custom-3d`且`releaseEligible:false`；专项8 passed、0 failed；
 - 本地ExerciseDB严格映射：完整检查1,500条元数据与1,500个本地GIF；按当前25项动作合同逐帧复核后冻结为10项`exact`、5项`near`、10项`reject`，纠正旧报告中`dead-bug`、`heel-slide`和`hamstring-stretch`的语义误判，并以`T0yTjgW`替换上斜推胸候选；生成器和双输出事务专项测试8 passed、0 failed；完整测试440 passed、0 failed；媒体审计通过，正式manifest未修改且发布门禁仍25/25阻塞。
+- 10项Exact内部候选包：从冻结映射与本地源GIF确定性构建，使用稳定英文文件名，逐项绑定SHA-256、字节数、180×180、12帧和3秒；桌面1440px与手机390px真实Chrome预览均显示10/10、无溢出、无加载/控制台错误，内部未开放警示清晰；专项12 passed、0 failed；完整测试452 passed、0 failed；普通媒体审计通过，release门禁按设计25/25阻塞；正式manifest字节不变且所有候选`releaseEligible:false`。
 - 当前Task规格与质量双审：待执行。
 
 ## 下一步
 
-1. 下一独立Task只处理10项`exact`候选：复制到内部发布候选目录，使用稳定英文文件名并生成SHA台账；
-2. 对10项候选执行逐项安全复核、技术校验和产品UI预览；
-3. 5项`near`与10项`reject`不得进入接入包，继续保留文字动作说明；
-4. 正式manifest继续25/25阻塞，只有独立接入审查通过后才允许逐项开放；
+1. 对本Task运行完整测试、普通媒体审计和release负向门禁；
+2. 以同一staged指纹完成规格与代码质量双审并创建独立本地提交；
+3. 下一独立Task再设计10项候选逐项接入正式manifest的发布策略；
+4. 5项`near`与10项`reject`不得进入接入包，继续保留文字动作说明；
 5. 推送、PR和公开HTTPS部署前仍需用户明确授权。
