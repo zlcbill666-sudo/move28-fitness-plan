@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "exerciseId": "calf-stretch",
+  "productionSpecSha256": "db6ec82abf96b9d98fb7382e0be134d4ae2d647db883b87ff3a7f7d5bc461686",
+  "source": {
+    "sha256": "ca42d32791559d76e71ff50da367618667f1cb90f328605960cd4cd6b5891be7",
+    "frameCount": 281,
+    "fps": 30,
+    "durationSeconds": 9.366666666666667,
+    "width": 400,
+    "height": 224
+  },
+  "manualMotionReview": {
+    "basis": "numbered-2fps-contact-sheet-plus-full-frame-comparison",
+    "contactSheetSha256": "45b8eb2122fc859b916ace32e0b47e454e6c0b132495e76d63968999e56178e8",
+    "uprightChairSitting": true,
+    "forwardLegVisible": true,
+    "heelGrounded": true,
+    "activeDorsiflexionVisible": true,
+    "assistiveToolCount": 0,
+    "handsDoNotPullFoot": true,
+    "reviewedSourceHoldFramesInclusive": [
+      90,
+      194
+    ],
+    "canonicalHoldFrame": 121,
+    "releaseStartsAtFrame": 195
+  },
+  "automatedFrameEvidence": {
+    "identicalRunsInclusive": [
+      [
+        1,
+        6
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        16,
+        17
+      ],
+      [
+        79,
+        80
+      ],
+      [
+        83,
+        84
+      ],
+      [
+        85,
+        86
+      ],
+      [
+        87,
+        89
+      ],
+      [
+        90,
+        120
+      ],
+      [
+        121,
+        194
+      ],
+      [
+        195,
+        197
+      ],
+      [
+        198,
+        199
+      ],
+      [
+        203,
+        204
+      ],
+      [
+        264,
+        265
+      ],
+      [
+        271,
+        272
+      ],
+      [
+        275,
+        276
+      ],
+      [
+        277,
+        280
+      ]
+    ],
+    "canonicalRunInclusive": [
+      121,
+      194
+    ],
+    "canonicalRunSeconds": 2.466666666666667
+  },
+  "encodingPlan": {
+    "phaseOrder": [
+      "neutral",
+      "dorsiflex",
+      "hold-20s",
+      "release"
+    ],
+    "ingressSourceFramesInclusive": [
+      1,
+      89
+    ],
+    "holdSourceFrame": 121,
+    "holdCopies": 600,
+    "holdSeconds": 20,
+    "releaseSourceFramesInclusive": [
+      195,
+      281
+    ],
+    "frameInterpolation": false,
+    "repetitiveToeTappingRetained": false,
+    "outputFrameCount": 776,
+    "outputDurationSeconds": 25.866666666666667
+  },
+  "candidateEncoding": null,
+  "decision": "go",
+  "nextStage": "controlled-edit-production",
+  "fallback": "custom-3d",
+  "releaseEligible": false,
+  "conclusion": "The frozen source contains a clean active-dorsiflexion pose and controlled release. Replace its peak region with 600 exact copies of one reviewed source frame to encode a true 20-second static hold without interpolation or repetitive toe tapping."
+}
