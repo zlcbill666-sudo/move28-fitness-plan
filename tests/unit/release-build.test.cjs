@@ -89,22 +89,34 @@ test('build rejects missing files and directory entries',()=>{
   assert.throws(()=>build(directoryRoot),/not a regular file/i);
 });
 
-test('build rejects symlinked files and symlinked path components',()=>{
-  const fileRoot=fixture();
-  write(fileRoot,'real.txt');
-  fs.symlinkSync(path.join(fileRoot,'real.txt'),path.join(fileRoot,'link.txt'),'file');
-  writeManifest(fileRoot,['link.txt']);
-  assert.throws(()=>build(fileRoot),/symbolic link/i);
+test('build rejects symlinked allowlisted files',t=>{
+  const root=fixture();
+  write(root,'real.txt');
+  try{
+    fs.symlinkSync(path.join(root,'real.txt'),path.join(root,'link.txt'),'file');
+  }catch(error){
+    t.skip(`file symlink unavailable: ${error.code||error.message}`);
+    return;
+  }
+  writeManifest(root,['link.txt']);
+  assert.throws(()=>build(root),/symbolic link/i);
+});
 
-  const directoryRoot=fixture();
-  write(directoryRoot,'real/secret.txt');
-  fs.symlinkSync(
-    path.join(directoryRoot,'real'),
-    path.join(directoryRoot,'linked'),
-    process.platform==='win32'?'junction':'dir'
-  );
-  writeManifest(directoryRoot,['linked/secret.txt']);
-  assert.throws(()=>build(directoryRoot),/symbolic link/i);
+test('build rejects symlinked or junction path components',t=>{
+  const root=fixture();
+  write(root,'real/secret.txt');
+  try{
+    fs.symlinkSync(
+      path.join(root,'real'),
+      path.join(root,'linked'),
+      process.platform==='win32'?'junction':'dir'
+    );
+  }catch(error){
+    t.skip(`directory link unavailable: ${error.code||error.message}`);
+    return;
+  }
+  writeManifest(root,['linked/secret.txt']);
+  assert.throws(()=>build(root),/symbolic link/i);
 });
 
 test('build enforces forbidden prefixes from the manifest',()=>{

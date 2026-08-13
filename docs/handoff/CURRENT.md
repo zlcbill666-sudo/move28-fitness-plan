@@ -3,9 +3,19 @@
 - 更新时间：2026-08-13
 - Repo：`C:\move28-live`（实际目录`E:\个人用\健身\健身计划公开版`）
 - Branch：`feature/supported-march-media`
-- 本Task基线HEAD：`3667507 docs(media): map local exercisedb candidates`
-- 当前范围：将本地ExerciseDB严格映射中的10项`exact`构建为内部产品接入候选包
-- 当前结论：10项候选已使用稳定英文名、SHA台账和响应式内部预览冻结；正式manifest仍25/25阻塞
+- 本Task基线HEAD：`a2f8a4a feat(media): build exact local candidate package`
+- 当前范围：建立10项`exact`正式接入前的隔离预演合同与发布硬门
+- 当前结论：隔离副本精确开放10项、其余15项继续文字阻塞；生产策略、正式manifest与运行时manifest未修改，正式参与者媒体仍0/25开放
+
+## 本Task验证
+
+- 新增冻结合同：`docs/research/data/move28-exact10-integration-dry-run.json`。
+- 新增构建器：`media-src/scripts/build_exact10_integration_dry_run.py`；仅在`media-build/integration-dry-run/exact10`生成运行时白名单闭包副本并注入10项exact GIF。
+- 隔离预演专项9/9通过（其中7项使用CI自包含最小fixture，不依赖本地候选包）；完整Node测试462项：458通过、4项因Windows链接权限按配置跳过；合同、候选manifest或生产边界漂移均失败关闭，输出覆盖/链接拒绝，安装失败回滚。
+- 全量Playwright共238项：2 worker首轮223通过、4项按配置跳过、11项并发超时；11项随后以单worker重跑全部通过，最终234项实际执行均通过。
+- 构建生成39个白名单文件，artifact 2/2通过；普通媒体审计通过，正式release继续25/25阻塞，参与者制品不含内部候选媒体。
+- HTTP与`file://`在1440×1200和390×844真实Chrome/Playwright下均无JS错误、请求失败或页面级横向滚动，10/10 GIF加载；桌面三列、手机单列动作库视觉复核通过。
+- 手机首屏既有横向“只要3步”轮播保持受控裁切，但`scrollWidth===clientWidth===390`，不是本Task新增溢出。
 
 ## 当前决策
 
@@ -97,7 +107,8 @@
 - 扶椅提踵支撑替换Spike：冻结水印GIF为180×180、12帧、3秒；动作本身具备双侧提踵、自然伸膝、连续手部支撑且峰值编码帧6持续1秒，但支撑物为健身长凳/器械而非稳定椅子；输入不含可编辑3D场景/Rig、可替换支撑对象或手部接触锚点，替换只能依赖合同禁止的2D覆盖或文字宣称；结论`no-go/custom-3d`且`releaseEligible:false`；专项8 passed、0 failed；
 - 本地ExerciseDB严格映射：完整检查1,500条元数据与1,500个本地GIF；按当前25项动作合同逐帧复核后冻结为10项`exact`、5项`near`、10项`reject`，纠正旧报告中`dead-bug`、`heel-slide`和`hamstring-stretch`的语义误判，并以`T0yTjgW`替换上斜推胸候选；生成器和双输出事务专项测试8 passed、0 failed；完整测试440 passed、0 failed；媒体审计通过，正式manifest未修改且发布门禁仍25/25阻塞。
 - 10项Exact内部候选包：从冻结映射与本地源GIF确定性构建，使用稳定英文文件名，逐项绑定SHA-256、字节数、180×180、12帧和3秒；桌面1440px与手机390px真实Chrome预览均显示10/10、无溢出、无加载/控制台错误，内部未开放警示清晰；专项12 passed、0 failed；完整测试452 passed、0 failed；普通媒体审计通过，release门禁按设计25/25阻塞；正式manifest字节不变且所有候选`releaseEligible:false`。
-- 当前Task规格与质量双审：待执行。
+- Exact10隔离预演最终硬化：补强运行时manifest用途身份检查、候选/输出上游plain-chain边界，并让Windows无symlink权限时链接安全测试显式skip而非误报失败；`npm test`为461项、457 passed、0 failed、4 skipped；普通媒体审计`ok:true`、25/25阻塞；release负向门禁按预期`ok:false`、25/25阻塞；隔离预演`--verify`输出`released:10`、`blocked:15`、`participantRelease:"blocked"`；`git diff --check`通过。
+- 当前Task规格与质量双审：独立代码审查已发起，等待审查回传后创建独立本地提交。
 
 ## 下一步
 
