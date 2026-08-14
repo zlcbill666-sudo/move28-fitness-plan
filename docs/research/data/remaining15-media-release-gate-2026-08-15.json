@@ -1,0 +1,390 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-08-15",
+  "baselineHead": "7f80f02",
+  "decision": "no-go-bulk-release-remaining15",
+  "counts": {
+    "reviewed": 15,
+    "releaseEligible": 0,
+    "blocked": 15
+  },
+  "rows": [
+    {
+      "id": "seated-leg-raise",
+      "name": "坐姿抬腿",
+      "currentPath": "assets/gifs/02_坐姿抬腿.gif",
+      "currentSha256": "caa505364dc6460d2706733a0bb7b74d1f2f328b31ffaf6ce0bdb138488d87b1",
+      "currentBytes": 103447,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "Hgs6Nl1",
+        "exerciseName": "seated leg raise",
+        "sourceUrl": "https://static.exercisedb.dev/media/Hgs6Nl1.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "后倾训练凳上双腿同时抬高，属于核心训练，不是有靠背椅上小幅交替抬膝。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "Hgs6Nl1",
+        "name": "seated leg raise",
+        "relativePath": "media/Hgs6Nl1.gif",
+        "sha256": "caa505364dc6460d2706733a0bb7b74d1f2f328b31ffaf6ce0bdb138488d87b1",
+        "bytes": 103447,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "ankle-circle",
+      "name": "脚踝绕环",
+      "currentPath": "assets/gifs/03_脚踝绕环.gif",
+      "currentSha256": "9db2b9ac2818fd4f5de0cbcf18a1bf067e923e6f5ba2c1aeaa8a2eb711d79758",
+      "currentBytes": 67960,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "uL9CsKm",
+        "exerciseName": "ankle circles",
+        "sourceUrl": "https://static.exercisedb.dev/media/uL9CsKm.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "near",
+      "localExerciseDbReason": "踝绕环轨迹接近，但候选为站姿交叉腿，无稳固座椅支撑。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "uL9CsKm",
+        "name": "ankle circles",
+        "relativePath": "media/uL9CsKm.gif",
+        "sha256": "9db2b9ac2818fd4f5de0cbcf18a1bf067e923e6f5ba2c1aeaa8a2eb711d79758",
+        "bytes": 67960,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "wall-hip-hinge",
+      "name": "墙触髋铰链",
+      "currentPath": "assets/gifs/20_墙触髋铰链.gif",
+      "currentSha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a",
+      "currentBytes": 74802,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "全库未发现背对墙、臀部后移轻触墙面的徒手髋铰链。",
+      "localExerciseDbCandidate": null,
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "standing-band-chest-press",
+      "name": "站姿弹力带推胸",
+      "currentPath": "assets/gifs/21_站姿弹力带推胸.gif",
+      "currentSha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16",
+      "currentBytes": 88868,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "候选为坐姿弹力带推胸，不是前后分腿站姿双手推胸。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "4x5Okof",
+        "name": "resistance band seated chest press",
+        "relativePath": "media/4x5Okof.gif",
+        "sha256": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6",
+        "bytes": 85825,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "band-row",
+      "name": "弹力带划船",
+      "currentPath": "assets/gifs/19_弹力带划船.gif",
+      "currentSha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c",
+      "currentBytes": 50264,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "候选坐姿且弹力带绕脚，不是胸高固定点站姿划船。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "Nu7jqFE",
+        "name": "resistance band seated straight back row",
+        "relativePath": "media/Nu7jqFE.gif",
+        "sha256": "e7a436616c28f1c64ead3be3c9dc38e8c833bc6e3d4ef4cae1ca44369b637846",
+        "bytes": 96983,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "high-seat-sit-to-stand",
+      "name": "高位坐姿起立",
+      "currentPath": "assets/gifs/10_高位坐姿起立.gif",
+      "currentSha256": "524dbd970d8bbe996fa6137b0dff27b2908196e73af38d8c5b48c968f341a13d",
+      "currentBytes": 107478,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "Gu2rNJd",
+        "exerciseName": "smith chair squat",
+        "sourceUrl": "https://static.exercisedb.dev/media/Gu2rNJd.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "候选为扶物下蹲，臀部不接触高位稳固座面。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "b63ZzGe",
+        "name": "potty squat with support",
+        "relativePath": "media/b63ZzGe.gif",
+        "sha256": "d046da32f9e3cde2ba3641a2c34b005c5ac57260806bf2653589504ed4e9d830",
+        "bytes": 83954,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "seated-knee-extension-unloaded",
+      "name": "坐姿徒手伸膝",
+      "currentPath": "assets/gifs/22_坐姿徒手伸膝.gif",
+      "currentSha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8",
+      "currentBytes": 86488,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "全库未发现有靠背椅上交替单侧无负重伸膝。",
+      "localExerciseDbCandidate": null,
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "supported-calf-raise",
+      "name": "扶椅提踵",
+      "currentPath": "assets/gifs/23_扶椅提踵.gif",
+      "currentSha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872",
+      "currentBytes": 82480,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "near",
+      "localExerciseDbReason": "平地双脚提踵轨迹匹配，但没有双手轻扶稳固椅背。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "bJYHBIN",
+        "name": "bodyweight standing calf raise",
+        "relativePath": "media/bJYHBIN.gif",
+        "sha256": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e",
+        "bytes": 62166,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "dead-bug",
+      "name": "死虫式",
+      "currentPath": "assets/gifs/14_死虫式.gif",
+      "currentSha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21",
+      "currentBytes": 74568,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "iny3m5y",
+        "exerciseName": "dead bug",
+        "sourceUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "候选为对侧手脚伸展，难度和轨迹不等于双臂体侧交替脚跟点地。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "iny3m5y",
+        "name": "dead bug",
+        "relativePath": "media/iny3m5y.gif",
+        "sha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21",
+        "bytes": 74568,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "heel-slide",
+      "name": "仰卧脚跟滑动",
+      "currentPath": "assets/gifs/25_仰卧脚跟滑动.gif",
+      "currentSha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93",
+      "currentBytes": 75530,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "候选从双腿伸直开始再屈膝，不符合双膝屈曲起始、单侧脚跟前滑合同。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "LNE3wfo",
+        "name": "single leg platform slide",
+        "relativePath": "media/LNE3wfo.gif",
+        "sha256": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693",
+        "bytes": 66510,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "bird-dog-regression",
+      "name": "四点支撑单肢滑动",
+      "currentPath": "assets/gifs/26_四点支撑单肢滑动.gif",
+      "currentSha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49",
+      "currentBytes": 89851,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "全库未发现手不离垫的四点支撑单肢贴垫滑动。",
+      "localExerciseDbCandidate": null,
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "flat-walk",
+      "name": "平地慢走",
+      "currentPath": "assets/gifs/16_平地慢走.gif",
+      "currentSha256": "e57e8ade4fff7ad586f0de6dea582a776838e76069923f8bd31ad206b4d33f90",
+      "currentBytes": 199540,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "rjiM4L3",
+        "exerciseName": "walking on incline treadmill",
+        "sourceUrl": "https://static.exercisedb.dev/media/rjiM4L3.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "near",
+      "localExerciseDbReason": "跑台步行轨迹匹配，但候选明确为上坡跑台，合同要求0坡度。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "rjiM4L3",
+        "name": "walking on incline treadmill",
+        "relativePath": "media/rjiM4L3.gif",
+        "sha256": "e57e8ade4fff7ad586f0de6dea582a776838e76069923f8bd31ad206b4d33f90",
+        "bytes": 199540,
+        "width": 180,
+        "height": 180,
+        "frameCount": 24
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "supported-standing-march",
+      "name": "扶椅原地踏步",
+      "currentPath": "assets/gifs/24_扶椅原地踏步.gif",
+      "currentSha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed",
+      "currentBytes": 93827,
+      "origin": {
+        "provider": "MOVE 28 Pillow",
+        "sourceUrl": null,
+        "retrievedAt": null
+      },
+      "localExerciseDbClassification": "near",
+      "localExerciseDbReason": "交替抬膝匹配，但以墙支撑且幅度较高，不是双手扶椅小幅踏步。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "ealLwvX",
+        "name": "high knee against wall",
+        "relativePath": "media/ealLwvX.gif",
+        "sha256": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a",
+        "bytes": 56086,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "hamstring-stretch",
+      "name": "大腿后侧拉伸",
+      "currentPath": "assets/gifs/17_大腿后侧拉伸.gif",
+      "currentSha256": "536d069f05a4001b47526656e1349861be60a3f524207ff5a6b9375060f5dd30",
+      "currentBytes": 77100,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "99rWm7w",
+        "exerciseName": "hamstring stretch",
+        "sourceUrl": "https://static.exercisedb.dev/media/99rWm7w.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "reject",
+      "localExerciseDbReason": "候选在椅上动态抬放直腿，没有进入并保持轻柔静态牵拉。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "xGgAGPm",
+        "name": "chair leg extended stretch",
+        "relativePath": "media/xGgAGPm.gif",
+        "sha256": "257310dc444d87aa419523395587eaf50c52785c21dec5b57b197f4256419045",
+        "bytes": 101703,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    },
+    {
+      "id": "calf-stretch",
+      "name": "小腿拉伸",
+      "currentPath": "assets/gifs/18_小腿拉伸.gif",
+      "currentSha256": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799",
+      "currentBytes": 161588,
+      "origin": {
+        "provider": "AscendAPI / ExerciseDB V1",
+        "exerciseId": "17bqEXD",
+        "exerciseName": "seated calf stretch (male)",
+        "sourceUrl": "https://static.exercisedb.dev/media/17bqEXD.gif",
+        "retrievedAt": "2026-08-07"
+      },
+      "localExerciseDbClassification": "near",
+      "localExerciseDbReason": "坐地并用手拉脚，合同要求坐稳椅面且不借助外力主动勾脚。",
+      "localExerciseDbCandidate": {
+        "exerciseDbId": "17bqEXD",
+        "name": "seated calf stretch (male)",
+        "relativePath": "media/17bqEXD.gif",
+        "sha256": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799",
+        "bytes": 161588,
+        "width": 180,
+        "height": 180,
+        "frameCount": 12
+      },
+      "gate": "block",
+      "releaseEligible": false
+    }
+  ]
+}
