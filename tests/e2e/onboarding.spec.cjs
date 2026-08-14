@@ -9,6 +9,10 @@ const safe = {
   cardioPreference:'flat_walk', cardioAvoid:'none', avoidMovements:[], avoidEquipment:[], trackingItems:['completion','rpe','pain','sleep'], sessionPreference:'short_frequent', musicEnabled:'no'
 };
 
+async function waitForAppReady(page){
+  await page.waitForFunction(()=>Boolean(window.Move28&&Move28.storage&&Move28.onboardingController&&Move28.capabilityController));
+}
+
 test.beforeEach(async ({ page }) => {
   const issues=[];
   const handlers={
@@ -19,8 +23,10 @@ test.beforeEach(async ({ page }) => {
   };
   Object.entries(handlers).forEach(([event,handler])=>page.on(event,handler)); runtime.set(page,{issues,handlers});
   await page.goto('/index.html');
+  await waitForAppReady(page);
   await page.evaluate(()=>{ localStorage.removeItem('move28-pilot-v1'); sessionStorage.removeItem('move28-onboarding-draft-v1'); sessionStorage.removeItem('move28-capability-draft-v1'); });
   await page.reload();
+  await waitForAppReady(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -30,6 +36,7 @@ test.afterEach(async ({ page }) => {
 });
 
 async function open(page){
+  await waitForAppReady(page);
   await page.getByRole('button',{name:/生成我的4周计划/}).click();
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden','false');
 }
@@ -114,7 +121,7 @@ test('能力警示症状仍保存有效profile，但停止自动生成', async (
 });
 
 test('健身房能力与计划原子保存，写入失败重试不会提前递增revision', async ({ page }) => {
-  await open(page); await inject(page,{setting:'gym',equipment:gymEquipment}); await confirm(page);
+  await open(page); await inject(page,{setting:'gym',equipment:gymEquipment,cardioPreference:'none'}); await confirm(page);
   await page.evaluate(values=>{
     for(const [field,value] of Object.entries(values))Move28.capabilityController.setField(field,value);
     Move28.capabilityController.goTo(2);

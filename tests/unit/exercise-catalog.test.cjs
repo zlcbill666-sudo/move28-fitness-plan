@@ -506,7 +506,7 @@ test('验证器面对不可序列化的非法器械ID也只返回结构化错误
   }
 });
 
-test('媒体可选性合同覆盖15项EXACT、4项NEAR和6项GAP并默认失败关闭', () => {
+test('媒体可选性合同覆盖10项EXACT、5项NEAR和10项GAP并保持未批准动作失败关闭', () => {
   const api = loadCatalogAndPlan();
   const { exerciseCatalog, validateExerciseCatalog, mediaEligibilityForExercise, isMediaSelectable } = api;
   assert.deepEqual(validateExerciseCatalog(exerciseCatalog), []);
@@ -514,16 +514,15 @@ test('媒体可选性合同覆盖15项EXACT、4项NEAR和6项GAP并默认失败�
     acc[item.mediaMatchVerdict] = (acc[item.mediaMatchVerdict] || 0) + 1;
     return acc;
   }, {});
-  assert.deepEqual(counts, { exact: 15, near: 4, gap: 6 });
+  assert.deepEqual(counts, { gap: 10, near: 5, exact: 10 });
   const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
-  assert.equal(isMediaSelectable(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: true }), true);
-  assert.deepEqual(mediaEligibilityForExercise(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: false }), {
-    selectable: false,
-    code: 'MEDIA_RIGHTS_BLOCKED',
-    reason: '公开产品永久再分发授权未确认。'
+  assert.equal(isMediaSelectable(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }), true);
+  assert.deepEqual(mediaEligibilityForExercise(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }), {
+    selectable: true,
+    mode: 'public_release'
   });
-  assert.equal(isMediaSelectable(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }), false);
-  assert.equal(mediaEligibilityForExercise(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');
+  assert.equal(isMediaSelectable(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: true }), true);
+  assert.equal(mediaEligibilityForExercise(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');
   assert.equal(isMediaSelectable(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: true }), true);
   assert.equal(isMediaSelectable(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: false }), false);
   assert.equal(mediaEligibilityForExercise(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');

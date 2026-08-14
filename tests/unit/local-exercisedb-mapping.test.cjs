@@ -149,8 +149,8 @@ print(json.dumps({'a':a.read_text(),'b':b.read_text(),'files':sorted(x.name for 
   fs.rmSync(temp, { recursive: true, force: true });
 });
 
-test('研究映射不得修改正式manifest或开放媒体', () => {
+test('研究映射不得修改正式manifest的Exact10开放边界', () => {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(manifest.assets.length, 25);
-  assert.ok(manifest.assets.every(item => item.production.releaseEligible === false));
+  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), ['seated-leg-press','seated-leg-curl','glute-bridge','chest-press-machine','seated-row','pallof-press','seated-leg-extension','hip-abduction-machine','wall-push-up','elliptical-trainer']);
 });

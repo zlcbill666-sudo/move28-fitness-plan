@@ -98,33 +98,34 @@
         "sha256": "e1ab1b38a4a0b756e6f69233659c65d897d1611120aa09a2678ed23db4c82079"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
-        "exerciseId": "2Qh2J1e",
-        "exerciseName": "sled 45° leg press (side pov)",
-        "sourceUrl": "https://static.exercisedb.dev/media/2Qh2J1e.gif",
-        "retrievedAt": "2026-08-07"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "10Z2DXU",
+        "exerciseName": "sled 45в° leg press",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/10Z2DXU.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/seated-leg-press.gif",
+        "gif": {
+          "path": "assets/exercises/seated-leg-press.gif",
+          "sha256": "4e4afb16a87ff94ecebf835cd56358e3ac3bbdf66f5743f211651400137ddec3",
+          "bytes": 115136
+        }
       }
     },
     {
@@ -135,33 +136,34 @@
         "sha256": "83be1db342fcb514086eccd82b6748fe2d957caef22ce1501a9eaded5142d277"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "Zg3XY7P",
         "exerciseName": "lever seated leg curl",
-        "sourceUrl": "https://static.exercisedb.dev/media/Zg3XY7P.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/Zg3XY7P.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/seated-leg-curl.gif",
+        "gif": {
+          "path": "assets/exercises/seated-leg-curl.gif",
+          "sha256": "83be1db342fcb514086eccd82b6748fe2d957caef22ce1501a9eaded5142d277",
+          "bytes": 141354
+        }
       }
     },
     {
@@ -172,33 +174,34 @@
         "sha256": "0488f6ef2f876420c071a2d4243f1f1574d25bba5b5eb72246da4f130d58ad91"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "u0cNiij",
         "exerciseName": "low glute bridge on floor",
-        "sourceUrl": "https://static.exercisedb.dev/media/u0cNiij.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/u0cNiij.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/glute-bridge.gif",
+        "gif": {
+          "path": "assets/exercises/glute-bridge.gif",
+          "sha256": "0488f6ef2f876420c071a2d4243f1f1574d25bba5b5eb72246da4f130d58ad91",
+          "bytes": 86092
+        }
       }
     },
     {
@@ -244,33 +247,34 @@
         "sha256": "aa2b979c98bb26ffcf992bee97987af3ece27d8783563e4b601626f477664ea0"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
-        "exerciseId": "DOoWcnA",
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "T0yTjgW",
         "exerciseName": "lever chest press",
-        "sourceUrl": "https://static.exercisedb.dev/media/DOoWcnA.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/T0yTjgW.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/chest-press-machine.gif",
+        "gif": {
+          "path": "assets/exercises/chest-press-machine.gif",
+          "sha256": "789515907e5001da8ced127bcf8969e7ab265f25545bf7f0a80dbb6f0da213b0",
+          "bytes": 135362
+        }
       }
     },
     {
@@ -316,33 +320,34 @@
         "sha256": "96000790878fe1238847466d0f3b81fbcaf6586e9555df38aad41727759c7cbd"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "7I6LNUG",
         "exerciseName": "lever seated row",
-        "sourceUrl": "https://static.exercisedb.dev/media/7I6LNUG.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/7I6LNUG.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/seated-row.gif",
+        "gif": {
+          "path": "assets/exercises/seated-row.gif",
+          "sha256": "96000790878fe1238847466d0f3b81fbcaf6586e9555df38aad41727759c7cbd",
+          "bytes": 136785
+        }
       }
     },
     {
@@ -388,33 +393,34 @@
         "sha256": "043e54c19d80a808d7565e96df9369f0c7909c17ccb93eeb930b50cf15fbab9e"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "9pa4H5m",
         "exerciseName": "band horizontal pallof press",
-        "sourceUrl": "https://static.exercisedb.dev/media/9pa4H5m.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/9pa4H5m.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/pallof-press.gif",
+        "gif": {
+          "path": "assets/exercises/pallof-press.gif",
+          "sha256": "043e54c19d80a808d7565e96df9369f0c7909c17ccb93eeb930b50cf15fbab9e",
+          "bytes": 80601
+        }
       }
     },
     {
@@ -462,33 +468,34 @@
         "sha256": "ad9602e9eb0584cd73ecc5cdf9f9e273ade4d14336d1554bc35b9242dfbb6f0d"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "my33uHU",
         "exerciseName": "lever leg extension",
-        "sourceUrl": "https://static.exercisedb.dev/media/my33uHU.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/my33uHU.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/seated-leg-extension.gif",
+        "gif": {
+          "path": "assets/exercises/seated-leg-extension.gif",
+          "sha256": "ad9602e9eb0584cd73ecc5cdf9f9e273ade4d14336d1554bc35b9242dfbb6f0d",
+          "bytes": 142827
+        }
       }
     },
     {
@@ -569,33 +576,34 @@
         "sha256": "f736cf937b8224e209c00d23acf002c74e6a0c94bea1bd7d321650d3a54f0cf5"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "CHpahtl",
         "exerciseName": "lever seated hip abduction",
-        "sourceUrl": "https://static.exercisedb.dev/media/CHpahtl.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/CHpahtl.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/hip-abduction-machine.gif",
+        "gif": {
+          "path": "assets/exercises/hip-abduction-machine.gif",
+          "sha256": "f736cf937b8224e209c00d23acf002c74e6a0c94bea1bd7d321650d3a54f0cf5",
+          "bytes": 178656
+        }
       }
     },
     {
@@ -606,33 +614,34 @@
         "sha256": "8025415b2ce801699ecf32864a622883bc623ae10cd48653d4bc689b6c7147e0"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "LEH9jxP",
         "exerciseName": "push-up (wall)",
-        "sourceUrl": "https://static.exercisedb.dev/media/LEH9jxP.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/LEH9jxP.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/wall-push-up.gif",
+        "gif": {
+          "path": "assets/exercises/wall-push-up.gif",
+          "sha256": "8025415b2ce801699ecf32864a622883bc623ae10cd48653d4bc689b6c7147e0",
+          "bytes": 82704
+        }
       }
     },
     {
@@ -750,33 +759,34 @@
         "sha256": "c77b3bb6811b3a6cca1ba8ccd34b1fbdceb699f1c1d70fcd35a480abb63f50b9"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "rjtuP6X",
         "exerciseName": "walk elliptical cross trainer",
-        "sourceUrl": "https://static.exercisedb.dev/media/rjtuP6X.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/rjtuP6X.gif",
+        "retrievedAt": "2026-08-14"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/elliptical-trainer.gif",
+        "gif": {
+          "path": "assets/exercises/elliptical-trainer.gif",
+          "sha256": "c77b3bb6811b3a6cca1ba8ccd34b1fbdceb699f1c1d70fcd35a480abb63f50b9",
+          "bytes": 115045
+        }
       }
     },
     {

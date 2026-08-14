@@ -116,17 +116,31 @@ async function completeGuideActions(page) {
   }
 }
 
+async function waitForAppReady(page) {
+  await page.waitForFunction(() => Boolean(
+    window.Move28
+      && window.Move28.storage
+      && window.Move28.onboardingController
+      && window.Move28.capabilityController
+      && window.Move28.domain
+      && window.Move28.ui
+  ));
+}
+
 async function resetHttp(page) {
   await installMonotonicClock(page);
   await page.goto('/index.html');
+  await waitForAppReady(page);
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
   });
   await page.reload();
+  await waitForAppReady(page);
 }
 
 async function completeCapability(page, overrides = {}) {
+  await waitForAppReady(page);
   await page.locator('#capabilityAssessmentView[aria-hidden="false"]').waitFor();
   await page.evaluate(data => {
     for (const [key, value] of Object.entries(data)) window.Move28.capabilityController.setField(key, value);
@@ -136,6 +150,7 @@ async function completeCapability(page, overrides = {}) {
 }
 
 async function completeOnboarding(page, overrides = {}, capabilityOverrides = {}) {
+  await waitForAppReady(page);
   await page.getByRole('button', { name: /生成我的4周计划|重新填写问卷|重新完成安全筛查/ }).first().click();
   await page.evaluate(data => {
     for (const [key, value] of Object.entries(data)) {
@@ -162,4 +177,4 @@ async function approvePendingPlan(page) {
   await page.reload();
 }
 
-module.exports = { gymEquipment, safeIntake, safeCapability, safeReadiness, answerSafeReadiness, installMonotonicClock, advanceMonotonicClock, advanceGuideToReviewedDuration, completeGuideActions, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };
+module.exports = { gymEquipment, safeIntake, safeCapability, safeReadiness, waitForAppReady, answerSafeReadiness, installMonotonicClock, advanceMonotonicClock, advanceGuideToReviewedDuration, completeGuideActions, resetHttp, completeCapability, completeOnboarding, approvePendingPlan };

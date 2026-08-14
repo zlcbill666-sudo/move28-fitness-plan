@@ -293,15 +293,22 @@ test('经典浏览器脚本按目录后匹配器顺序加载且不依赖DOM或st
   assert.equal(result.exercise.id, 'wall-push-up');
 });
 
-test('媒体硬门在公开发布模式阻断未授权和GAP候选', () => {
+test('媒体硬门在公开发布模式允许Exact10并阻断NEAR/GAP候选', () => {
   const api = loadMatcher();
   const publicPush = api.matchExercise({
     pattern: 'horizontal_push', setting: 'home', equipment: ['wall'], exclusions: [], difficulty: 1, mediaRequirement: 'public_release'
   });
-  assert.equal(publicPush.ok, false);
-  assert.equal(publicPush.error.code, 'MEDIA_RIGHTS_BLOCKED');
-  assert.deepEqual(publicPush.error.blockedActionIds, ['wall-push-up']);
-  assert.equal(publicPush.error.causes[0].code, 'MEDIA_RIGHTS_BLOCKED');
+  assert.equal(publicPush.ok, true);
+  assert.equal(publicPush.exercise.id, 'wall-push-up');
+
+  const standingMarch = api.exerciseCatalog.find(item => item.id === 'supported-standing-march');
+  const nearOnly = api.matchExercise({
+    pattern: 'low_impact_cardio', setting: 'home', equipment: ['stable_chair'], exclusions: [], difficulty: 1,
+    catalog: [standingMarch], mediaRequirement: 'public_release'
+  });
+  assert.equal(nearOnly.ok, false);
+  assert.equal(nearOnly.error.code, 'MEDIA_MATCH_NOT_APPROVED');
+  assert.deepEqual(nearOnly.error.blockedActionIds, ['supported-standing-march']);
 
   const wallHinge = api.exerciseCatalog.find(item => item.id === 'wall-hip-hinge');
   const gapOnly = api.matchExercise({

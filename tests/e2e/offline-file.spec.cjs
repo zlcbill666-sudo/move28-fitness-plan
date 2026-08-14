@@ -41,8 +41,8 @@ test.afterEach(async ({ page }) => {
   expect(guard.issues, 'file:// 页面不应出现脚本、控制台或资源加载错误').toEqual([]);
 });
 
-test('双击打开时首屏、纯文字动作库和跟练入口均可离线使用', async ({ page }) => {
-  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
+test('双击打开时首屏、Exact10动作库和跟练入口均可离线使用', async ({ page }) => {
+  const legacyGifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))legacyGifRequests.push(request.url())});
   await page.goto(INDEX_FILE_URL);
   await expect(page.locator('#todayCard')).toContainText('力量A');
 
@@ -78,9 +78,10 @@ test('双击打开时首屏、纯文字动作库和跟练入口均可离线使�
   ]);
 
   await expect(page.locator('#exerciseGrid article.exercise')).toHaveCount(25);
-  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(0);
-  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(25);
-  expect(gifRequests).toEqual([]);
+  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(10);
+  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(15);
+  await expect(page.locator('#exerciseGrid img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
+  expect(legacyGifRequests).toEqual([]);
 
   expect(await page.evaluate(() => ({
     namespace: typeof window.Move28,

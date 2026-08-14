@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { spawnSync } = require('node:child_process');
+const crypto = require('node:crypto');
 
 const projectRoot = path.resolve(__dirname, '..', '..');
 const { exerciseCatalog } = require('../../src/data/exercise-catalog.js');
@@ -32,10 +33,28 @@ test('公开产品媒体台账完整覆盖25个动作且与目录一一对应', 
   }
 });
 
-test('ExerciseDB首批17项来源精确、商业权利阻塞且不得作为正式资产', () => {
+test('本地ExerciseDB Exact10已安装为正式GIF资产', () => {
+  const manifest = loadManifest();
+  const released = manifest.assets.filter(item => item.origin.provider === 'local ExerciseDB V1 library');
+  assert.equal(released.length, 10);
+  for (const item of released) {
+    assert.match(item.origin.exerciseId, /^[A-Za-z0-9]{7}$/);
+    assert.equal(item.origin.sourceUrl, `local://bootstrapping-lab-exercisedb-api/media/${item.origin.exerciseId}.gif`);
+    assert.equal(item.rights.status, 'confirmed');
+    assert.equal(item.production.status, 'approved');
+    assert.equal(item.production.releaseEligible, true);
+    assert.equal(item.replacement.source, `assets/exercises/${item.id}.gif`);
+    assert.equal(item.replacement.gif.path, `assets/exercises/${item.id}.gif`);
+    const file = path.join(projectRoot, ...item.replacement.gif.path.split('/'));
+    assert.equal(fs.statSync(file).size, item.replacement.gif.bytes);
+    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), item.replacement.gif.sha256);
+  }
+});
+
+test('旧ExerciseDB远端参考只保留未批准缺口且不得作为正式资产', () => {
   const manifest = loadManifest();
   const legacy = manifest.assets.filter(item => item.origin.provider === 'AscendAPI / ExerciseDB V1');
-  assert.equal(legacy.length, 17);
+  assert.equal(legacy.length, 7);
   for (const item of legacy) {
     assert.match(item.origin.exerciseId, /^[A-Za-z0-9]{7}$/);
     assert.equal(item.origin.sourceUrl, `https://static.exercisedb.dev/media/${item.origin.exerciseId}.gif`);
@@ -76,7 +95,7 @@ test('不存在未经四重审核就标记可发布的媒体', () => {
     assert.equal(item.reviews.motion, 'approved');
     assert.equal(item.reviews.visual, 'approved');
     assert.equal(item.reviews.safety, 'approved');
-    for (const key of ['webm', 'mp4', 'poster', 'gif']) {
+    for (const key of ['gif']) {
       assert.ok(item.replacement[key] && item.replacement[key].path);
     }
   }
@@ -105,7 +124,7 @@ test('经典脚本先加载媒体策略再加载参与者渲染器且首页不�
   assert.ok(policyIndex < scripts.indexOf('src/ui/dashboard.js'));
   assert.ok(policyIndex < scripts.indexOf('src/ui/workout-guide.js'));
   assert.doesNotMatch(html, /<img[^>]+assets\/gifs\//i);
-  assert.match(html, /参与者界面保持纯文字模式/);
+  assert.match(html, /首批10项Exact本地动图已开放|首批动图已开放/);
   const context = {}; vm.createContext(context);
   for (const relative of ['src/namespace.js', 'src/data/exercise-media-policy.js']) {
     vm.runInContext(fs.readFileSync(path.join(projectRoot, ...relative.split('/')), 'utf8'), context);
@@ -113,7 +132,7 @@ test('经典脚本先加载媒体策略再加载参与者渲染器且首页不�
   assert.equal(context.Move28.data.exerciseMediaPolicy.presentationFor('unknown').status, 'blocked');
 });
 
-test('媒体校验器审计模式通过、发布模式对25个未完成动作闭门失败', () => {
+test('媒体校验器审计和发布模式均只允许Exact10正式动图', () => {
   const script = path.join(projectRoot, 'scripts', 'validate_exercise_media.py');
   const audit = spawnSync('python', [script], { cwd: projectRoot, encoding: 'utf8' });
   assert.equal(audit.status, 0, audit.stderr || audit.stdout);
@@ -122,9 +141,10 @@ test('媒体校验器审计模式通过、发布模式对25个未完成动作闭
   assert.equal(auditReport.assets, 25);
 
   const release = spawnSync('python', [script, '--release'], { cwd: projectRoot, encoding: 'utf8' });
-  assert.equal(release.status, 1, release.stderr || release.stdout);
+  assert.equal(release.status, 0, release.stderr || release.stdout);
   const releaseReport = JSON.parse(release.stdout);
-  assert.equal(releaseReport.ok, false);
-  assert.equal(releaseReport.releaseBlocked, 25);
-  assert.ok(releaseReport.errors.every(error => error.includes('releaseEligible=false')));
+  assert.equal(releaseReport.ok, true);
+  assert.equal(releaseReport.releaseEligible, 10);
+  assert.equal(releaseReport.releaseBlocked, 15);
+  assert.deepEqual(releaseReport.errors, []);
 });

@@ -261,10 +261,15 @@ test('跨realm纯数据可校验；classic script无structuredClone时fail close
   assert.equal(result.errors[0].code,'INVALID_VALIDATOR_INPUT');
 });
 
-test('公开发布媒体硬门独立拒绝本地参考媒体计划', () => {
+test('公开发布媒体硬门接受Exact10计划并独立拒绝未批准动作', () => {
   const apis = loadApis();
   const baseline = generated(apis.generator);
-  const result = apis.validator.validatePlan({ ...baseline, catalog: apis.catalog, mediaRequirement: 'public_release' });
-  assert.equal(result.ok, false);
-  assert.ok(result.errors.some(error => ['MEDIA_RIGHTS_BLOCKED', 'MEDIA_MATCH_NOT_APPROVED'].includes(error.code)), JSON.stringify(result.errors));
+  const ok = apis.validator.validatePlan({ ...baseline, catalog: apis.catalog, mediaRequirement: 'public_release' });
+  assert.equal(ok.ok, true, JSON.stringify(ok.errors));
+
+  const invalid = structuredClone(baseline);
+  invalid.plan.weeks[0].sessions[0].actions[0].exerciseId = 'wall-hip-hinge';
+  const blocked = apis.validator.validatePlan({ ...invalid, catalog: apis.catalog, mediaRequirement: 'public_release' });
+  assert.equal(blocked.ok, false);
+  assert.ok(blocked.errors.some(error => error.code === 'MEDIA_MATCH_NOT_APPROVED'), JSON.stringify(blocked.errors));
 });

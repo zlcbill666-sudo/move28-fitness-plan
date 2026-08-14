@@ -9,7 +9,7 @@ MOVE 28 是一个静态、local-first、零构建的健身计划产品原型。�
 - 常规流程固定为：问卷 → 三屏能力校准 → 4 周候选计划 → 完整规则校验 → 人工一致性复核 → 开放训练。
 - 能力检查共五项：坐站、髋铰链、墙壁推、地面活动和步行耐受；均为非极限、可跳过，不上传视频、不调用摄像头。
 - 候选计划先进入 `pending_review`；validator 与人工复核都通过后才变为 `active`。
-- 25 个审核动作均绑定器械组合、剂量、RPE、休息、安全提示和能力约束；动作媒体尚未通过正式发布审核，参与者界面保持纯文字模式。
+- 25 个审核动作均绑定器械组合、剂量、RPE、休息、安全提示和能力约束；首批10项Exact本地动图已开放，其余动作保持文字替代。
 - 受限能力只显示动作目录中的受控中文变式指导，不展示内部枚举或计划自由文本。
 - 每屏一个确定动作；训练中严重信号会使计划失效并要求重新筛查。
 - 每周复盘只允许确定性、有限、单变量调整；用户接受调整后必须重新人工复核。
@@ -21,7 +21,7 @@ MOVE 28 是一个静态、local-first、零构建的健身计划产品原型。�
 
 ZIP 和直接双击 `index.html` 仅用于维护者备份、离线恢复和发布前兼容性验证。当前阶段不自动发布，也不覆盖稳定站点。
 
-参与者发布包必须严格按 [`release/runtime-manifest.json`](release/runtime-manifest.json) 的白名单构建。旧 `assets/gifs/`、正式媒体审核台账、`media-build/`、`media-src/`、研究资料、测试和开发脚本不得进入参与者包。
+参与者发布包必须严格按 [`release/runtime-manifest.json`](release/runtime-manifest.json) 的白名单构建。旧 `assets/gifs/`、未上架媒体、正式媒体审核台账、`media-build/`、`media-src/`、研究资料、测试和开发脚本不得进入参与者包；参与者包只允许 `release/runtime-manifest.json` 白名单中的Exact动图。
 
 ## 参与试用
 
@@ -67,4 +67,4 @@ npm run test:all
 
 ## 媒体来源
 
-动作媒体来源和审核状态见 [docs/media-source-licenses.md](docs/media-source-licenses.md)；当前没有动作媒体获准进入参与者发布包。跟练音乐来自 Mixkit Fitness Music，曲名与作者在播放器中显示；音乐加载失败只降级为静音，不影响训练步骤与安全停止。
+动作媒体来源和审核状态见 [docs/media-source-licenses.md](docs/media-source-licenses.md)；首批10项Exact本地动图获准进入参与者发布包，其余动作仍为文字替代。跟练音乐来自 Mixkit Fitness Music，曲名与作者在播放器中显示；音乐加载失败只降级为静音，不影响训练步骤与安全停止。

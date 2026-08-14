@@ -1,5 +1,5 @@
 const {test,expect}=require('@playwright/test');
-const {installMonotonicClock,advanceMonotonicClock,advanceGuideToReviewedDuration,completeGuideActions,answerSafeReadiness}=require('./helpers/pilot-flow.cjs');
+const {installMonotonicClock,waitForAppReady,advanceMonotonicClock,advanceGuideToReviewedDuration,completeGuideActions,answerSafeReadiness}=require('./helpers/pilot-flow.cjs');
 
 const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const safe={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:gymEquipment,allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion','rpe','pain','sleep'],sessionPreference:'short_frequent',musicEnabled:'no'};
@@ -7,14 +7,18 @@ const safe={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',a
 async function reset(page){
   await installMonotonicClock(page);
   await page.goto('/index.html');
+  await waitForAppReady(page);
   await page.evaluate(()=>{localStorage.clear();sessionStorage.clear()});
   await page.reload();
+  await waitForAppReady(page);
 }
 async function completeOnboarding(page,overrides={},capabilityOverrides={}){
+  await waitForAppReady(page);
   await page.getByRole('button',{name:/生成我的4周计划/}).click();
   await page.evaluate(data=>{for(const [key,value] of Object.entries(data))Move28.onboardingController.setField(key,value);Move28.onboardingController.goTo(9)},{...safe,...overrides});
   await page.locator('input[name="finalConfirmed"]').check();
   await page.getByRole('button',{name:/确认并保存结果/}).click();
+  await page.locator('#capabilityAssessmentView[aria-hidden="false"]').waitFor();
   await page.evaluate(values=>{for(const [field,value] of Object.entries(values))Move28.capabilityController.setField(field,value);Move28.capabilityController.goTo(2)},
     {chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable',...capabilityOverrides});
   await page.getByRole('button',{name:/确认并保存能力档案/}).click();
@@ -161,7 +165,7 @@ test('generated-plan 四天与5+计划把recovery明确显示为恢复训练',as
 });
 
 test('generated-plan 跟练严格消费session.actions，每屏一个动作并完成记录',async({page})=>{
-  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
+  const legacyGifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))legacyGifRequests.push(request.url())});
   await completeOnboarding(page);
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await approvePendingPlan(page);
@@ -179,8 +183,9 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     const item=expected.actions[index];
     await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
     await expect(page.locator('#guideBody h3')).toHaveText(item.exercise.name);
-    await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
-    await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作媒体审核中');
+    await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(1);
+    await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(0);
+    await expect(page.locator('#guideBody img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
     const dose=item.action.phase==='main'?`${item.action.sets}组 × ${item.action.reps}次`: `${item.action.durationMin}分钟`;
     await expect(page.locator('.guide-dose')).toContainText(dose);
     await expect(page.locator('#guideBody input,#guideBody select,#guideBody textarea')).toHaveCount(0);
@@ -206,7 +211,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   expect(record.planId).toBe(expected.planId);
   expect(record.sessionId).toBe(expected.sessionId);
   expect(record.status).toBe('completed');
-  expect(gifRequests).toEqual([]);
+  expect(legacyGifRequests).toEqual([]);
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
 });
@@ -306,34 +311,21 @@ test('generated-plan 跟练在390竖屏、844横屏与1280桌面无横向溢出�
   for(const viewport of [{width:390,height:844},{width:1280,height:800}]){await page.setViewportSize(viewport);await assertNoOverflow()}
 });
 
-test('generated-plan 受控能力档案在跟练页显示可信中文变式指导且不回显枚举',async({page})=>{
+test('generated-plan 居家受控能力在公开发布媒体门下原子受限且不回显变式枚举',async({page})=>{
   await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],allowSettingSwap:'no'}, {chairRise:'hands_supported',wallPushup:'limited_range'});
+  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.capabilityResult?.status).toBe('conservative');
+  expect(state.capabilityRevision).toBe(1);
+  expect(state.plan).toBeNull();
+  await expect(page.locator('body')).not.toContainText('high_seat');
+  await expect(page.locator('body')).not.toContainText('close_wall');
+  await expect(page.locator('body')).not.toContainText('hands_supported');
+  await expect(page.locator('body')).not.toContainText('limited_range');
   await page.getByRole('button',{name:'完成，返回首页'}).click();
-  await approvePendingPlan(page);
-  await page.locator('.plan-explanation summary').click();
-  await expect(page.locator('.plan-explanation')).toContainText('安全与能力规则要求保守起步');
-  await expect(page.locator('.plan-explanation')).toContainText('坐站需要手部辅助');
-  await expect(page.locator('.plan-explanation')).toContainText('墙壁推举活动范围有限');
-  await expect(page.locator('.plan-explanation')).not.toContainText('high_seat');
-  await expect(page.locator('.plan-explanation')).not.toContainText('close_wall');
-  await expect(page.locator('.plan-explanation')).not.toContainText('hands_supported');
-  await expect(page.locator('.plan-explanation')).not.toContainText('limited_range');
-  await page.getByRole('button',{name:'开始今天训练'}).click();
-  await answerSafeReadiness(page);await page.getByRole('button',{name:'检查今天状态'}).click();
-  await page.getByRole('button',{name:'按原计划继续'}).click();
-  await page.getByRole('button',{name:'开始本节',exact:true}).click();
-
-  await expect(page.locator('.guide-variant')).toContainText('受控变式 · 高位座椅变式');
-  await expect(page.locator('.guide-variant')).toContainText('使用稳固、不会滑动的较高座椅');
-  await expect(page.locator('.guide-variant')).toContainText('只在可控、无痛范围内起立和坐回');
-  await expect(page.locator('#guideModal')).not.toContainText('high_seat');
-  await page.locator('#guideNext').click();
-  await page.locator('#guideNext').click();
-
-  await expect(page.locator('.guide-variant')).toContainText('受控变式 · 近墙小幅变式');
-  await expect(page.locator('.guide-variant')).toContainText('双脚站得更靠近墙面');
-  await expect(page.locator('.guide-variant')).toContainText('胸部只靠近墙到肩部无痛');
-  await expect(page.locator('#guideModal')).not.toContainText('close_wall');
+  await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
+  await expect(page.locator('#todayCard')).toContainText('当前没有可执行计划');
+  await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
 
 test('generated-plan 缺少审核动作时原子阻断且不回退成用户训练计划',async({page})=>{

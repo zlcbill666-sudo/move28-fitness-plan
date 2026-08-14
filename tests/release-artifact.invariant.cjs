@@ -6,6 +6,7 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const dist=path.join(root,'dist');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'release','runtime-manifest.json'),'utf8'));
+const mediaPolicy=require('../src/data/exercise-media-policy.js');
 const toPosix=value=>value.split(path.sep).join('/');
 
 function artifactEntries(directory,base=directory){
@@ -32,12 +33,11 @@ test('generated participant artifact is exactly the runtime allowlist',()=>{
   ])assert.equal(actual.includes(required),true,`missing required runtime file: ${required}`);
 });
 
-test('generated participant artifact excludes every forbidden repository area',()=>{
+test('generated participant artifact excludes forbidden areas and only ships Exact10 GIFs',()=>{
   const actual=artifactEntries(dist);
   const forbidden=[
     '.git',
     'assets/gifs',
-    'assets/exercises',
     'media-build',
     'media-src',
     'docs/research',
@@ -52,5 +52,8 @@ test('generated participant artifact excludes every forbidden repository area',(
     );
     assert.equal(fs.existsSync(path.join(dist,...blocked.split('/'))),false,blocked);
   }
-  assert.equal(actual.some(file=>file.toLowerCase().endsWith('.gif')),false,'GIF assets are forbidden');
+  const mediaFiles=actual.filter(file=>file.startsWith('assets/exercises/'));
+  const expected=mediaPolicy.releaseEligibleIds.map(id=>`assets/exercises/${id}.gif`).sort();
+  assert.deepEqual(mediaFiles.sort(), expected);
+  assert.equal(actual.some(file=>/\.(?:mp4|webm|png|jpe?g|webp)$/i.test(file)),false,'non-GIF media assets are forbidden');
 });

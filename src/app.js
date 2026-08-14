@@ -196,7 +196,14 @@ function handoffToCapability(){
     if(Move28.onboardingController)Move28.onboardingController.close(true);
     Move28.capabilityController.open();
   };
-  if(typeof root.setTimeout==='function')root.setTimeout(launch,0);else launch();
+  if(typeof root.setTimeout!=='function'){launch();return}
+  let attempts=0;
+  const waitForOnboardingRouteRelease=()=>{
+    attempts+=1;
+    if(root.location&&root.location.hash==='#onboarding'&&attempts<20){root.setTimeout(waitForOnboardingRouteRelease,0);return}
+    launch();
+  };
+  root.setTimeout(waitForOnboardingRouteRelease,0);
 }
 function handleOnboardingComplete({intake,risk,canGenerate}){
   const saved=Move28.storage.saveIntake(intake,risk);

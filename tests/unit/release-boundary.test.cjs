@@ -7,6 +7,7 @@ const root=path.resolve(__dirname,'../..');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'release/runtime-manifest.json'),'utf8'));
 const files=manifest.files;
 const allowed=new Set(files);
+const mediaPolicy=require('../../src/data/exercise-media-policy.js');
 
 const toPosix=value=>value.replaceAll('\\','/');
 const localRef=value=>{
@@ -63,9 +64,12 @@ test('entry document, styles and dynamic audio close over the release allowlist'
   assert.deepEqual(scripts,allowedScripts);
 });
 
-test('participant artifact physically excludes blocked and research media',()=>{
-  assert.equal(files.some(file=>/\.(?:gif|jpe?g|png|webp|mp4)$/i.test(file)),false);
-  for(const prefix of ['assets/exercises/','assets/gifs/','media-build/','media-src/','docs/research/']){
+test('participant artifact only includes allowlisted Exact10 media and excludes blocked research media',()=>{
+  const mediaFiles=files.filter(file=>/\.(?:gif|jpe?g|png|webp|mp4)$/i.test(file));
+  const expectedMedia=mediaPolicy.releaseEligibleIds.map(id=>`assets/exercises/${id}.gif`).sort((a,b)=>a.localeCompare(b,'en'));
+  assert.deepEqual(mediaFiles, expectedMedia);
+  assert.equal(manifest.forbiddenPrefixes.includes('assets/exercises/'), false);
+  for(const prefix of ['assets/gifs/','media-build/','media-src/','docs/research/']){
     assert.equal(manifest.forbiddenPrefixes.includes(prefix),true,prefix);
     assert.equal(files.some(file=>file.startsWith(prefix)),false,prefix);
   }
@@ -74,16 +78,17 @@ test('participant artifact physically excludes blocked and research media',()=>{
   }
 });
 
-test('ordinary pilot review instructions require visible local handoff and text-only blocked media',()=>{
+test('ordinary pilot review instructions require visible local handoff and exact10 media boundaries',()=>{
   const reviewer=fs.readFileSync(path.join(root,'docs/pilot/reviewer-checklist.md'),'utf8');
   const participant=fs.readFileSync(path.join(root,'docs/pilot/participant-guide.md'),'utf8');
   for(const document of [reviewer,participant]){
     assert.equal(/(?:开发者\s*)?Console|控制台命令/i.test(document),false);
     assert.match(document,/文字(?:替代|说明|指导)/);
-    assert.match(document,/正式(?:媒体)?批准|媒体.*正式批准/);
+    assert.match(document,/首批10项Exact动图|首批10项Exact本地动图/);
+    assert.match(document,/blocked|仍blocked|文字替代/);
   }
   assert.match(reviewer,/下载复核 dossier/);
   assert.match(reviewer,/导入/);
   assert.match(reviewer,/拒绝并要求返工/);
-  assert.doesNotMatch(reviewer,/GIF 可加载|跟练时 GIF/);
+  assert.match(reviewer,/首批10项Exact动图可显示/);
 });

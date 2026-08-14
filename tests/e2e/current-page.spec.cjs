@@ -72,7 +72,7 @@ test.afterEach(async ({ page }) => {
 
 test('当前页面加载完整且关键样式生效', async ({ page }) => {
   await openCurrentPage(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 
   const styles = await page.evaluate(() => ({
     bodyBackground: getComputedStyle(document.body).backgroundColor,
@@ -122,17 +122,22 @@ test('四周计划和安全区保持完整行为基线', async ({ page }) => {
   ]);
 });
 
-test('动作库25项完整保留文字指导且不创建或请求受阻GIF', async ({ page }) => {
-  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
+test('动作库25项完整保留文字指导，Exact10显示正式GIF且不请求旧受阻GIF', async ({ page }) => {
+  const legacyGifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))legacyGifRequests.push(request.url())});
   await openCurrentPage(page);
-  const catalogSize = await page.evaluate(() => Move28.data.exerciseCatalog.length);
+  const { catalogSize, releaseEligibleCount } = await page.evaluate(() => ({
+    catalogSize: Move28.data.exerciseCatalog.length,
+    releaseEligibleCount: Move28.data.exerciseMediaPolicy.releaseEligibleIds.length
+  }));
   await expect(page.locator('#exerciseGrid article.exercise')).toHaveCount(catalogSize);
-  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(0);
-  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(catalogSize);
+  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(releaseEligibleCount);
+  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(catalogSize - releaseEligibleCount);
+  await expect(page.locator('#exerciseGrid img')).toHaveCount(10);
+  await expect(page.locator('#exerciseGrid img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
   await expect(page.locator('#exerciseGrid')).toContainText('弹力带划船');
   await expect(page.locator('#exerciseGrid')).toContainText('安全保护要点');
   for(const label of ['力量A','力量B','有氧C','全部'])await page.getByRole('button',{name:label,exact:true}).click();
-  expect(gifRequests).toEqual([]);
+  expect(legacyGifRequests).toEqual([]);
 });
 
 test('未问卷的28天示例保持只读，不开放旧跟练或写入记录', async ({ page }) => {

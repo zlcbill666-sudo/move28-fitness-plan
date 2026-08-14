@@ -259,8 +259,12 @@ def build_report(source: Path, spec_path: Path) -> tuple[dict[str, object], byte
         render_contact_sheet(frame_dir, generated_sheet)
         if not REVIEW_CONTACT_SHEET.is_file():
             raise ValueError("versioned manual-review contact sheet is missing")
-        contact_hash = file_hash(REVIEW_CONTACT_SHEET)
-        contact_bytes = generated_sheet.read_bytes()
+        # The manual review is bound to the versioned contact sheet bytes.
+        # Regenerate a sheet above to prove the frozen source is still decodable,
+        # but write the reviewed artifact so local ffmpeg/font rendering drift cannot
+        # silently replace the evidence named by the report hash.
+        contact_bytes = REVIEW_CONTACT_SHEET.read_bytes()
+        contact_hash = hashlib.sha256(contact_bytes).hexdigest()
     timing = classify_peak_hold([packet["durationSeconds"] for packet in packets], REVIEWED_PEAK_FRAME)
     report = {
         "schemaVersion": 2,

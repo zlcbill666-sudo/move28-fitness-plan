@@ -13,7 +13,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "assets" / "exercises" / "manifest.json"
 REQUIRED_REVIEWS = ("rights", "motion", "visual", "safety")
-REQUIRED_OUTPUTS = ("webm", "mp4", "poster", "gif")
+REQUIRED_OUTPUTS = ("gif",)
 ALLOWED_RIGHTS = {"confirmed", "blocked"}
 ALLOWED_PRODUCTION = {"reference_only", "replacement_required", "approved"}
 
@@ -68,10 +68,6 @@ def validate_asset(item: dict[str, Any], release: bool) -> list[str]:
     if not isinstance(release_eligible, bool):
         errors.append(f"{item_id}: production.releaseEligible must be boolean")
 
-    if release and release_eligible is not True:
-        errors.append(f"{item_id}: releaseEligible=false")
-        return errors
-
     if release_eligible is True:
         if rights_status != "confirmed" or production_status != "approved":
             errors.append(f"{item_id}: approved release requires confirmed rights and production.status=approved")
@@ -110,7 +106,7 @@ def validate_asset(item: dict[str, Any], release: bool) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--release", action="store_true", help="require every asset to be release eligible")
+    parser.add_argument("--release", action="store_true", help="require every release-eligible asset to have approved outputs")
     args = parser.parse_args()
 
     try:
@@ -139,14 +135,21 @@ def main() -> int:
             continue
         errors.extend(validate_asset(item, args.release))
 
+    release_eligible = sum(
+        1 for item in assets
+        if isinstance(item, dict) and (item.get("production") or {}).get("releaseEligible") is True
+    )
     release_blocked = sum(
         1 for item in assets
         if isinstance(item, dict) and (item.get("production") or {}).get("releaseEligible") is not True
     )
+    if args.release and release_eligible <= 0:
+        errors.append("release mode requires at least one release-eligible asset")
     report = {
         "ok": not errors,
         "mode": "release" if args.release else "audit",
         "assets": len(assets),
+        "releaseEligible": release_eligible,
         "releaseBlocked": release_blocked,
         "errors": errors,
     }

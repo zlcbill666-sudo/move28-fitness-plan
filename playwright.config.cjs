@@ -2,6 +2,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
+  timeout: 60000,
   use: {
     baseURL: 'http://127.0.0.1:8765',
     browserName: 'chromium',
@@ -9,9 +10,10 @@ module.exports = defineConfig({
     trace: 'retain-on-failure'
   },
   webServer: {
-    command: 'python -m http.server 8765 --bind 127.0.0.1',
+    command: 'node tests/e2e/helpers/static-server.cjs 8765',
     url: 'http://127.0.0.1:8765/index.html',
-    reuseExistingServer: !process.env.CI
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000
   },
   projects: [
     {

@@ -1,16 +1,19 @@
 const fs=require('node:fs');
 const{test,expect}=require('@playwright/test');
+const {waitForAppReady}=require('./helpers/pilot-flow.cjs');
 
 const equipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const intake={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment,allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no'};
 const capability={chairRise:'independent_controlled',wallHinge:'controlled',wallPushup:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'};
 
-async function reset(page){await page.goto('/index.html');await page.evaluate(()=>{localStorage.clear();sessionStorage.clear()});await page.reload()}
+async function reset(page){await page.goto('/index.html');await waitForAppReady(page);await page.evaluate(()=>{localStorage.clear();sessionStorage.clear()});await page.reload();await waitForAppReady(page)}
 async function submit(page){
+  await waitForAppReady(page);
   await page.getByRole('button',{name:/生成我的4周计划/}).click();
   await page.evaluate(value=>{for(const[key,item]of Object.entries(value))Move28.onboardingController.setField(key,item);Move28.onboardingController.goTo(9)},intake);
   await page.locator('input[name=finalConfirmed]').check();
   await page.getByRole('button',{name:/确认并保存结果/}).click();
+  await page.locator('#capabilityAssessmentView[aria-hidden="false"]').waitFor();
   await page.evaluate(value=>{for(const[key,item]of Object.entries(value))Move28.capabilityController.setField(key,item);Move28.capabilityController.goTo(2)},capability);
   await page.getByRole('button',{name:/确认并保存能力档案/}).click();
   await page.getByRole('button',{name:'完成，返回首页'}).click();

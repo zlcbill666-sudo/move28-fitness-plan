@@ -27,7 +27,7 @@ async function openAndFill(page, overrides = {}) {
 test.beforeEach(async ({ page }) => resetHttp(page));
 
 test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢复', async ({ page }) => {
-  const gifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))gifRequests.push(request.url())});
+  const legacyGifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))legacyGifRequests.push(request.url())});
   await completeOnboarding(page);
   let state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan.status).toBe('pending_review');
@@ -49,14 +49,15 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
-  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
-  await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作媒体审核中');
+  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(1);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(0);
+  await expect(page.locator('#guideBody img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
 
   await completeGuideActions(page);
   state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(Object.values(state.logs)).toHaveLength(1);
   expect(Object.values(state.logs)[0].status).toBe('completed');
-  expect(gifRequests).toEqual([]);
+  expect(legacyGifRequests).toEqual([]);
 
   await page.reload();
   await expect(page.locator('#todayCard')).toContainText('已完成 1/');
@@ -135,7 +136,7 @@ test('重复确认不会重复增加intake revision或绕过能力校准提前�
   expect(state.plan).toBeNull();
 });
 
-test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重叠', async ({ page }, testInfo) => {
+test('390×844 Exact10训练、音乐区、停止按钮和固定操作区不重叠', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile');
   await completeOnboarding(page);
   await finishSavedScreen(page);
@@ -155,15 +156,15 @@ test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重
     const footer = box('.guide-foot');
     const stop = box('.guide-stop');
     const next = box('#guideNext');
-    const mediaNotice = box('#guideBody .guide-media-blocked');
+    const media = box('#guideBody .guide-demo');
     return {
       noHorizontalOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       musicFooterOverlap: overlaps(music, footer),
       stopNextOverlap: overlaps(stop, next),
       stopInsideFooter: stop.left >= footer.left && stop.right <= footer.right
         && stop.top >= footer.top && stop.bottom <= footer.bottom,
-      noticeWidth: mediaNotice.width,
-      noticeInside: mediaNotice.left >= 0 && mediaNotice.right <= innerWidth
+      mediaWidth: media.width,
+      mediaInside: media.left >= 0 && media.right <= innerWidth
     };
   });
   expect(layout).toEqual({
@@ -171,10 +172,10 @@ test('390×844纯文字训练、音乐区、停止按钮和固定操作区不重
     musicFooterOverlap: false,
     stopNextOverlap: false,
     stopInsideFooter: true,
-    noticeWidth: expect.any(Number),
-    noticeInside: true
+    mediaWidth: expect.any(Number),
+    mediaInside: true
   });
-  expect(layout.noticeWidth).toBeGreaterThan(0);
+  expect(layout.mediaWidth).toBeGreaterThan(0);
   await page.locator('.guide-stop').click();
   await expect(page.getByRole('heading', { name: '选择最符合当前情况的一项' })).toBeVisible();
 });

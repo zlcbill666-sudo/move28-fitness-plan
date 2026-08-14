@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "kind": "internal-media-integration-dry-run",
-  "candidateManifestSha256": "77d694087859fc515e270f8c6905200ed474b6652c6cdc1b32025ee2e6dbc594",
-  "productionPolicySha256": "26bd35e9ada4b3cc4a6e538343fae2b10c7a8b38e9de28d2d258fd0360ab6891",
-  "formalManifestSha256": "b13403f49a9b52051e91579b9546aaf6a0e8357642664c14279b7b6fe9e6f8de",
-  "runtimeManifestSha256": "0de1d7888f04aaf11f1905584f7bf1ebcf7f003607dfd9a13848234ba1ef9442",
+  "candidateManifestSha256": "f9310b0ccff4bf9d78c68ad38c094a4b2991e1d14d7c58f4652806fc213845fd",
+  "productionPolicySha256": "e03e448ab9a9705c672eabd0c59aafed24e3c94553299f6c5f4948b62412c851",
+  "formalManifestSha256": "fbc28e18a96c9a351c0620e23864cb73f1e42206f638401825087b093a2ab4df",
+  "runtimeManifestSha256": "a8817b86e7760db593498f63a052278facea3d2a7198eac525bc9baff66bc71f",
   "runtimeFileSha256": {
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "assets/audio/cardio-techno-fest-vibes.mp3": "8b194d167ca8ae4eb45f8c20ea753eabc7d5175f64666ac22b5813facb2d9e40",
@@ -13,14 +13,24 @@
     "assets/audio/warmup-rising-forest.mp3": "4c2ebb1c5e7e9271eceb11ea13c7dbea64f207daefcc6cc12040b5f32f0cff1a",
     "assets/css/app.css": "98b256d0f16f3ffacf9510fb556bbf5ed8ff21084f5abe973354b5acec05e530",
     "assets/css/generated-plan.css": "7db194868ccf1326ce2b997cf6839fa93a31275a6daf60006911fbc48bf423bb",
+    "assets/exercises/chest-press-machine.gif": "789515907e5001da8ced127bcf8969e7ab265f25545bf7f0a80dbb6f0da213b0",
+    "assets/exercises/elliptical-trainer.gif": "c77b3bb6811b3a6cca1ba8ccd34b1fbdceb699f1c1d70fcd35a480abb63f50b9",
+    "assets/exercises/glute-bridge.gif": "0488f6ef2f876420c071a2d4243f1f1574d25bba5b5eb72246da4f130d58ad91",
+    "assets/exercises/hip-abduction-machine.gif": "f736cf937b8224e209c00d23acf002c74e6a0c94bea1bd7d321650d3a54f0cf5",
+    "assets/exercises/pallof-press.gif": "043e54c19d80a808d7565e96df9369f0c7909c17ccb93eeb930b50cf15fbab9e",
+    "assets/exercises/seated-leg-curl.gif": "83be1db342fcb514086eccd82b6748fe2d957caef22ce1501a9eaded5142d277",
+    "assets/exercises/seated-leg-extension.gif": "ad9602e9eb0584cd73ecc5cdf9f9e273ade4d14336d1554bc35b9242dfbb6f0d",
+    "assets/exercises/seated-leg-press.gif": "4e4afb16a87ff94ecebf835cd56358e3ac3bbdf66f5743f211651400137ddec3",
+    "assets/exercises/seated-row.gif": "96000790878fe1238847466d0f3b81fbcaf6586e9555df38aad41727759c7cbd",
+    "assets/exercises/wall-push-up.gif": "8025415b2ce801699ecf32864a622883bc623ae10cd48653d4bc689b6c7147e0",
     "docs/pilot/issue-log-template.md": "65d74871ba6e355579757784ae9a47f0e1d2431598bb01789a07468d68faf7ef",
-    "docs/pilot/participant-guide.md": "6f1624a334312b8bfe8222c43e986e0e9569f530842bb7b8ce589d5456aa972d",
-    "docs/pilot/reviewer-checklist.md": "b1696a5db65bf66d1df5a26aef5089b7e73ac3726f0dd334fa34ae938e58b3d6",
-    "index.html": "92a2f4925aad23f5bd14d003c30f9895f5285822650575b961654f2884d2b0bf",
-    "README.md": "b7bdf098fe3a2463c86bcde0ae5c89da8526aa5026ac8062d54d4c3583df239a",
-    "src/app.js": "727d1a3a751996939d3487bfc363260058b52b67295c4dfc86b17737999d80a7",
-    "src/data/exercise-catalog.js": "27ab190da3b14df6d2fb3bb18c134123589940feaf240e8cc6d877811b75002e",
-    "src/data/exercise-media-policy.js": "26bd35e9ada4b3cc4a6e538343fae2b10c7a8b38e9de28d2d258fd0360ab6891",
+    "docs/pilot/participant-guide.md": "644b3e1ce1cc16221e30751c9c45129be5af45bbf9da4bb829c94102f33d3453",
+    "docs/pilot/reviewer-checklist.md": "1fab20ae5381181d6533a1725e921759aa6bcb559abdf4584c20534e4edd97c6",
+    "index.html": "a12573eb5c5cd77d4012cb506aa8642895127279f0d19056e365d6af60275134",
+    "README.md": "54fe99e05496119c961beab4a297dc2fad6fac7fa2e39c28ba272ae4cf36bed7",
+    "src/app.js": "8e7e1112325910431a3dfd36441a7551bf4d24998ff90ccb56f472792b9849da",
+    "src/data/exercise-catalog.js": "7dbc18350032a152163949b37c5d039c02c2592b96e9297b1884cad2e01bb9a6",
+    "src/data/exercise-media-policy.js": "e03e448ab9a9705c672eabd0c59aafed24e3c94553299f6c5f4948b62412c851",
     "src/data/legacy-demo-plan.js": "3fa5c281135b8cc64a46b7a643f5d24313a37857358818b920198ad63ac856ce",
     "src/data/tracker-fields.js": "b38c354c5b0aea7943c1ecde92f5e56459baf41ddeab00ace08484d0209bf736",
     "src/domain/capability-engine.js": "ddb600de6c1ddd73debe2969b0e0d58f643bf03e2c749448f5aa48c3a8609806",
@@ -44,7 +54,7 @@
     "src/ui/session-readiness.js": "fca282568b4fddaf4c9e2c5421c3f8c46a05ace0f4f2081f414354fea406677e",
     "src/ui/weekly-review.js": "e98607bc716ecbb31b1c29b686b74fce86f969145ee16ad6a602cc1effb6c1c0",
     "src/ui/workout-guide.js": "52980d0341ea85944dddb8e273c1c511ed008c82ba6aa5f9775dc5ddd27e519d",
-    "使用说明.txt": "8c96340e304a7236f799632eafdde29615e9ec7b4d0093bca4312d80bb34ec51"
+    "使用说明.txt": "3f1d3b8999b571992b7629dd02c4d5c2b0632eebc882c3a1e2a1221ecac2df79"
   },
   "approvedExerciseIds": [
     "seated-leg-press",
@@ -61,14 +71,14 @@
   "expectedDryRun": {
     "released": 10,
     "blocked": 15,
-    "formalReleaseEligible": 0
+    "formalReleaseEligible": 10
   },
   "gates": {
     "motion": "approved-for-internal-candidate",
     "visual": "approved-for-internal-preview",
     "safety": "approved-for-internal-candidate",
     "rights": "deferred-by-user-for-internal-stage",
-    "participantRelease": "blocked"
+    "participantRelease": "exact10_allowlisted"
   },
   "forbiddenChanges": [
     "src/data/exercise-media-policy.js",
