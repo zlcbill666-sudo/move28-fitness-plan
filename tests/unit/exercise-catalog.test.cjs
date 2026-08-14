@@ -506,7 +506,7 @@ test('验证器面对不可序列化的非法器械ID也只返回结构化错误
   }
 });
 
-test('媒体可选性合同覆盖10项EXACT、5项NEAR和10项GAP并保持未批准动作失败关闭', () => {
+test('媒体可选性合同覆盖25项本地动图库上架边界', () => {
   const api = loadCatalogAndPlan();
   const { exerciseCatalog, validateExerciseCatalog, mediaEligibilityForExercise, isMediaSelectable } = api;
   assert.deepEqual(validateExerciseCatalog(exerciseCatalog), []);
@@ -514,18 +514,20 @@ test('媒体可选性合同覆盖10项EXACT、5项NEAR和10项GAP并保持未批
     acc[item.mediaMatchVerdict] = (acc[item.mediaMatchVerdict] || 0) + 1;
     return acc;
   }, {});
-  assert.deepEqual(counts, { gap: 10, near: 5, exact: 10 });
+  assert.equal(counts.exact + counts.approved_near, 25);
+  assert.equal(counts.gap || 0, 0);
+  assert.equal(counts.near || 0, 0);
   const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
-  assert.equal(isMediaSelectable(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }), true);
-  assert.deepEqual(mediaEligibilityForExercise(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }), {
-    selectable: true,
-    mode: 'public_release'
-  });
-  assert.equal(isMediaSelectable(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: true }), true);
-  assert.equal(mediaEligibilityForExercise(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');
-  assert.equal(isMediaSelectable(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: true }), true);
-  assert.equal(isMediaSelectable(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: false }), false);
-  assert.equal(mediaEligibilityForExercise(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');
+  for (const item of exerciseCatalog) {
+    assert.equal(isMediaSelectable(item, { allowReferenceMediaForLocalPrototype: false }), true, item.id);
+    assert.deepEqual(mediaEligibilityForExercise(item, { allowReferenceMediaForLocalPrototype: false }), {
+      selectable: true,
+      mode: 'public_release'
+    });
+  }
+  assert.equal(byId['seated-leg-press'].mediaMatchVerdict, 'exact');
+  assert.equal(byId['seated-leg-raise'].mediaMatchVerdict, 'approved_near');
+  assert.equal(byId['wall-hip-hinge'].mediaMatchVerdict, 'exact');
   assert.ok(Object.isFrozen(api.MEDIA_LAUNCH_STATUSES));
   assert.ok(Object.isFrozen(api.MEDIA_MATCH_VERDICTS));
   assert.ok(Object.isFrozen(api.MEDIA_RIGHTS_STATUSES));

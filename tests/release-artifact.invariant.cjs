@@ -33,7 +33,7 @@ test('generated participant artifact is exactly the runtime allowlist',()=>{
   ])assert.equal(actual.includes(required),true,`missing required runtime file: ${required}`);
 });
 
-test('generated participant artifact excludes forbidden areas and only ships Exact10 GIFs',()=>{
+test('generated participant artifact excludes forbidden areas and only ships allowlisted local-library GIFs',()=>{
   const actual=artifactEntries(dist);
   const forbidden=[
     '.git',

@@ -306,11 +306,12 @@ test('经典script与CommonJS均暴露纯生成API且不依赖DOM/storage/时间
   assert.equal(result.status,'generated');
 });
 
-test('公开发布模式下Exact10健身房计划可生成，未批准居家动作仍原子失败', () => {
+test('公开发布模式下25项本地图库健身房与居家计划均可生成', () => {
   const api = loadGenerator();
   const gymResult = generate(api, {}, 'normal', { mediaRequirement: 'public_release' });
   assert.equal(gymResult.status, 'generated');
-  const eligible = new Set(['seated-leg-press','seated-leg-curl','glute-bridge','chest-press-machine','seated-row','pallof-press','seated-leg-extension','hip-abduction-machine','wall-push-up','elliptical-trainer']);
+  const eligible = new Set(api.exerciseCatalog.filter(item => item.mediaRightsStatus === 'confirmed').map(item => item.id));
+  assert.equal(eligible.size, 25);
   for (const week of gymResult.weeks) {
     for (const session of week.sessions) {
       for (const action of session.actions) assert.equal(eligible.has(action.exerciseId), true, action.exerciseId);
@@ -318,9 +319,10 @@ test('公开发布模式下Exact10健身房计划可生成，未批准居家动�
   }
 
   const homeResult = generate(api, { setting: 'home', equipment: homeEquipment }, 'normal', { mediaRequirement: 'public_release' });
-  assert.equal(homeResult.status, 'manual_review');
-  assert.equal(homeResult.plan, null);
-  assert.equal(homeResult.errors[0].code, 'MOVEMENT_PATTERN_UNAVAILABLE');
-  assert.equal(homeResult.errors[0].cause.code, 'MEDIA_MATCH_NOT_APPROVED');
-  assert.ok(Array.isArray(homeResult.errors[0].cause.blockedActionIds));
+  assert.equal(homeResult.status, 'generated');
+  for (const week of homeResult.weeks) {
+    for (const session of week.sessions) {
+      for (const action of session.actions) assert.equal(eligible.has(action.exerciseId), true, action.exerciseId);
+    }
+  }
 });

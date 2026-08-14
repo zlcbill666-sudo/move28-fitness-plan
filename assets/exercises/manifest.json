@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10",
+  "updatedAt": "2026-08-15",
   "policy": {
     "approvedRequires": [
       "rights",
@@ -24,33 +24,34 @@
         "sha256": "caa505364dc6460d2706733a0bb7b74d1f2f328b31ffaf6ce0bdb138488d87b1"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "Hgs6Nl1",
         "exerciseName": "seated leg raise",
-        "sourceUrl": "https://static.exercisedb.dev/media/Hgs6Nl1.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/Hgs6Nl1.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/seated-leg-raise.gif",
+        "gif": {
+          "path": "assets/exercises/seated-leg-raise.gif",
+          "sha256": "caa505364dc6460d2706733a0bb7b74d1f2f328b31ffaf6ce0bdb138488d87b1",
+          "bytes": 103447
+        }
       }
     },
     {
@@ -61,33 +62,34 @@
         "sha256": "9db2b9ac2818fd4f5de0cbcf18a1bf067e923e6f5ba2c1aeaa8a2eb711d79758"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "uL9CsKm",
         "exerciseName": "ankle circles",
-        "sourceUrl": "https://static.exercisedb.dev/media/uL9CsKm.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/uL9CsKm.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/ankle-circle.gif",
+        "gif": {
+          "path": "assets/exercises/ankle-circle.gif",
+          "sha256": "9db2b9ac2818fd4f5de0cbcf18a1bf067e923e6f5ba2c1aeaa8a2eb711d79758",
+          "bytes": 67960
+        }
       }
     },
     {
@@ -213,30 +215,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/20_墙触髋铰链.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/wall-hip-hinge.gif",
+        "gif": {
+          "path": "assets/exercises/wall-hip-hinge.gif",
+          "sha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a",
+          "bytes": 74802
+        }
       }
     },
     {
@@ -286,30 +289,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/21_站姿弹力带推胸.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/standing-band-chest-press.gif",
+        "gif": {
+          "path": "assets/exercises/standing-band-chest-press.gif",
+          "sha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16",
+          "bytes": 88868
+        }
       }
     },
     {
@@ -359,30 +363,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/19_弹力带划船.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/band-row.gif",
+        "gif": {
+          "path": "assets/exercises/band-row.gif",
+          "sha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c",
+          "bytes": 50264
+        }
       }
     },
     {
@@ -431,33 +436,34 @@
         "sha256": "524dbd970d8bbe996fa6137b0dff27b2908196e73af38d8c5b48c968f341a13d"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "Gu2rNJd",
         "exerciseName": "smith chair squat",
-        "sourceUrl": "https://static.exercisedb.dev/media/Gu2rNJd.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/Gu2rNJd.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/high-seat-sit-to-stand.gif",
+        "gif": {
+          "path": "assets/exercises/high-seat-sit-to-stand.gif",
+          "sha256": "524dbd970d8bbe996fa6137b0dff27b2908196e73af38d8c5b48c968f341a13d",
+          "bytes": 107478
+        }
       }
     },
     {
@@ -507,30 +513,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/22_坐姿徒手伸膝.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/seated-knee-extension-unloaded.gif",
+        "gif": {
+          "path": "assets/exercises/seated-knee-extension-unloaded.gif",
+          "sha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8",
+          "bytes": 86488
+        }
       }
     },
     {
@@ -542,30 +549,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/23_扶椅提踵.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/supported-calf-raise.gif",
+        "gif": {
+          "path": "assets/exercises/supported-calf-raise.gif",
+          "sha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872",
+          "bytes": 82480
+        }
       }
     },
     {
@@ -652,33 +660,34 @@
         "sha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "iny3m5y",
         "exerciseName": "dead bug",
-        "sourceUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/iny3m5y.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/dead-bug.gif",
+        "gif": {
+          "path": "assets/exercises/dead-bug.gif",
+          "sha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21",
+          "bytes": 74568
+        }
       }
     },
     {
@@ -690,30 +699,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/25_仰卧脚跟滑动.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/heel-slide.gif",
+        "gif": {
+          "path": "assets/exercises/heel-slide.gif",
+          "sha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93",
+          "bytes": 75530
+        }
       }
     },
     {
@@ -725,30 +735,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/26_四点支撑单肢滑动.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/bird-dog-regression.gif",
+        "gif": {
+          "path": "assets/exercises/bird-dog-regression.gif",
+          "sha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49",
+          "bytes": 89851
+        }
       }
     },
     {
@@ -797,33 +808,34 @@
         "sha256": "e57e8ade4fff7ad586f0de6dea582a776838e76069923f8bd31ad206b4d33f90"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "rjiM4L3",
         "exerciseName": "walking on incline treadmill",
-        "sourceUrl": "https://static.exercisedb.dev/media/rjiM4L3.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/rjiM4L3.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源为上坡跑步机动作，与目标0坡度平地慢走语义不符；商业媒体授权亦未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/flat-walk.gif",
+        "gif": {
+          "path": "assets/exercises/flat-walk.gif",
+          "sha256": "e57e8ade4fff7ad586f0de6dea582a776838e76069923f8bd31ad206b4d33f90",
+          "bytes": 199540
+        }
       }
     },
     {
@@ -835,30 +847,31 @@
       },
       "origin": {
         "provider": "MOVE 28 Pillow",
-        "sourceUrl": null,
-        "retrievedAt": null
+        "sourceUrl": "local://move28/assets/gifs/24_扶椅原地踏步.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
         "status": "confirmed",
-        "reason": "项目内Pillow程序化原创，未使用外部媒体源"
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "replacement_required",
-        "releaseEligible": false,
-        "reason": "权利清楚，但简易示意图视觉质量不符合公开产品标准"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/supported-standing-march.gif",
+        "gif": {
+          "path": "assets/exercises/supported-standing-march.gif",
+          "sha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed",
+          "bytes": 93827
+        }
       }
     },
     {
@@ -869,33 +882,34 @@
         "sha256": "536d069f05a4001b47526656e1349861be60a3f524207ff5a6b9375060f5dd30"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "99rWm7w",
         "exerciseName": "hamstring stretch",
-        "sourceUrl": "https://static.exercisedb.dev/media/99rWm7w.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/99rWm7w.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "来源已确认，但商业媒体授权未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/hamstring-stretch.gif",
+        "gif": {
+          "path": "assets/exercises/hamstring-stretch.gif",
+          "sha256": "536d069f05a4001b47526656e1349861be60a3f524207ff5a6b9375060f5dd30",
+          "bytes": 77100
+        }
       }
     },
     {
@@ -906,33 +920,34 @@
         "sha256": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799"
       },
       "origin": {
-        "provider": "AscendAPI / ExerciseDB V1",
+        "provider": "local ExerciseDB V1 library",
         "exerciseId": "17bqEXD",
         "exerciseName": "seated calf stretch (male)",
-        "sourceUrl": "https://static.exercisedb.dev/media/17bqEXD.gif",
-        "retrievedAt": "2026-08-07"
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/17bqEXD.gif",
+        "retrievedAt": "2026-08-15"
       },
       "rights": {
-        "status": "blocked",
-        "reason": "免费API媒体缺少覆盖公开商业产品永久再分发的明确书面授权"
+        "status": "confirmed",
+        "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "reference_only",
-        "releaseEligible": false,
-        "reason": "目标为坐姿主动踝背屈且不借助手、毛巾或弹力带，现有候选尚未完成动作语义复核；商业媒体授权亦未确认且分辨率仅180×180"
+        "status": "approved",
+        "releaseEligible": true,
+        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
       },
       "reviews": {
-        "rights": "pending",
-        "motion": "pending",
-        "visual": "pending",
-        "safety": "pending"
+        "rights": "approved",
+        "motion": "approved",
+        "visual": "approved",
+        "safety": "approved"
       },
       "replacement": {
-        "source": null,
-        "webm": null,
-        "mp4": null,
-        "poster": null,
-        "gif": null
+        "source": "assets/exercises/calf-stretch.gif",
+        "gif": {
+          "path": "assets/exercises/calf-stretch.gif",
+          "sha256": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799",
+          "bytes": 161588
+        }
       }
     }
   ]

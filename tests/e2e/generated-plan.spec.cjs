@@ -311,20 +311,23 @@ test('generated-plan 跟练在390竖屏、844横屏与1280桌面无横向溢出�
   for(const viewport of [{width:390,height:844},{width:1280,height:800}]){await page.setViewportSize(viewport);await assertNoOverflow()}
 });
 
-test('generated-plan 居家受控能力在公开发布媒体门下原子受限且不回显变式枚举',async({page})=>{
+test('generated-plan 居家受控能力在公开发布媒体门下等待人工复核且不回显变式枚举',async({page})=>{
   await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],allowSettingSwap:'no'}, {chairRise:'hands_supported',wallPushup:'limited_range'});
-  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
+  await expect(page.locator('.cap-result')).toContainText('待人工复核（pending_review）');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityResult?.status).toBe('conservative');
   expect(state.capabilityRevision).toBe(1);
-  expect(state.plan).toBeNull();
+  expect(state.plan.status).toBe('pending_review');
+  expect(state.plan.review).toBeNull();
+  expect(state.plan.capabilityRevision).toBe(1);
   await expect(page.locator('body')).not.toContainText('high_seat');
   await expect(page.locator('body')).not.toContainText('close_wall');
   await expect(page.locator('body')).not.toContainText('hands_supported');
   await expect(page.locator('body')).not.toContainText('limited_range');
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
-  await expect(page.locator('#todayCard')).toContainText('当前没有可执行计划');
+  await expect(page.locator('#pendingReviewHero')).toBeVisible();
+  await expect(page.locator('#pendingReviewHero')).toContainText('训练入口保持锁定');
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
 });
 

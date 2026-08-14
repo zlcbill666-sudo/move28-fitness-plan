@@ -81,10 +81,23 @@ const server = http.createServer((req, res) => {
       return;
     }
     const stream = fs.createReadStream(file);
-    pipeline(stream, res, error => {
-      if (!error || error.code === 'ERR_STREAM_PREMATURE_CLOSE' || error.code === 'ECONNRESET' || error.code === 'EPIPE') return;
-      console.error(`static-server stream error: ${error.code || error.message}`);
-    });
+    const benignStreamErrors = new Set([
+      'ERR_STREAM_PREMATURE_CLOSE',
+      'ERR_STREAM_UNABLE_TO_PIPE',
+      'ECONNRESET',
+      'EPIPE'
+    ]);
+    try {
+      pipeline(stream, res, error => {
+        if (!error || benignStreamErrors.has(error.code)) return;
+        console.error(`static-server stream error: ${error.code || error.message}`);
+      });
+    } catch (error) {
+      stream.destroy();
+      if (!benignStreamErrors.has(error.code)) {
+        console.error(`static-server stream error: ${error.code || error.message}`);
+      }
+    }
   });
 });
 

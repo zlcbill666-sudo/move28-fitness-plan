@@ -28,7 +28,7 @@ function hash(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
-test('冻结报告记录动作可用但支撑替换No-Go并继续阻止发布', () => {
+test('冻结报告记录Gymvisual候选动作可用但支撑替换No-Go', () => {
   const data = JSON.parse(fs.readFileSync(report, 'utf8'));
   assert.equal(data.exerciseId, 'supported-calf-raise');
   assert.equal(data.manualMotionReview.bilateralCalfRaiseVisible, true);

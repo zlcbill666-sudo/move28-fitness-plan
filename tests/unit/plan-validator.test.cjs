@@ -261,15 +261,17 @@ test('跨realm纯数据可校验；classic script无structuredClone时fail close
   assert.equal(result.errors[0].code,'INVALID_VALIDATOR_INPUT');
 });
 
-test('公开发布媒体硬门接受Exact10计划并独立拒绝未批准动作', () => {
+test('公开发布媒体硬门接受25项本地图库计划并拒绝未知媒体模式', () => {
   const apis = loadApis();
   const baseline = generated(apis.generator);
   const ok = apis.validator.validatePlan({ ...baseline, catalog: apis.catalog, mediaRequirement: 'public_release' });
   assert.equal(ok.ok, true, JSON.stringify(ok.errors));
 
-  const invalid = structuredClone(baseline);
-  invalid.plan.weeks[0].sessions[0].actions[0].exerciseId = 'wall-hip-hinge';
-  const blocked = apis.validator.validatePlan({ ...invalid, catalog: apis.catalog, mediaRequirement: 'public_release' });
-  assert.equal(blocked.ok, false);
-  assert.ok(blocked.errors.some(error => error.code === 'MEDIA_MATCH_NOT_APPROVED'), JSON.stringify(blocked.errors));
+  const invalidRequirement = apis.validator.validatePlan({ ...baseline, catalog: apis.catalog, mediaRequirement: 'external_release' });
+  assert.equal(invalidRequirement.ok, false);
+  assert.deepEqual(invalidRequirement.errors[0], {
+    code: 'INVALID_PLAN_SCHEMA',
+    path: 'input.mediaRequirement',
+    message: '计划结构或必需字段无效。'
+  });
 });

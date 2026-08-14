@@ -64,7 +64,7 @@ test('entry document, styles and dynamic audio close over the release allowlist'
   assert.deepEqual(scripts,allowedScripts);
 });
 
-test('participant artifact only includes allowlisted Exact10 media and excludes blocked research media',()=>{
+test('participant artifact only includes allowlisted local-library media and excludes research media',()=>{
   const mediaFiles=files.filter(file=>/\.(?:gif|jpe?g|png|webp|mp4)$/i.test(file));
   const expectedMedia=mediaPolicy.releaseEligibleIds.map(id=>`assets/exercises/${id}.gif`).sort((a,b)=>a.localeCompare(b,'en'));
   assert.deepEqual(mediaFiles, expectedMedia);
@@ -78,17 +78,17 @@ test('participant artifact only includes allowlisted Exact10 media and excludes 
   }
 });
 
-test('ordinary pilot review instructions require visible local handoff and exact10 media boundaries',()=>{
+test('ordinary pilot review instructions require visible local handoff and all25 local media boundaries',()=>{
   const reviewer=fs.readFileSync(path.join(root,'docs/pilot/reviewer-checklist.md'),'utf8');
   const participant=fs.readFileSync(path.join(root,'docs/pilot/participant-guide.md'),'utf8');
   for(const document of [reviewer,participant]){
     assert.equal(/(?:开发者\s*)?Console|控制台命令/i.test(document),false);
-    assert.match(document,/文字(?:替代|说明|指导)/);
-    assert.match(document,/首批10项Exact动图|首批10项Exact本地动图/);
-    assert.match(document,/blocked|仍blocked|文字替代/);
+    assert.match(document,/文字(?:步骤|说明|指导)/);
+    assert.match(document,/25项本地动图库GIF/);
+    assert.doesNotMatch(document,/首批10项Exact|仍blocked|文字替代/);
   }
   assert.match(reviewer,/下载复核 dossier/);
   assert.match(reviewer,/导入/);
   assert.match(reviewer,/拒绝并要求返工/);
-  assert.match(reviewer,/首批10项Exact动图可显示/);
+  assert.match(reviewer,/25项本地动图库GIF均可显示/);
 });

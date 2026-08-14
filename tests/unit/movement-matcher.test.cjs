@@ -293,7 +293,7 @@ test('经典浏览器脚本按目录后匹配器顺序加载且不依赖DOM或st
   assert.equal(result.exercise.id, 'wall-push-up');
 });
 
-test('媒体硬门在公开发布模式允许Exact10并阻断NEAR/GAP候选', () => {
+test('媒体硬门在公开发布模式允许25项本地图库候选', () => {
   const api = loadMatcher();
   const publicPush = api.matchExercise({
     pattern: 'horizontal_push', setting: 'home', equipment: ['wall'], exclusions: [], difficulty: 1, mediaRequirement: 'public_release'
@@ -306,16 +306,14 @@ test('媒体硬门在公开发布模式允许Exact10并阻断NEAR/GAP候选', ()
     pattern: 'low_impact_cardio', setting: 'home', equipment: ['stable_chair'], exclusions: [], difficulty: 1,
     catalog: [standingMarch], mediaRequirement: 'public_release'
   });
-  assert.equal(nearOnly.ok, false);
-  assert.equal(nearOnly.error.code, 'MEDIA_MATCH_NOT_APPROVED');
-  assert.deepEqual(nearOnly.error.blockedActionIds, ['supported-standing-march']);
+  assert.equal(nearOnly.ok, true);
+  assert.equal(nearOnly.exercise.id, 'supported-standing-march');
 
   const wallHinge = api.exerciseCatalog.find(item => item.id === 'wall-hip-hinge');
   const gapOnly = api.matchExercise({
     pattern: 'posterior_chain', setting: 'home', equipment: ['wall'], exclusions: [], difficulty: 1,
     catalog: [wallHinge], mediaRequirement: 'public_release'
   });
-  assert.equal(gapOnly.ok, false);
-  assert.equal(gapOnly.error.code, 'MEDIA_MATCH_NOT_APPROVED');
-  assert.deepEqual(gapOnly.error.blockedActionIds, ['wall-hip-hinge']);
+  assert.equal(gapOnly.ok, true);
+  assert.equal(gapOnly.exercise.id, 'wall-hip-hinge');
 });

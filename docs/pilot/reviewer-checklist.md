@@ -52,7 +52,7 @@
 - [ ] 每节 `setting` 与 dossier 的 `selectedSetting` 一致；当前试用不允许训练当天临时切换场景。
 - [ ] 每个动作至少一组 `equipmentOptions` 能由 dossier 的 `availableEquipment` 满足；没有要求参与者自创替代动作。
 - [ ] 每个动作 ID 来自审核目录，动作内容的 `reviewStatus === "approved"`。
-- [ ] 当前参与者界面以已复核文字步骤为准；首批10项Exact动图可显示，任何仍blocked的GIF/视频都不要求“正常”，也不得被本次计划复核视为已获媒体批准。
+- [ ] 当前参与者界面以已复核文字步骤为准；25项本地动图库GIF均可显示，复核时仍需记录任何动作语义、支撑物或安全提示不一致。
 - [ ] 禁忌动作已排除，动作模式没有因回退而失真。
 - [ ] `high_seat`、`close_wall` 等变式只用于匹配动作，并在跟练页显示可信中文指导，不显示内部枚举。
 - [ ] 居家计划不混入 dossier 未列出的健身房器械；健身房计划不假设 `availableEquipment` 未列出的器械。
@@ -82,7 +82,7 @@
 - [ ] `plan.review.capabilityRevision === state.capabilityRevision`；
 - [ ] 首页出现“开始本节训练”；
 - [ ] 打开首节跟练时文字动作指导、剂量、受控变式、安全停止按钮正常；
-- [ ] 首批10项Exact动图可显示，其余动作继续使用文字替代；
+- [ ] 25项本地动图库GIF均可显示；
 - [ ] 刷新后训练入口仍存在。
 
 ## 7. 周调整重新复核

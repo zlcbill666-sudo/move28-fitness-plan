@@ -11,7 +11,7 @@
 
 ## 明确排除
 
-- `assets/gifs/`和`assets/exercises/`：旧GIF及正式媒体审核台账，不是参与者运行时输入；
+- `assets/gifs/`：旧GIF来源库，不是参与者运行时输入；`assets/exercises/`仅允许`runtime-manifest.json`白名单中的正式本地动图库GIF进入参与者包；
 - `media-build/`、`media-src/`：研究候选、源素材和生成中间件；
 - `docs/research/`、`docs/plans/`、handoff、产品研究资料；
 - `tests/`、`scripts/`、依赖、测试报告、缓存和版本控制数据。
