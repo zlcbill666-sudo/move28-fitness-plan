@@ -42,7 +42,11 @@ const MESSAGES=Object.freeze({
   CAPABILITY_EXCLUSION_CONFLICT:'计划动作违反当前能力排除项。',
   CAPABILITY_DIFFICULTY_EXCEEDED:'计划动作超过当前能力难度上限。',
   CAPABILITY_VARIANT_MISMATCH:'计划动作变式与当前能力约束不一致。',
-  CARDIO_START_EXCEEDED:'首周有氧剂量超过当前能力起始上限。'
+  CARDIO_START_EXCEEDED:'首周有氧剂量超过当前能力起始上限。',
+  MEDIA_RIGHTS_BLOCKED:'动作媒体尚未获得公开发布授权。',
+  MEDIA_MATCH_NOT_APPROVED:'计划包含未通过媒体语义审批的动作。',
+  MEDIA_PROVENANCE_MISSING:'动作缺少可审计的媒体来源。',
+  INVALID_MEDIA_SCHEMA:'动作媒体状态结构无效。'
 });
 
 function deepFreeze(value,seen=new Set()){
@@ -136,7 +140,7 @@ function sameData(left,right){
   return true;
 }
 function matchesTrustedExercise(exercise,trusted){
-  const fields=['pattern','difficulty','reviewStatus','settings','equipment','equipmentOptions','contraindications','regressionIds','progressionIds','dose','cues'];
+  const fields=['pattern','difficulty','reviewStatus','settings','equipment','equipmentOptions','contraindications','regressionIds','progressionIds','dose','cues','mediaLaunchStatus','mediaMatchVerdict','mediaRightsStatus','approvedDisplayName','sourceExerciseDbId','sourceExerciseDbName','mediaFailureReason'];
   return fields.every(field=>sameData(exercise[field],trusted[field]));
 }
 function buildCatalogIndex(catalog,errors){
@@ -189,6 +193,8 @@ function validatePlan(rawInput){
   const errors=[];
   const capability=canonicalCapability(input);
   if(!capability){add(errors,'INVALID_PLAN_SCHEMA','input.capabilityResult');return result(errors)}
+  const mediaRequirement=Object.prototype.hasOwnProperty.call(input,'mediaRequirement')?input.mediaRequirement:'local_reference';
+  if(!['local_reference','public_release'].includes(mediaRequirement)){add(errors,'INVALID_PLAN_SCHEMA','input.mediaRequirement');return result(errors)}
   const sessionMinutesValid=typeof intake.sessionMinutes==='string'&&['20','30','45','60','75'].includes(intake.sessionMinutes);
   const intakeExclusionsValid=stringArray(intake.avoidMovements,{max:32});
   const intakeWeekdaysValid=stringArray(intake.weekdays,{max:7})&&intake.weekdays.length>0&&intake.weekdays.every(day=>WEEKDAYS.includes(day));
@@ -234,6 +240,8 @@ function validatePlan(rawInput){
         const trusted=TRUSTED_EXERCISES.get(action.exerciseId);
         if(!exercise||!trusted||exercise.reviewStatus!=='approved'){add(errors,'EXERCISE_NOT_APPROVED',`${actionPath}.exerciseId`);continue}
         if(!matchesTrustedExercise(exercise,trusted))add(errors,'INVALID_PLAN_SCHEMA',`${actionPath}.exerciseId`);
+        const mediaEligibility=typeof catalogApi.mediaEligibilityForExercise==='function'?catalogApi.mediaEligibilityForExercise(trusted,{allowReferenceMediaForLocalPrototype:mediaRequirement==='local_reference'}):{selectable:true};
+        if(!mediaEligibility||mediaEligibility.selectable!==true)add(errors,mediaEligibility&&mediaEligibility.code||'INVALID_MEDIA_SCHEMA',`${actionPath}.exerciseId`);
         if(!completeCues(trusted))add(errors,'CUES_UNAVAILABLE',`${actionPath}.exerciseId`);
         const mapped=matcherApi.CATALOG_PATTERN_TO_INTENT&&matcherApi.CATALOG_PATTERN_TO_INTENT[trusted.pattern];
         if(mapped!==action.pattern)add(errors,'MOVEMENT_PATTERN_MISMATCH',`${actionPath}.pattern`);

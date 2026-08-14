@@ -292,3 +292,23 @@ test('经典浏览器脚本按目录后匹配器顺序加载且不依赖DOM或st
   assert.equal(result.ok, true);
   assert.equal(result.exercise.id, 'wall-push-up');
 });
+
+test('媒体硬门在公开发布模式阻断未授权和GAP候选', () => {
+  const api = loadMatcher();
+  const publicPush = api.matchExercise({
+    pattern: 'horizontal_push', setting: 'home', equipment: ['wall'], exclusions: [], difficulty: 1, mediaRequirement: 'public_release'
+  });
+  assert.equal(publicPush.ok, false);
+  assert.equal(publicPush.error.code, 'MEDIA_RIGHTS_BLOCKED');
+  assert.deepEqual(publicPush.error.blockedActionIds, ['wall-push-up']);
+  assert.equal(publicPush.error.causes[0].code, 'MEDIA_RIGHTS_BLOCKED');
+
+  const wallHinge = api.exerciseCatalog.find(item => item.id === 'wall-hip-hinge');
+  const gapOnly = api.matchExercise({
+    pattern: 'posterior_chain', setting: 'home', equipment: ['wall'], exclusions: [], difficulty: 1,
+    catalog: [wallHinge], mediaRequirement: 'public_release'
+  });
+  assert.equal(gapOnly.ok, false);
+  assert.equal(gapOnly.error.code, 'MEDIA_MATCH_NOT_APPROVED');
+  assert.deepEqual(gapOnly.error.blockedActionIds, ['wall-hip-hinge']);
+});

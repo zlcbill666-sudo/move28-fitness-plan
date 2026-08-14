@@ -16,7 +16,7 @@ DEFAULT_LIBRARY = Path(r"E:\个人用\健身\健身动作动画\bootstrapping-la
 CATALOG = ROOT / "src/data/exercise-catalog.js"
 REPORT = ROOT / "docs/research/data/move28-local-exercisedb-mapping.json"
 CONTACT = ROOT / "docs/research/evidence/local-exercisedb/move28-local-candidates.jpg"
-CATALOG_SHA256 = "d375039f0e56528a46113149c32f4bb08e235d596195e3ad7dbff3bc03c41c8e"
+CATALOG_SHA256 = "27ab190da3b14df6d2fb3bb18c134123589940feaf240e8cc6d877811b75002e"
 DATABASE_SHA256 = "a28dfeafa409fcaf737a6d27c4694d9bddc52ba69f12b37121be1e81b90b5c2d"
 
 # Classification is a frozen manual full-loop review against exercise-catalog.js.

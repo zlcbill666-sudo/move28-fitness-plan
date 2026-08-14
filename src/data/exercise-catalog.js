@@ -52,6 +52,56 @@ const EXCLUSION_TAGS=deepFreeze(['deep_knee_bend','overhead','floor','single_leg
 const EQUIPMENT_IDS=deepFreeze(['stable_chair','stable_high_bench','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','leg_extension_machine','hip_abduction_machine','wall','elliptical_trainer','treadmill','flat_walking_route']);
 const DOSE_KEYS=deepFreeze(['sets','reps','rpe','restSec','durationMin','holdSec']);
 const VARIANT_GUIDANCE_BY_EXERCISE=deepFreeze(Object.assign(Object.create(null),{'high-seat-sit-to-stand':'high_seat','wall-push-up':'close_wall'}));
+const MEDIA_LAUNCH_STATUSES=deepFreeze(['exact_ready','near_pending','near_approved','gap_blocked']);
+const MEDIA_MATCH_VERDICTS=deepFreeze(['exact','near','approved_near','gap']);
+const MEDIA_RIGHTS_STATUSES=deepFreeze(['confirmed','pending','blocked']);
+const MEDIA_POLICY_BY_EXERCISE=deepFreeze(Object.assign(Object.create(null),{
+  'seated-leg-raise':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'坐姿抬腿',sourceExerciseDbId:'Hgs6Nl1',sourceExerciseDbName:'seated leg raise',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'ankle-circle':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'脚踝绕环',sourceExerciseDbId:'uL9CsKm',sourceExerciseDbName:'ankle circles',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'seated-leg-press':{mediaLaunchStatus:'near_pending',mediaMatchVerdict:'near',mediaRightsStatus:'blocked',approvedDisplayName:'坐姿腿举',sourceExerciseDbId:'10Z2DXU',sourceExerciseDbName:'sled 45° leg press',mediaFailureReason:'候选实际为45°斜板腿举，必须改名并通过产品/动作合同审批。'},
+  'seated-leg-curl':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'坐姿腿弯举',sourceExerciseDbId:'Zg3XY7P',sourceExerciseDbName:'lever seated leg curl',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'glute-bridge':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'臀桥',sourceExerciseDbId:'u0cNiij',sourceExerciseDbName:'low glute bridge on floor',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'wall-hip-hinge':{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:'墙触髋铰链',sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'本地ExerciseDB无墙触/无负重髋铰链，good morning/pull through会改变器械和负荷。'},
+  'chest-press-machine':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'推胸机',sourceExerciseDbId:'T0yTjgW',sourceExerciseDbName:'lever chest press',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'standing-band-chest-press':{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:'站姿弹力带推胸',sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'本地ExerciseDB无站姿双手弹力带推胸，坐姿/卧推/单臂扭转不能替代。'},
+  'seated-row':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'坐姿划船',sourceExerciseDbId:'fUBheHs',sourceExerciseDbName:'cable seated row',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'band-row':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'弹力带划船',sourceExerciseDbId:'km0sQC0',sourceExerciseDbName:'band one arm standing low row',mediaFailureReason:'公开产品永久再分发授权未确认；单臂低位划船需要左右轮换说明。'},
+  'pallof-press':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'抗旋转推压',sourceExerciseDbId:'9pa4H5m',sourceExerciseDbName:'band horizontal pallof press',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'high-seat-sit-to-stand':{mediaLaunchStatus:'near_pending',mediaMatchVerdict:'near',mediaRightsStatus:'blocked',approvedDisplayName:'高位坐姿起立',sourceExerciseDbId:'b63ZzGe',sourceExerciseDbName:'potty squat with support',mediaFailureReason:'候选更像扶椅半蹲/深蹲，不是高位坐到椅面再起立，暂不建议首版启用。'},
+  'seated-leg-extension':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'坐姿腿屈伸',sourceExerciseDbId:'my33uHU',sourceExerciseDbName:'lever leg extension',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'seated-knee-extension-unloaded':{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:'坐姿徒手伸膝',sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'本地ExerciseDB只有器械/弹力带腿屈伸，无徒手坐姿伸膝。'},
+  'supported-calf-raise':{mediaLaunchStatus:'near_pending',mediaMatchVerdict:'near',mediaRightsStatus:'blocked',approvedDisplayName:'扶椅提踵',sourceExerciseDbId:'bJYHBIN',sourceExerciseDbName:'bodyweight standing calf raise',mediaFailureReason:'候选为无支撑站姿提踵；保留扶椅支撑要求时不能启用。'},
+  'hip-abduction-machine':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'髋外展机',sourceExerciseDbId:'CHpahtl',sourceExerciseDbName:'lever seated hip abduction',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'wall-push-up':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'墙壁俯卧撑',sourceExerciseDbId:'LEH9jxP',sourceExerciseDbName:'push-up (wall)',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'dead-bug':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'死虫式',sourceExerciseDbId:'iny3m5y',sourceExerciseDbName:'dead bug',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'heel-slide':{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:'仰卧脚跟滑动',sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'本地ExerciseDB未找到heel slide/仰卧脚跟滑动。'},
+  'bird-dog-regression':{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:'四点支撑单肢滑动',sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'本地ExerciseDB未找到bird-dog退阶，bear crawl/all fours stretch不是目标动作。'},
+  'elliptical-trainer':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'椭圆机／交叉训练机',sourceExerciseDbId:'rjtuP6X',sourceExerciseDbName:'walk elliptical cross trainer',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'flat-walk':{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:'平地慢走',sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'本地ExerciseDB仅有坡度跑步机/台阶机等，强度和0坡度平地慢走语义不符。'},
+  'supported-standing-march':{mediaLaunchStatus:'near_pending',mediaMatchVerdict:'near',mediaRightsStatus:'blocked',approvedDisplayName:'扶椅原地踏步',sourceExerciseDbId:'sVQCCeG',sourceExerciseDbName:'march sit (wall)',mediaFailureReason:'候选更像靠墙原地抬膝；必须改名/批准后才能公开使用。'},
+  'hamstring-stretch':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'大腿后侧拉伸',sourceExerciseDbId:'99rWm7w',sourceExerciseDbName:'hamstring stretch',mediaFailureReason:'公开产品永久再分发授权未确认。'},
+  'calf-stretch':{mediaLaunchStatus:'exact_ready',mediaMatchVerdict:'exact',mediaRightsStatus:'blocked',approvedDisplayName:'小腿拉伸',sourceExerciseDbId:'m0tCHqc',sourceExerciseDbName:'calf stretch with hands against wall',mediaFailureReason:'公开产品永久再分发授权未确认。'}
+}));
+function mediaValue(source,key){
+  try{const descriptor=safeGetOwnPropertyDescriptor(source,key);return descriptor&&safeHasOwnProperty(descriptor,'value')?descriptor.value:undefined}catch(_error){return undefined}
+}
+function mediaEligibilityForExercise(source,options){
+  const allowReference=Boolean(options&&typeof options==='object'&&options.allowReferenceMediaForLocalPrototype===true);
+  if(!source||typeof source!=='object'||safeArrayIsArray(source))return Object.freeze({selectable:false,code:'INVALID_MEDIA_SCHEMA',reason:'动作媒体记录不是对象。'});
+  const reviewStatus=mediaValue(source,'reviewStatus');
+  if(reviewStatus!=='approved')return Object.freeze({selectable:false,code:'EXERCISE_NOT_APPROVED',reason:'动作未通过动作目录审核。'});
+  const launch=mediaValue(source,'mediaLaunchStatus'),verdict=mediaValue(source,'mediaMatchVerdict'),rights=mediaValue(source,'mediaRightsStatus');
+  const approvedDisplayName=mediaValue(source,'approvedDisplayName'),sourceExerciseDbId=mediaValue(source,'sourceExerciseDbId');
+  if(!MEDIA_LAUNCH_STATUSES.includes(launch)||!MEDIA_MATCH_VERDICTS.includes(verdict)||!MEDIA_RIGHTS_STATUSES.includes(rights)||typeof approvedDisplayName!=='string'||!approvedDisplayName.trim())return Object.freeze({selectable:false,code:'INVALID_MEDIA_SCHEMA',reason:'动作媒体状态字段非法。'});
+  if(allowReference)return Object.freeze({selectable:true,mode:'local_reference'});
+  if(verdict==='gap'||launch==='gap_blocked')return Object.freeze({selectable:false,code:'MEDIA_MATCH_NOT_APPROVED',reason:mediaValue(source,'mediaFailureReason')||'动作媒体语义缺口未关闭。'});
+  const hasProvenance=typeof sourceExerciseDbId==='string'&&/^[A-Za-z0-9]{3,20}$/.test(sourceExerciseDbId);
+  if(!hasProvenance)return Object.freeze({selectable:false,code:'MEDIA_PROVENANCE_MISSING',reason:'缺少可审计的媒体来源ID。'});
+  if(!((launch==='exact_ready'&&verdict==='exact')||(launch==='near_approved'&&verdict==='approved_near')))return Object.freeze({selectable:false,code:'MEDIA_MATCH_NOT_APPROVED',reason:mediaValue(source,'mediaFailureReason')||'近似或未批准媒体不能用于公开生成。'});
+  if(rights!=='confirmed')return Object.freeze({selectable:false,code:'MEDIA_RIGHTS_BLOCKED',reason:mediaValue(source,'mediaFailureReason')||'公开发布媒体授权未确认。'});
+  return Object.freeze({selectable:true,mode:'public_release'});
+}
+function isMediaSelectable(source,options){return mediaEligibilityForExercise(source,options).selectable===true}
 const strengthDose={sets:[2,3],reps:[8,12],rpe:[5,6],restSec:[60,90]};
 const warmupDose={sets:[1,1],reps:[10,10],rpe:[1,3],restSec:[0,30]};
 const cardioDose={sets:[1,1],reps:[1,1],rpe:[4,5],restSec:[0,0],durationMin:[8,40]};
@@ -59,7 +109,8 @@ const supportedCardioDose={sets:[1,1],reps:[1,1],rpe:[2,4],restSec:[0,60],durati
 const stretchDose={sets:[1,1],reps:[1,1],rpe:[1,3],restSec:[0,0],holdSec:[20,20]};
 function exercise(meta,legacy){
   const equipmentOptions=meta.equipmentOptions.map(option=>[...option]);
-  return Object.assign({},meta,{
+  const media=MEDIA_POLICY_BY_EXERCISE[meta.id]||{mediaLaunchStatus:'gap_blocked',mediaMatchVerdict:'gap',mediaRightsStatus:'blocked',approvedDisplayName:meta.name,sourceExerciseDbId:null,sourceExerciseDbName:null,mediaFailureReason:'动作缺少媒体策略。'};
+  return Object.assign({},meta,media,{
     settings:[...meta.settings],equipment:[...new Set(equipmentOptions.flat())],equipmentOptions,
     dose:Object.fromEntries(Object.entries(meta.dose).map(([key,range])=>[key,[...range]])),
     contraindications:[...(meta.contraindications||[])],regressionIds:[...(meta.regressionIds||[])],progressionIds:[...(meta.progressionIds||[])],
@@ -106,7 +157,7 @@ function validateExerciseCatalog(catalog){
     if(!Object.hasOwn(catalog,index)){add(base,'必须是对象，数组不得包含空位');continue}
     const item=catalog[index];
     if(!item||typeof item!=='object'){add(base,'必须是对象');continue}
-    for(const field of ['id','name','pattern','settings','equipment','equipmentOptions','difficulty','dose','contraindications','regressionIds','progressionIds','gif','reviewStatus','cues'])if(!Object.hasOwn(item,field))add(`${base}.${field}`,'缺少必需字段');
+    for(const field of ['id','name','pattern','settings','equipment','equipmentOptions','difficulty','dose','contraindications','regressionIds','progressionIds','gif','reviewStatus','cues','mediaLaunchStatus','mediaMatchVerdict','mediaRightsStatus','approvedDisplayName','sourceExerciseDbId','sourceExerciseDbName','mediaFailureReason'])if(!Object.hasOwn(item,field))add(`${base}.${field}`,'缺少必需字段');
     if(typeof item.id!=='string'||!slugPattern.test(item.id))add(`${base}.id`,'必须是稳定英文slug');
     else if(ids.has(item.id))add(`${base}.id`,'ID重复');else ids.add(item.id);
     if(typeof item.name!=='string'||!item.name)add(`${base}.name`,'必须是非空名称');
@@ -163,6 +214,20 @@ function validateExerciseCatalog(catalog){
       }
     }
     if(typeof item.gif!=='string'||!/^assets\/gifs\/[^/]+\.gif$/.test(item.gif))add(`${base}.gif`,'必须是assets/gifs下的GIF相对路径');
+    if(!MEDIA_LAUNCH_STATUSES.includes(item.mediaLaunchStatus))add(`${base}.mediaLaunchStatus`,'媒体上线状态非法');
+    if(!MEDIA_MATCH_VERDICTS.includes(item.mediaMatchVerdict))add(`${base}.mediaMatchVerdict`,'媒体匹配结论非法');
+    if(!MEDIA_RIGHTS_STATUSES.includes(item.mediaRightsStatus))add(`${base}.mediaRightsStatus`,'媒体权利状态非法');
+    if(typeof item.approvedDisplayName!=='string'||!item.approvedDisplayName.trim())add(`${base}.approvedDisplayName`,'媒体批准展示名不能为空');
+    if(typeof item.mediaFailureReason!=='string'||!item.mediaFailureReason.trim())add(`${base}.mediaFailureReason`,'媒体阻塞/授权说明不能为空');
+    const provenanceRequired=item.mediaMatchVerdict==='exact'||item.mediaMatchVerdict==='near'||item.mediaMatchVerdict==='approved_near';
+    if(provenanceRequired){
+      if(typeof item.sourceExerciseDbId!=='string'||!/^[A-Za-z0-9]{3,20}$/.test(item.sourceExerciseDbId))add(`${base}.sourceExerciseDbId`,'EXACT/NEAR媒体必须包含可审计ExerciseDB ID');
+      if(typeof item.sourceExerciseDbName!=='string'||!item.sourceExerciseDbName.trim())add(`${base}.sourceExerciseDbName`,'EXACT/NEAR媒体必须包含候选名称');
+    }else if(item.sourceExerciseDbId!==null||item.sourceExerciseDbName!==null)add(`${base}.sourceExerciseDbId`,'GAP媒体不得伪造候选来源');
+    if(item.mediaLaunchStatus==='exact_ready'&&item.mediaMatchVerdict!=='exact')add(`${base}.mediaMatchVerdict`,'exact_ready必须对应exact');
+    if(item.mediaLaunchStatus==='near_pending'&&item.mediaMatchVerdict!=='near')add(`${base}.mediaMatchVerdict`,'near_pending必须对应near');
+    if(item.mediaLaunchStatus==='near_approved'&&item.mediaMatchVerdict!=='approved_near')add(`${base}.mediaMatchVerdict`,'near_approved必须对应approved_near');
+    if(item.mediaLaunchStatus==='gap_blocked'&&item.mediaMatchVerdict!=='gap')add(`${base}.mediaMatchVerdict`,'gap_blocked必须对应gap');
     if(!item.dose||typeof item.dose!=='object'||Array.isArray(item.dose))add(`${base}.dose`,'必须是剂量对象');
     else{
       for(const key of Object.keys(item.dose))if(!DOSE_KEYS.includes(key))add(`${base}.dose.${key}`,'未知剂量字段');
@@ -196,5 +261,5 @@ function validateExerciseCatalog(catalog){
   return errors;
 }
 function getApprovedExercises(catalog=exerciseCatalog){return catalog.filter(exercise=>exercise.reviewStatus==='approved')}
-return{exerciseCatalog,validateExerciseCatalog,getApprovedExercises,PATTERNS,SETTINGS,REVIEW_STATUSES,EXCLUSION_TAGS,EQUIPMENT_IDS,DOSE_KEYS,VARIANT_GUIDANCE_BY_EXERCISE};
+return{exerciseCatalog,validateExerciseCatalog,getApprovedExercises,mediaEligibilityForExercise,isMediaSelectable,PATTERNS,SETTINGS,REVIEW_STATUSES,EXCLUSION_TAGS,EQUIPMENT_IDS,DOSE_KEYS,VARIANT_GUIDANCE_BY_EXERCISE,MEDIA_LAUNCH_STATUSES,MEDIA_MATCH_VERDICTS,MEDIA_RIGHTS_STATUSES};
 });

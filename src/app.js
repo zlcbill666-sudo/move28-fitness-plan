@@ -217,11 +217,11 @@ function handleCapabilityComplete(profile){
   const current=Move28.storage.loadState();
   if(!current||!Number.isSafeInteger(current.capabilityRevision)||current.capabilityRevision>=Number.MAX_SAFE_INTEGER)throw new Error('Capability revision unavailable');
   const nextCapabilityRevision=current.capabilityRevision+1;
-  const generated=Move28.domain.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,capabilityResult:result,capabilityRevision:nextCapabilityRevision,catalog:trustedCatalog});
+  const generated=Move28.domain.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,capabilityResult:result,capabilityRevision:nextCapabilityRevision,catalog:trustedCatalog,mediaRequirement:'public_release'});
   if(!generated||generated.status!=='generated'){
     const saved=trustedSaveCapabilityProfile(profile);
     Move28.ui.setPlanContext({mode:'review',plan:null,logs:saved.logs||{},message:'动作、器械或安全硬门槛未满足，需要人工复核。'});
-    return{message:'能力档案已保存到本机，但计划未通过完整校验，需要人工复核。'};
+    return{message:'能力档案已保存到本机，但公开发布媒体硬门未通过，需要人工复核或继续补齐正式媒体。'};
   }
   const capabilityBoundPlan=Object.assign({},generated,{capabilityRevision:current.capabilityRevision+1});
   const persisted=trustedSaveCapabilityProfileWithPlan(profile,capabilityBoundPlan);

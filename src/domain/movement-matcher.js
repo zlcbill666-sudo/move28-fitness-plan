@@ -77,7 +77,7 @@ function availableOption(exercise,equipment){
   const available=new Set(equipment);
   return exercise.equipmentOptions.find(option=>option.every(id=>available.has(id)))||null;
 }
-function safeCatalog(catalog){
+function safeCatalog(catalog,mediaOptions={allowReferenceMediaForLocalPrototype:true}){
   const items=arrayValues(catalog,{max:256});
   if(!items)return null;
   const approved=[];
@@ -93,13 +93,15 @@ function safeCatalog(catalog){
     const difficulty=ownValue(source,'difficulty');
     const rawOptions=arrayValues(ownValue(source,'equipmentOptions'),{allowEmpty:false,max:16});
     if(typeof id!=='string'||!id||typeof pattern!=='string'||!settings||!contraindications||!Number.isInteger(difficulty)||difficulty<1||difficulty>3||!rawOptions)return null;
+    const mediaEligibility=typeof catalogApi.mediaEligibilityForExercise==='function'?catalogApi.mediaEligibilityForExercise(source,mediaOptions):Object.freeze({selectable:true});
+    if(!mediaEligibility||typeof mediaEligibility!=='object')return null;
     const equipmentOptions=[];
     for(const option of rawOptions){
       const canonical=stringArray(option,{allowEmpty:false,max:16});
       if(!canonical)return null;
       equipmentOptions.push(canonical);
     }
-    approved.push({source,id,pattern,settings,contraindications,difficulty,equipmentOptions});
+    approved.push({source,id,pattern,settings,contraindications,difficulty,equipmentOptions,mediaEligibility});
   }
   return approved;
 }
@@ -114,14 +116,16 @@ function requestFrom(input){
   if(hasDifficulty===hasDifficultyCap)return null;
   const difficulty=ownValue(input,hasDifficultyCap?'difficultyCap':'difficulty');
   const catalog=own(input,'catalog')?ownValue(input,'catalog'):catalogApi.exerciseCatalog;
-  if(!MOVEMENT_INTENTS.includes(pattern)||!SUPPORTED_SETTINGS.includes(setting)||!equipment||!exclusions||!Number.isInteger(difficulty)||difficulty<1||difficulty>3)return null;
-  const approved=safeCatalog(catalog);
+  const mediaRequirement=own(input,'mediaRequirement')?ownValue(input,'mediaRequirement'):'local_reference';
+  const allowReference=own(input,'allowReferenceMediaForLocalPrototype')?ownValue(input,'allowReferenceMediaForLocalPrototype')===true:mediaRequirement!=='public_release';
+  if(!['local_reference','public_release'].includes(mediaRequirement)||!MOVEMENT_INTENTS.includes(pattern)||!SUPPORTED_SETTINGS.includes(setting)||!equipment||!exclusions||!Number.isInteger(difficulty)||difficulty<1||difficulty>3)return null;
+  const approved=safeCatalog(catalog,{allowReferenceMediaForLocalPrototype:allowReference});
   if(!approved)return null;
   const knownExclusions=new Set([
     ...(catalogApi.EXCLUSION_TAGS||[]),...(catalogApi.PATTERNS||[]),...MOVEMENT_INTENTS,...approved.map(item=>item.id)
   ]);
   if(new Set(equipment).size!==equipment.length||new Set(exclusions).size!==exclusions.length||exclusions.some(value=>!knownExclusions.has(value)))return null;
-  return {pattern,setting,equipment,exclusions,difficulty,approved};
+  return {pattern,setting,equipment,exclusions,difficulty,approved,mediaRequirement,allowReferenceMediaForLocalPrototype:allowReference};
 }
 function matchExercise(input){
   const request=requestFrom(input);
@@ -131,7 +135,13 @@ function matchExercise(input){
   const rank=new Map(priorities.map((id,index)=>[id,index]));
   const mapped=approved.filter(exercise=>rank.has(exercise.id)&&Array.isArray(exercise.settings)&&exercise.settings.includes(setting)).sort((a,b)=>rank.get(a.id)-rank.get(b.id));
   if(!mapped.length)return failure('NO_APPROVED_MATCH',{pattern,setting});
-  const allowed=mapped.filter(exercise=>{
+  const mediaReady=mapped.filter(exercise=>exercise.mediaEligibility&&exercise.mediaEligibility.selectable===true);
+  if(!mediaReady.length){
+    const causes=mapped.map(exercise=>({exerciseId:exercise.id,code:exercise.mediaEligibility&&exercise.mediaEligibility.code||'INVALID_MEDIA_SCHEMA'}));
+    const code=causes.length&&causes.every(cause=>cause.code==='MEDIA_RIGHTS_BLOCKED')?'MEDIA_RIGHTS_BLOCKED':'MEDIA_MATCH_NOT_APPROVED';
+    return failure(code,{pattern,setting,blockedActionIds:mapped.map(exercise=>exercise.id),causes});
+  }
+  const allowed=mediaReady.filter(exercise=>{
     const tags=Array.isArray(exercise.contraindications)?exercise.contraindications:[];
     return !exclusions.includes(exercise.id)&&!exclusions.includes(pattern)&&!exclusions.includes(exercise.pattern)&&!tags.some(tag=>exclusions.includes(tag));
   });

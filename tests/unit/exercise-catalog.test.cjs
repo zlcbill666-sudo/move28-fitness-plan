@@ -505,3 +505,29 @@ test('验证器面对不可序列化的非法器械ID也只返回结构化错误
     assert.ok(errors.some(error => error.path.endsWith('.equipmentOptions[0]')));
   }
 });
+
+test('媒体可选性合同覆盖15项EXACT、4项NEAR和6项GAP并默认失败关闭', () => {
+  const api = loadCatalogAndPlan();
+  const { exerciseCatalog, validateExerciseCatalog, mediaEligibilityForExercise, isMediaSelectable } = api;
+  assert.deepEqual(validateExerciseCatalog(exerciseCatalog), []);
+  const counts = exerciseCatalog.reduce((acc, item) => {
+    acc[item.mediaMatchVerdict] = (acc[item.mediaMatchVerdict] || 0) + 1;
+    return acc;
+  }, {});
+  assert.deepEqual(counts, { exact: 15, near: 4, gap: 6 });
+  const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
+  assert.equal(isMediaSelectable(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: true }), true);
+  assert.deepEqual(mediaEligibilityForExercise(byId['seated-leg-raise'], { allowReferenceMediaForLocalPrototype: false }), {
+    selectable: false,
+    code: 'MEDIA_RIGHTS_BLOCKED',
+    reason: '公开产品永久再分发授权未确认。'
+  });
+  assert.equal(isMediaSelectable(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }), false);
+  assert.equal(mediaEligibilityForExercise(byId['seated-leg-press'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');
+  assert.equal(isMediaSelectable(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: true }), true);
+  assert.equal(isMediaSelectable(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: false }), false);
+  assert.equal(mediaEligibilityForExercise(byId['wall-hip-hinge'], { allowReferenceMediaForLocalPrototype: false }).code, 'MEDIA_MATCH_NOT_APPROVED');
+  assert.ok(Object.isFrozen(api.MEDIA_LAUNCH_STATUSES));
+  assert.ok(Object.isFrozen(api.MEDIA_MATCH_VERDICTS));
+  assert.ok(Object.isFrozen(api.MEDIA_RIGHTS_STATUSES));
+});

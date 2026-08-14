@@ -205,11 +205,12 @@ function canonicalInput(input){
   const catalogProperty=dataProperty(input,'catalog');
   if(!catalogProperty.valid)return null;
   const catalog=catalogProperty.present?catalogProperty.value:catalogApi.exerciseCatalog;
-  if(!catalog)return null;
+  const mediaRequirement=Object.prototype.hasOwnProperty.call(input,'mediaRequirement')?ownValue(input,'mediaRequirement'):'local_reference';
+  if(!catalog||!['local_reference','public_release'].includes(mediaRequirement))return null;
   const sortedWeekdays=[...weekdays].sort((a,b)=>WEEKDAYS.indexOf(a)-WEEKDAYS.indexOf(b));
   const availableEquipment=equipment.filter(item=>!avoidEquipment.includes(item));
   const mergedExclusions=[...new Set([...avoidMovements,...capability.exclusions])];
-  return {intakeRevision,...capability,daysPerWeek,dayCount,sessionMinutes:Number(sessionMinutes),weekdays:sortedWeekdays,setting,equipment:availableEquipment,avoidMovements:mergedExclusions,cardioPreference,cardioAvoid,trainingBreak,strengthExperience,riskLevel,catalog};
+  return {intakeRevision,...capability,daysPerWeek,dayCount,sessionMinutes:Number(sessionMinutes),weekdays:sortedWeekdays,setting,equipment:availableEquipment,avoidMovements:mergedExclusions,cardioPreference,cardioAvoid,trainingBreak,strengthExperience,riskLevel,catalog,mediaRequirement,allowReferenceMediaForLocalPrototype:mediaRequirement==='local_reference'};
 }
 function circularGap(first,second){
   const gap=Math.abs(WEEKDAYS.indexOf(first)-WEEKDAYS.indexOf(second));
@@ -259,7 +260,7 @@ function capabilityMatchingExclusions(input,pattern){
 }
 function matchedAction(input,pattern,weekNumber){
   const exclusions=capabilityMatchingExclusions(input,pattern);
-  const result=matcherApi.matchExercise({pattern,setting:input.setting,equipment:input.equipment,exclusions,difficultyCap:input.difficultyCap,catalog:input.catalog});
+  const result=matcherApi.matchExercise({pattern,setting:input.setting,equipment:input.equipment,exclusions,difficultyCap:input.difficultyCap,catalog:input.catalog,mediaRequirement:input.mediaRequirement,allowReferenceMediaForLocalPrototype:input.allowReferenceMediaForLocalPrototype});
   if(!result||result.ok!==true)return {error:result&&result.error?result.error:{code:'MATCHER_UNAVAILABLE'}};
   if(pattern==='low_impact_cardio'){
     const dose=result.exercise&&result.exercise.dose&&result.exercise.dose.durationMin;
@@ -281,7 +282,11 @@ function buildSession(input,item,weekNumber,index){
   const actions=[];
   for(const pattern of patterns){
     const matched=matchedAction(input,pattern,weekNumber);
-    if(matched.error)return {error:{code:'REQUIRED_MOVEMENT_UNAVAILABLE',path:`weeks[${weekNumber-1}].sessions[${index}].actions`,pattern,setting:input.setting,cause:matched.error}};
+    if(matched.error){
+      const mediaCodes=['MEDIA_MATCH_NOT_APPROVED','MEDIA_RIGHTS_BLOCKED','MEDIA_PROVENANCE_MISSING','INVALID_MEDIA_SCHEMA'];
+      const code=mediaCodes.includes(matched.error.code)?'MOVEMENT_PATTERN_UNAVAILABLE':'REQUIRED_MOVEMENT_UNAVAILABLE';
+      return {error:{code,path:`weeks[${weekNumber-1}].sessions[${index}].actions`,pattern,setting:input.setting,cause:matched.error}};
+    }
     actions.push(matched.action);
   }
   const estimatedMinutes=item.intent==='full_body_strength'?((input.riskLevel==='conservative'||input.status==='conservative')?20:18):(item.intent==='recovery'?actions[0].durationMin:actions[0].durationMin+5);
@@ -340,7 +345,8 @@ function generatePlan(rawInput){
       risk:{level:input.riskLevel,ruleVersion:RULE_VERSION},
       capabilityResult:{status:input.status,difficultyCap:input.difficultyCap,exclusions:[...input.exclusions],variants:{...input.variants},cardioStartMinutes:input.cardioStartMinutes,reasonCodes:[...input.reasonCodes]},
       capabilityRevision:input.capabilityRevision,
-      catalog:input.catalog
+      catalog:input.catalog,
+      mediaRequirement:input.mediaRequirement
     }));
   }catch(_error){return failure('VALIDATOR_UNAVAILABLE')}
   if(!validation)return failure('VALIDATOR_UNAVAILABLE');

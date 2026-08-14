@@ -305,3 +305,13 @@ test('经典script与CommonJS均暴露纯生成API且不依赖DOM/storage/时间
   const result=vm.runInContext(`Move28.domain.generatePlan(${JSON.stringify({intake:baseIntake,risk:risk(),intakeRevision:1,...capabilityInput})})`,context);
   assert.equal(result.status,'generated');
 });
+
+test('公开发布模式下媒体未授权或未批准时整份计划原子失败且无部分计划', () => {
+  const api = loadGenerator();
+  const result = generate(api, {}, 'normal', { mediaRequirement: 'public_release' });
+  assert.equal(result.status, 'manual_review');
+  assert.equal(result.plan, null);
+  assert.equal(result.errors[0].code, 'MOVEMENT_PATTERN_UNAVAILABLE');
+  assert.equal(result.errors[0].cause.code, 'MEDIA_MATCH_NOT_APPROVED');
+  assert.ok(Array.isArray(result.errors[0].cause.blockedActionIds));
+});

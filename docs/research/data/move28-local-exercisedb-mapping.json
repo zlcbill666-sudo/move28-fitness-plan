@@ -7,7 +7,7 @@
     "databaseRelativePath": "src/data/exercises.json",
     "databaseSha256": "a28dfeafa409fcaf737a6d27c4694d9bddc52ba69f12b37121be1e81b90b5c2d",
     "recordCount": 1500,
-    "exerciseCatalogSha256": "d375039f0e56528a46113149c32f4bb08e235d596195e3ad7dbff3bc03c41c8e"
+    "exerciseCatalogSha256": "27ab190da3b14df6d2fb3bb18c134123589940feaf240e8cc6d877811b75002e"
   },
   "reviewMethod": {
     "semanticClassificationIsManual": true,

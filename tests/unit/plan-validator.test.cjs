@@ -260,3 +260,11 @@ test('跨realm纯数据可校验；classic script无structuredClone时fail close
   assert.equal(result.ok,false);
   assert.equal(result.errors[0].code,'INVALID_VALIDATOR_INPUT');
 });
+
+test('公开发布媒体硬门独立拒绝本地参考媒体计划', () => {
+  const apis = loadApis();
+  const baseline = generated(apis.generator);
+  const result = apis.validator.validatePlan({ ...baseline, catalog: apis.catalog, mediaRequirement: 'public_release' });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(error => ['MEDIA_RIGHTS_BLOCKED', 'MEDIA_MATCH_NOT_APPROVED'].includes(error.code)), JSON.stringify(result.errors));
+});
