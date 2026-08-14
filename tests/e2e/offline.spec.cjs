@@ -32,8 +32,9 @@ test.afterEach(async ({ page }) => {
 test('离线资源清单包含全部本地CSS、JS、内部审计GIF和四段音乐', async () => {
   for (const relative of audioFiles) expect(fs.existsSync(path.join(projectRoot, relative)), relative).toBe(true);
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
-  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => match[1]);
-  const styles = [...html.matchAll(/<link[^>]+href="([^"]+)"[^>]+stylesheet|<link[^>]+stylesheet[^>]+href="([^"]+)"/g)].map(match => match[1] || match[2]);
+  const srcPath = value => value.split(/[?#]/, 1)[0];
+  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => srcPath(match[1]));
+  const styles = [...html.matchAll(/<link[^>]+href="([^"]+)"[^>]+stylesheet|<link[^>]+stylesheet[^>]+href="([^"]+)"/g)].map(match => srcPath(match[1] || match[2]));
   expect(scripts.length).toBeGreaterThan(0);
   expect(styles.length).toBeGreaterThan(0);
   expect(new Set(scripts).size).toBe(scripts.length);

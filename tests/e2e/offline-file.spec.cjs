@@ -47,7 +47,7 @@ test('双击打开时首屏、全量本地图库动作库和跟练入口均可�
   await expect(page.locator('#todayCard')).toContainText('力量A');
 
   expect(await page.locator('script[src]').evaluateAll(scripts =>
-    scripts.map(script => script.getAttribute('src'))
+    scripts.map(script => script.getAttribute('src').split(/[?#]/, 1)[0])
   )).toEqual([
     'src/namespace.js',
     'src/data/exercise-catalog.js',

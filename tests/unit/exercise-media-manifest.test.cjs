@@ -83,15 +83,20 @@ test('参与者媒体策略与正式manifest逐项一致且未知动作失败关
   assert.ok(Object.isFrozen(mediaPolicy.releaseEligibleIds));
 });
 
-test('经典脚本先加载媒体策略再加载参与者渲染器且首页不引用旧GIF', () => {
+test('经典脚本先加载媒体策略再加载参与者渲染器且首页不引用旧GIF或旧阻止文案', () => {
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
-  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => match[1]);
+  const srcPath = value => value.split(/[?#]/, 1)[0];
+  const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match => srcPath(match[1]));
   const policyIndex = scripts.indexOf('src/data/exercise-media-policy.js');
   assert.ok(policyIndex > scripts.indexOf('src/data/exercise-catalog.js'));
   assert.ok(policyIndex < scripts.indexOf('src/ui/dashboard.js'));
   assert.ok(policyIndex < scripts.indexOf('src/ui/workout-guide.js'));
   assert.doesNotMatch(html, /<img[^>]+assets\/gifs\//i);
   assert.match(html, /25项本地动图库GIF已开放/);
+  assert.match(html, /25项动图已开放/);
+  assert.match(html, /剩余15项已完成本地上架/);
+  assert.match(html, /0项继续阻止/);
+  assert.doesNotMatch(html, /首批动图已开放|10项Exact|15项未匹配|未匹配动作继续文字模式|Exact10已完成本阶段复核|TEXT GUIDE|REVIEW GATE/);
   const context = {}; vm.createContext(context);
   for (const relative of ['src/namespace.js', 'src/data/exercise-media-policy.js']) {
     vm.runInContext(fs.readFileSync(path.join(projectRoot, ...relative.split('/')), 'utf8'), context);
