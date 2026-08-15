@@ -58,6 +58,35 @@ test('25项本地动图库GIF全部进入前台发布清单', () => {
   }
 });
 
+test('8项MOVE 28 Pillow方形动图使用深色画布，避免16:10卡片出现白色竖边', () => {
+  const manifest = loadManifest();
+  const css = fs.readFileSync(path.join(projectRoot, 'assets', 'css', 'app.css'), 'utf8');
+  const pillowAssets = manifest.assets.filter(item => item.origin.provider === 'MOVE 28 Pillow');
+  assert.deepEqual(pillowAssets.map(item => item.id), [
+    'wall-hip-hinge',
+    'standing-band-chest-press',
+    'band-row',
+    'seated-knee-extension-unloaded',
+    'supported-calf-raise',
+    'heel-slide',
+    'bird-dog-regression',
+    'supported-standing-march'
+  ]);
+  assert.match(css, /\.exercise-media\{aspect-ratio:16\/10;background:#e7e7e0/);
+  assert.match(css, /background:#0b1018;mix-blend-mode:normal/);
+  for (const item of pillowAssets) {
+    const gifName = `${item.id}.gif`;
+    const bytes = fs.readFileSync(path.join(projectRoot, ...item.replacement.gif.path.split('/')));
+    assert.equal(bytes.toString('ascii', 0, 3), 'GIF', item.id);
+    const width = bytes.readUInt16LE(6);
+    const height = bytes.readUInt16LE(8);
+    assert.equal(width, 180, item.id);
+    assert.equal(height, 180, item.id);
+    assert.match(css, new RegExp(`\\.exercise-media img\\[src\\*="${gifName}"\\]`), item.id);
+    assert.match(css, new RegExp(`\\.motion-card img\\[src\\*="${gifName}"\\]`), item.id);
+  }
+});
+
 test('旧assets/gifs仅作为本地来源库，参与者引用统一走assets/exercises', () => {
   const manifest = loadManifest();
   for (const item of manifest.assets) {
