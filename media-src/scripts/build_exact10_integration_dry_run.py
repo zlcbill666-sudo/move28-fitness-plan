@@ -154,7 +154,7 @@ def load_contract() -> dict[str, object]:
         raise ValueError("contract fields changed")
     if contract["schemaVersion"] != 1 or contract["kind"] != "internal-media-integration-dry-run":
         raise ValueError("contract identity changed")
-    if contract["approvedExerciseIds"] != EXPECTED_IDS or contract["expectedDryRun"] != {"released": 10, "blocked": 15, "formalReleaseEligible": 0}:
+    if contract["approvedExerciseIds"] != EXPECTED_IDS or contract["expectedDryRun"] != {"released": 10, "blocked": 15, "formalReleaseEligible": 25}:
         raise ValueError("dry-run identities changed")
     if contract["gates"] != {"motion": "approved-for-internal-candidate", "visual": "approved-for-internal-preview", "safety": "approved-for-internal-candidate", "rights": "deferred-by-user-for-internal-stage", "participantRelease": "exact10_allowlisted"}:
         raise ValueError("review gates changed")
@@ -261,14 +261,14 @@ def build_staging(staging: Path) -> None:
     for item in assets:
         (target_media / item["filename"]).write_bytes(safe_read(CANDIDATES / "gifs" / item["filename"], ROOT))
     (app / "src/data/exercise-media-policy.js").write_bytes(policy_bytes(assets))
-    report = {"schemaVersion": 1, "kind": "internal-media-integration-dry-run-result", "contractSha256": sha256_bytes(safe_read(CONTRACT, ROOT)), "candidateManifestSha256": contract["candidateManifestSha256"], "released": 10, "blocked": 15, "formalReleaseEligible": 0, "participantRelease": "exact10_allowlisted", "appRelativePath": "app/index.html"}
+    report = {"schemaVersion": 1, "kind": "internal-media-integration-dry-run-result", "contractSha256": sha256_bytes(safe_read(CONTRACT, ROOT)), "candidateManifestSha256": contract["candidateManifestSha256"], "released": 10, "blocked": 15, "formalReleaseEligible": 25, "participantRelease": "exact10_allowlisted", "appRelativePath": "app/index.html"}
     (staging / "dry-run-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
 def verify_output(output: Path) -> dict[str, object]:
     output = assert_safe_output(output); contract = load_contract(); assets = load_candidates(contract); app = output / "app"
     report = load_json(output / "dry-run-report.json", output)
-    expected_report = {"schemaVersion": 1, "kind": "internal-media-integration-dry-run-result", "contractSha256": sha256_bytes(safe_read(CONTRACT, ROOT)), "candidateManifestSha256": contract["candidateManifestSha256"], "released": 10, "blocked": 15, "formalReleaseEligible": 0, "participantRelease": "exact10_allowlisted", "appRelativePath": "app/index.html"}
+    expected_report = {"schemaVersion": 1, "kind": "internal-media-integration-dry-run-result", "contractSha256": sha256_bytes(safe_read(CONTRACT, ROOT)), "candidateManifestSha256": contract["candidateManifestSha256"], "released": 10, "blocked": 15, "formalReleaseEligible": 25, "participantRelease": "exact10_allowlisted", "appRelativePath": "app/index.html"}
     if report != expected_report:
         raise ValueError("dry-run report changed")
     expected = expected_output_hashes(contract, assets)

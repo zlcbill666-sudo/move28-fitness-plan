@@ -10,7 +10,7 @@ const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '../..');
 const script = path.join(root, 'media-src/scripts/build_local_exercisedb_candidate_package.py');
-const mapping = path.join(root, 'docs/research/data/move28-local-exercisedb-mapping.json');
+const mapping = path.join(root, 'docs/research/data/move28-local-exercisedb-strict-mapping-2026-08-13.json');
 const library = 'E:\\个人用\\健身\\健身动作动画\\bootstrapping-lab-exercisedb-api';
 const defaultPackage = path.join(root, 'media-build/internal-candidates/local-exercisedb-exact10');
 const formalManifest = path.join(root, 'assets/exercises/manifest.json');
@@ -218,7 +218,7 @@ test('CLI在解析前拒绝本地素材库根目录链接或Windows junction', {
   fs.rmSync(temp, { recursive: true, force: true });
 });
 
-test('正式manifest在候选包构建前后保持字节不变且当前前台质量门阻止本地图库开放', { skip: !fs.existsSync(library) }, () => {
+test('正式manifest在候选包构建前后保持字节不变且当前前台开放25项媒体', { skip: !fs.existsSync(library) }, () => {
   const before = hash(formalManifest);
   const temp = temporary();
   const result = run(['--library', library, '--output', path.join(temp, 'package')]);
@@ -226,8 +226,8 @@ test('正式manifest在候选包构建前后保持字节不变且当前前台质
   assert.equal(hash(formalManifest), before);
   const manifest = JSON.parse(fs.readFileSync(formalManifest, 'utf8'));
   assert.equal(manifest.assets.length, 25);
-  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), []);
-  assert.equal(manifest.policy.frontendMediaMode, 'text_only_quality_review');
+  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), ['seated-leg-raise','ankle-circle','seated-leg-press','seated-leg-curl','glute-bridge','wall-hip-hinge','chest-press-machine','standing-band-chest-press','seated-row','band-row','pallof-press','high-seat-sit-to-stand','seated-leg-extension','seated-knee-extension-unloaded','supported-calf-raise','hip-abduction-machine','wall-push-up','dead-bug','heel-slide','bird-dog-regression','elliptical-trainer','flat-walk','supported-standing-march','hamstring-stretch','calf-stretch']);
+  assert.equal(manifest.policy.frontendMediaMode, 'media_enabled');
   fs.rmSync(temp, { recursive: true, force: true });
 });
 

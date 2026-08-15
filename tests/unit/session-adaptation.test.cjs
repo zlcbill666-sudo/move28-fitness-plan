@@ -7,7 +7,7 @@ const vm=require('node:vm');
 const {projectRoot,clearMove28ModuleCache,loadScript}=require('../helpers/load-script.cjs');
 const {capabilityInput}=require('../helpers/capability-fixture.cjs');
 
-const intake={age:30,finalConfirmed:true,daysPerWeek:'3',sessionMinutes:'30',weekdays:['mon','wed','fri'],setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','wall','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no'};
+const intake={age:30,finalConfirmed:true,daysPerWeek:'3',sessionMinutes:'30',weekdays:['mon','wed','fri'],setting:'gym',equipment:['stable_chair','exercise_mat','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','wall','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no'};
 const risk={level:'normal',ruleVersion:'pilot-v2',reasons:[]};
 const readiness=Object.freeze({version:'session-readiness.v1',route:'adapt_candidate',reasonCodes:Object.freeze(['equipment_bodyweight_only'])});
 const capabilityProfile=Object.freeze({version:1,completed:true,chairRise:'independent_controlled',wallPushup:'controlled',wallHinge:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'});

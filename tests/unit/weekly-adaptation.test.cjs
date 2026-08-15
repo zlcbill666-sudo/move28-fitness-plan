@@ -9,7 +9,7 @@ const {exerciseCatalog}=require('../../src/data/exercise-catalog.js');
 const adaptation=require('../../src/domain/weekly-adaptation.js');
 const {capabilityInput}=require('../helpers/capability-fixture.cjs');
 
-const intake={age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no',allowSettingSwap:'no'};
+const intake={age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:['stable_chair','exercise_mat','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'],avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no',allowSettingSwap:'no'};
 const risk={level:'normal',ruleVersion:'pilot-v2',reasons:[]};
 function activePlan(level='normal'){
   const generated=generatePlan({intake,risk:{...risk,level},intakeRevision:1,catalog:exerciseCatalog,...capabilityInput()});

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build and verify the ten exact local ExerciseDB integration candidates."""
+"""Build and verify the legacy Exact10 local ExerciseDB integration candidates."""
 from __future__ import annotations
 
 import argparse
@@ -15,9 +15,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LIBRARY = Path(r"E:\个人用\健身\健身动作动画\bootstrapping-lab-exercisedb-api")
-MAPPING = ROOT / "docs/research/data/move28-local-exercisedb-mapping.json"
+MAPPING = ROOT / "docs/research/data/move28-local-exercisedb-strict-mapping-2026-08-13.json"
 DEFAULT_OUTPUT = ROOT / "media-build/internal-candidates/local-exercisedb-exact10"
-MAPPING_SHA256 = "faeb34b6ed61639f8cae9a91778a73306b27c6a86b3721309e5030fa336ac52a"
+MAPPING_SHA256 = "729c164aeecabdbc441ccd5f0abc64df9dacf9b00d207e03b06c6bd896c8136f"
 EXPECTED_EXACT = {
     "seated-leg-press": "10Z2DXU",
     "seated-leg-curl": "Zg3XY7P",

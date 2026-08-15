@@ -14,7 +14,7 @@ function loadMatcher() {
 }
 
 const equipment = Object.freeze({
-  gym: ['stable_chair','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','cable_machine','elliptical_trainer','treadmill'],
+  gym: ['stable_chair','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','cable_machine','elliptical_trainer','treadmill'],
   home: ['stable_chair','exercise_mat','resistance_band','wall','flat_walking_route']
 });
 
@@ -26,8 +26,7 @@ test('六类动作意图按场景和器械确定性匹配审核动作', () => {
   const api = loadMatcher();
   const cases = [
     ['knee_dominant','gym',equipment.gym,'seated-leg-press'],
-    ['knee_dominant','home',equipment.home,'high-seat-sit-to-stand'],
-    ['posterior_chain','gym',equipment.gym,'seated-leg-curl'],
+        ['posterior_chain','gym',equipment.gym,'seated-leg-curl'],
     ['posterior_chain','home',equipment.home,'glute-bridge'],
     ['horizontal_push','gym',equipment.gym,'chest-press-machine'],
     ['horizontal_push','home',equipment.home,'wall-push-up'],
@@ -51,7 +50,7 @@ test('六类动作意图按场景和器械确定性匹配审核动作', () => {
 
 test('难度上限只允许同级或更简单动作，并兼容旧difficulty请求', () => {
   const api = loadMatcher();
-  const request={pattern:'knee_dominant',setting:'gym',equipment:['stable_chair','leg_press_machine'],exclusions:[]};
+  const request={pattern:'knee_dominant',setting:'gym',equipment:['stable_chair','smith_machine','leg_press_machine'],exclusions:[]};
   const result = api.matchExercise({...request,difficultyCap:1});
   assert.equal(result.ok, true);
   assert.equal(result.exercise.id, 'high-seat-sit-to-stand');
@@ -233,7 +232,7 @@ test('非法输入和未知排除项fail closed且不抛异常', () => {
   }
 });
 
-test('场景切换保持session intent、动作意图和剂量，只替换动作实现', () => {
+test('场景切换到home在缺少已审核膝主导动作时fail closed且不改写session', () => {
   const api = loadMatcher();
   const session = {
     id:'session-a', intent:'full_body_strength', setting:'gym',
@@ -248,21 +247,14 @@ test('场景切换保持session intent、动作意图和剂量，只替换动作
   };
   const before = JSON.parse(JSON.stringify(session));
   const result = api.swapSessionSetting(session, 'home', api.exerciseCatalog);
-  assert.equal(result.ok, true, JSON.stringify(result));
-  assert.equal(result.session.intent, session.intent);
-  assert.equal(result.session.setting, 'home');
-  assert.deepEqual(result.session.actions.map(action => action.pattern), session.actions.map(action => action.pattern));
-  assert.deepEqual(result.session.actions.map(action => action.exerciseId), ['high-seat-sit-to-stand','glute-bridge','wall-push-up','dead-bug','flat-walk']);
-  result.session.actions.forEach((action,index) => {
-    const { exerciseId:_old, ...oldDose } = session.actions[index];
-    const { exerciseId:_new, ...newDose } = action;
-    assert.deepEqual(newDose, oldDose);
-  });
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'SESSION_SWAP_UNAVAILABLE');
+  assert.equal(result.error.cause.pattern, 'knee_dominant');
+  assert.equal(result.error.cause.code, 'NO_APPROVED_MATCH');
   assert.deepEqual(session, before);
   assert.equal(Object.isFrozen(session), false);
   assert.equal(Object.isFrozen(session.equipmentBySetting), false);
   assert.equal(Object.isFrozen(session.actions), false);
-  assert.equal(result.replacements.length, session.actions.length);
 });
 
 test('有弹力带时包含水平拉的session可完整切换到home', () => {

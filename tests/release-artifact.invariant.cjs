@@ -53,8 +53,8 @@ test('generated participant artifact excludes forbidden areas and only ships all
     assert.equal(fs.existsSync(path.join(dist,...blocked.split('/'))),false,blocked);
   }
   const mediaFiles=actual.filter(file=>file.startsWith('assets/exercises/'));
-  assert.deepEqual(mediaPolicy.releaseEligibleIds, []);
-  assert.equal(mediaPolicy.mode, 'text_only_quality_review');
+  assert.equal(mediaPolicy.releaseEligibleIds.length, 25);
+  assert.equal(mediaPolicy.mode, 'media_enabled');
   assert.equal(mediaFiles.every(file=>file.endsWith('.gif')||file==='assets/exercises/manifest.json'), true);
   assert.equal(actual.some(file=>/\.(?:mp4|webm|png|jpe?g|webp)$/i.test(file)),false,'non-GIF media assets are forbidden');
 });

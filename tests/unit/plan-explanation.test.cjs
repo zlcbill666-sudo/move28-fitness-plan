@@ -4,7 +4,7 @@ const test=require('node:test');
 const {clearMove28ModuleCache}=require('../helpers/load-script.cjs');
 const {NORMAL_CAPABILITY_RESULT}=require('../helpers/capability-fixture.cjs');
 
-const equipment=['stable_chair','exercise_mat','wall','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
+const equipment=['stable_chair','exercise_mat','wall','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const intake={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment,allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true};
 const risk={level:'normal',ruleVersion:'pilot-v2',reasons:[]};
 
@@ -51,12 +51,23 @@ test('合法周调整可用每周节数范围解释而不会隐藏面板',()=>{
   assert.deepEqual(result.weeklySessionRange,{min:1,max:2});
 });
 
-test('居家计划使用同一有限汇总schema',()=>{
-  const {explanation,plan}=setup(NORMAL_CAPABILITY_RESULT,3,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall']});
-  const result=explanation.buildPlanExplanation({plan,capabilityResult:NORMAL_CAPABILITY_RESULT,capabilityRevision:3});
-  assert.equal(result.validationResult,'passed');
-  assert.equal(result.setting,'home');
-  assert.deepEqual(result.weeklySessionRange,{min:2,max:2});
+test('居家缺少已审核膝主导动作时不伪造可解释计划',()=>{
+  clearMove28ModuleCache();
+  const catalog=require('../../src/data/exercise-catalog.js');
+  const generator=require('../../src/domain/plan-generator.js');
+  const generated=generator.generatePlan({
+    intake:{...intake,setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall']},
+    risk,
+    intakeRevision:2,
+    catalog:catalog.exerciseCatalog,
+    capabilityResult:NORMAL_CAPABILITY_RESULT,
+    capabilityRevision:3
+  });
+  assert.equal(generated.status,'manual_review');
+  assert.equal(generated.plan,null);
+  assert.equal(generated.errors[0].code,'REQUIRED_MOVEMENT_UNAVAILABLE');
+  assert.equal(generated.errors[0].pattern,'knee_dominant');
+  assert.equal(generated.errors[0].cause.code,'NO_APPROVED_MATCH');
 });
 
 test('保守风险即使能力正常也必须解释为保守起步',()=>{

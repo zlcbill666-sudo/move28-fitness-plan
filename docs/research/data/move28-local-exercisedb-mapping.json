@@ -1,40 +1,49 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-08-13",
+  "reviewedAt": "2026-08-15",
   "source": {
-    "provider": "local ExerciseDB V1 library",
+    "provider": "current formal manifest plus local ExerciseDB V1 library",
     "libraryRoot": "E:\\个人用\\健身\\健身动作动画\\bootstrapping-lab-exercisedb-api",
     "databaseRelativePath": "src/data/exercises.json",
     "databaseSha256": "a28dfeafa409fcaf737a6d27c4694d9bddc52ba69f12b37121be1e81b90b5c2d",
     "recordCount": 1500,
-    "exerciseCatalogSha256": "dda57ea5063208e0515c8778921e8155fb42f22bb59c89f6f71d99862d3014ed"
+    "exerciseCatalogSha256": "4bfdcc11a0f8652a44eb130d0247dce400d9e3a8e7a2265c4ce09e4a3d675220",
+    "formalManifestSha256": "41ff3bf6d5b87dd7e0e2f1c83efc6e7bef2f393c1513ff26f6d371de54375477"
   },
   "reviewMethod": {
     "semanticClassificationIsManual": true,
     "automatedChecks": [
+      "catalog-sha256",
+      "formal-manifest-sha256",
       "source-sha256",
       "record-identity",
       "gif-format",
       "dimensions",
-      "frame-count"
+      "frame-count",
+      "release-gate-binding"
     ],
-    "contactSheetSha256": "1ffa8f9c69754869edac54a6df329c1dd0763b569cf3cc067567ee592377787f"
+    "contactSheetSha256": "f98aa621ddc29b81d5c525cda66db294b920951838c8d02f02292124e9051200"
   },
   "counts": {
-    "exact": 10,
-    "near": 5,
-    "reject": 10
+    "exact": 17,
+    "project_owned": 8
   },
-  "releaseEligibleCount": 0,
-  "decision": "use-exact-local-candidates-for-next-internal-integration-stage",
+  "releaseEligibleCount": 25,
+  "decision": "current-formal-manifest-25-item-gif-release-evidence",
   "mapping": [
     {
       "exerciseId": "seated-leg-raise",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "后倾训练凳上双腿同时抬高，属于核心训练，不是有靠背椅上小幅交替抬膝。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录按本地GIF坐姿抬腿执行，坐姿抬膝热身语义、支撑和幅度已对齐。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/02_坐姿抬腿.gif",
+        "replacementPath": "assets/exercises/seated-leg-raise.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "Hgs6Nl1",
         "name": "seated leg raise",
         "relativePath": "media/Hgs6Nl1.gif",
@@ -47,11 +56,17 @@
     },
     {
       "exerciseId": "ankle-circle",
-      "classification": "near",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "踝绕环轨迹接近，但候选为站姿交叉腿，无稳固座椅支撑。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录已改为站姿脚踝绕环，匹配本地GIF站姿交叉腿踝绕环轨迹。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/03_脚踝绕环.gif",
+        "replacementPath": "assets/exercises/ankle-circle.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "uL9CsKm",
         "name": "ankle circles",
         "relativePath": "media/uL9CsKm.gif",
@@ -65,10 +80,16 @@
     {
       "exerciseId": "seated-leg-press",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "双脚45度腿举机，屈伸轨迹、器械和支撑匹配。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/04_坐姿腿举.gif",
+        "replacementPath": "assets/exercises/seated-leg-press.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "10Z2DXU",
         "name": "sled 45в° leg press",
         "relativePath": "media/10Z2DXU.gif",
@@ -82,10 +103,16 @@
     {
       "exerciseId": "seated-leg-curl",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "坐姿腿弯举机，脚跟向下后方屈膝并受控返回。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/05_坐姿腿弯举.gif",
+        "replacementPath": "assets/exercises/seated-leg-curl.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "Zg3XY7P",
         "name": "lever seated leg curl",
         "relativePath": "media/Zg3XY7P.gif",
@@ -99,10 +126,16 @@
     {
       "exerciseId": "glute-bridge",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "仰卧屈膝双脚支撑，抬髋至肩髋膝接近直线。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/06_臀桥.gif",
+        "replacementPath": "assets/exercises/glute-bridge.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "u0cNiij",
         "name": "low glute bridge on floor",
         "relativePath": "media/u0cNiij.gif",
@@ -115,19 +148,40 @@
     },
     {
       "exerciseId": "wall-hip-hinge",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "全库未发现背对墙、臀部后移轻触墙面的徒手髋铰链。",
-      "releaseEligible": false,
-      "candidate": null
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为墙触髋铰链发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/20_墙触髋铰链.gif",
+        "replacementPath": "assets/exercises/wall-hip-hinge.gif",
+        "productionStatus": "approved"
+      },
+      "candidate": {
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "墙触髋铰链",
+        "relativePath": "assets/exercises/wall-hip-hinge.gif",
+        "sha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a",
+        "bytes": 74802,
+        "width": 180,
+        "height": 180,
+        "frameCount": 15
+      }
     },
     {
       "exerciseId": "chest-press-machine",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "坐姿背贴垫，双手从胸高近水平向前推压；替换原上斜候选DOoWcnA。",
-      "releaseEligible": false,
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "坐姿背贴垫，双手从胸高近水平向前推压。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/07_推胸机.gif",
+        "replacementPath": "assets/exercises/chest-press-machine.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "T0yTjgW",
         "name": "lever chest press",
         "relativePath": "media/T0yTjgW.gif",
@@ -140,28 +194,40 @@
     },
     {
       "exerciseId": "standing-band-chest-press",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "候选为坐姿弹力带推胸，不是前后分腿站姿双手推胸。",
-      "releaseEligible": false,
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为站姿弹力带推胸发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/21_站姿弹力带推胸.gif",
+        "replacementPath": "assets/exercises/standing-band-chest-press.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "4x5Okof",
-        "name": "resistance band seated chest press",
-        "relativePath": "media/4x5Okof.gif",
-        "sha256": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6",
-        "bytes": 85825,
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "站姿弹力带推胸",
+        "relativePath": "assets/exercises/standing-band-chest-press.gif",
+        "sha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16",
+        "bytes": 88868,
         "width": 180,
         "height": 180,
-        "frameCount": 12
+        "frameCount": 15
       }
     },
     {
       "exerciseId": "seated-row",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "坐姿划船机，双肘水平向后拉并受控伸臂。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/08_坐姿划船.gif",
+        "replacementPath": "assets/exercises/seated-row.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "7I6LNUG",
         "name": "lever seated row",
         "relativePath": "media/7I6LNUG.gif",
@@ -174,28 +240,40 @@
     },
     {
       "exerciseId": "band-row",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "候选坐姿且弹力带绕脚，不是胸高固定点站姿划船。",
-      "releaseEligible": false,
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为弹力带划船发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/19_弹力带划船.gif",
+        "replacementPath": "assets/exercises/band-row.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "Nu7jqFE",
-        "name": "resistance band seated straight back row",
-        "relativePath": "media/Nu7jqFE.gif",
-        "sha256": "e7a436616c28f1c64ead3be3c9dc38e8c833bc6e3d4ef4cae1ca44369b637846",
-        "bytes": 96983,
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "弹力带划船",
+        "relativePath": "assets/exercises/band-row.gif",
+        "sha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c",
+        "bytes": 50264,
         "width": 180,
         "height": 180,
-        "frameCount": 12
+        "frameCount": 15
       }
     },
     {
       "exerciseId": "pallof-press",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "身体侧对胸高弹力带，双手前推且躯干保持抗旋转。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/09_抗旋转推压.gif",
+        "replacementPath": "assets/exercises/pallof-press.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "9pa4H5m",
         "name": "band horizontal pallof press",
         "relativePath": "media/9pa4H5m.gif",
@@ -208,16 +286,22 @@
     },
     {
       "exerciseId": "high-seat-sit-to-stand",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "候选为扶物下蹲，臀部不接触高位稳固座面。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录已约束为健身房史密斯机加座椅/高凳门槛，匹配本地GIF smith chair squat。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/10_高位坐姿起立.gif",
+        "replacementPath": "assets/exercises/high-seat-sit-to-stand.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "b63ZzGe",
-        "name": "potty squat with support",
-        "relativePath": "media/b63ZzGe.gif",
-        "sha256": "d046da32f9e3cde2ba3641a2c34b005c5ac57260806bf2653589504ed4e9d830",
-        "bytes": 83954,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "Gu2rNJd",
+        "name": "smith chair squat",
+        "relativePath": "media/Gu2rNJd.gif",
+        "sha256": "524dbd970d8bbe996fa6137b0dff27b2908196e73af38d8c5b48c968f341a13d",
+        "bytes": 107478,
         "width": 180,
         "height": 180,
         "frameCount": 12
@@ -226,10 +310,16 @@
     {
       "exerciseId": "seated-leg-extension",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "坐姿腿屈伸机完成双膝伸展与返回，未见明显膝反曲。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/11_坐姿腿屈伸.gif",
+        "replacementPath": "assets/exercises/seated-leg-extension.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "my33uHU",
         "name": "lever leg extension",
         "relativePath": "media/my33uHU.gif",
@@ -242,36 +332,63 @@
     },
     {
       "exerciseId": "seated-knee-extension-unloaded",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "全库未发现有靠背椅上交替单侧无负重伸膝。",
-      "releaseEligible": false,
-      "candidate": null
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为坐姿徒手伸膝发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/22_坐姿徒手伸膝.gif",
+        "replacementPath": "assets/exercises/seated-knee-extension-unloaded.gif",
+        "productionStatus": "approved"
+      },
+      "candidate": {
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "坐姿徒手伸膝",
+        "relativePath": "assets/exercises/seated-knee-extension-unloaded.gif",
+        "sha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8",
+        "bytes": 86488,
+        "width": 180,
+        "height": 180,
+        "frameCount": 15
+      }
     },
     {
       "exerciseId": "supported-calf-raise",
-      "classification": "near",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "平地双脚提踵轨迹匹配，但没有双手轻扶稳固椅背。",
-      "releaseEligible": false,
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为扶椅提踵发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/23_扶椅提踵.gif",
+        "replacementPath": "assets/exercises/supported-calf-raise.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "bJYHBIN",
-        "name": "bodyweight standing calf raise",
-        "relativePath": "media/bJYHBIN.gif",
-        "sha256": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e",
-        "bytes": 62166,
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "扶椅提踵",
+        "relativePath": "assets/exercises/supported-calf-raise.gif",
+        "sha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872",
+        "bytes": 82480,
         "width": 180,
         "height": 180,
-        "frameCount": 12
+        "frameCount": 15
       }
     },
     {
       "exerciseId": "hip-abduction-machine",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "坐姿髋外展机，双膝从并拢位置向外打开并返回。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/12_髋外展机.gif",
+        "replacementPath": "assets/exercises/hip-abduction-machine.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "CHpahtl",
         "name": "lever seated hip abduction",
         "relativePath": "media/CHpahtl.gif",
@@ -285,10 +402,16 @@
     {
       "exerciseId": "wall-push-up",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "双手撑墙、身体保持直线，胸靠近墙面后推回。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/13_墙壁俯卧撑.gif",
+        "replacementPath": "assets/exercises/wall-push-up.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "LEH9jxP",
         "name": "push-up (wall)",
         "relativePath": "media/LEH9jxP.gif",
@@ -301,11 +424,17 @@
     },
     {
       "exerciseId": "dead-bug",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "候选为对侧手脚伸展，难度和轨迹不等于双臂体侧交替脚跟点地。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录按本地GIF死虫式执行，对侧手脚伸展轨迹已纳入动作语义。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/14_死虫式.gif",
+        "replacementPath": "assets/exercises/dead-bug.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "iny3m5y",
         "name": "dead bug",
         "relativePath": "media/iny3m5y.gif",
@@ -318,36 +447,63 @@
     },
     {
       "exerciseId": "heel-slide",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "候选从双腿伸直开始再屈膝，不符合双膝屈曲起始、单侧脚跟前滑合同。",
-      "releaseEligible": false,
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为仰卧脚跟滑动发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/25_仰卧脚跟滑动.gif",
+        "replacementPath": "assets/exercises/heel-slide.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "LNE3wfo",
-        "name": "single leg platform slide",
-        "relativePath": "media/LNE3wfo.gif",
-        "sha256": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693",
-        "bytes": 66510,
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "仰卧脚跟滑动",
+        "relativePath": "assets/exercises/heel-slide.gif",
+        "sha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93",
+        "bytes": 75530,
         "width": 180,
         "height": 180,
-        "frameCount": 12
+        "frameCount": 15
       }
     },
     {
       "exerciseId": "bird-dog-regression",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "全库未发现手不离垫的四点支撑单肢贴垫滑动。",
-      "releaseEligible": false,
-      "candidate": null
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为四点支撑单肢滑动发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/26_四点支撑单肢滑动.gif",
+        "replacementPath": "assets/exercises/bird-dog-regression.gif",
+        "productionStatus": "approved"
+      },
+      "candidate": {
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "四点支撑单肢滑动",
+        "relativePath": "assets/exercises/bird-dog-regression.gif",
+        "sha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49",
+        "bytes": 89851,
+        "width": 180,
+        "height": 180,
+        "frameCount": 15
+      }
     },
     {
       "exerciseId": "elliptical-trainer",
       "classification": "exact",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
       "reason": "直立使用椭圆机并扶内侧固定把手，步幅连续且较小。",
-      "releaseEligible": false,
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/15_椭圆机.gif",
+        "replacementPath": "assets/exercises/elliptical-trainer.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "rjtuP6X",
         "name": "walk elliptical cross trainer",
         "relativePath": "media/rjtuP6X.gif",
@@ -360,11 +516,17 @@
     },
     {
       "exerciseId": "flat-walk",
-      "classification": "near",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "跑台步行轨迹匹配，但候选明确为上坡跑台，合同要求0坡度。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录已改为坡度跑台慢走，匹配本地GIF walking on incline treadmill；平路为无跑台替代。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/16_平地慢走.gif",
+        "replacementPath": "assets/exercises/flat-walk.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "rjiM4L3",
         "name": "walking on incline treadmill",
         "relativePath": "media/rjiM4L3.gif",
@@ -377,33 +539,45 @@
     },
     {
       "exerciseId": "supported-standing-march",
-      "classification": "near",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "交替抬膝匹配，但以墙支撑且幅度较高，不是双手扶椅小幅踏步。",
-      "releaseEligible": false,
+      "classification": "project_owned",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "项目自有Pillow动图已作为扶椅原地踏步发布素材并通过正式manifest四项复核。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/24_扶椅原地踏步.gif",
+        "replacementPath": "assets/exercises/supported-standing-march.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "ealLwvX",
-        "name": "high knee against wall",
-        "relativePath": "media/ealLwvX.gif",
-        "sha256": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a",
-        "bytes": 56086,
+        "provider": "MOVE 28 Pillow",
+        "exerciseDbId": null,
+        "name": "扶椅原地踏步",
+        "relativePath": "assets/exercises/supported-standing-march.gif",
+        "sha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed",
+        "bytes": 93827,
         "width": 180,
         "height": 180,
-        "frameCount": 12
+        "frameCount": 15
       }
     },
     {
       "exerciseId": "hamstring-stretch",
-      "classification": "reject",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "候选在椅上动态抬放直腿，没有进入并保持轻柔静态牵拉。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录按本地GIF大腿后侧拉伸执行，拉伸姿势和无痛保持提示已对齐。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/17_大腿后侧拉伸.gif",
+        "replacementPath": "assets/exercises/hamstring-stretch.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
-        "exerciseDbId": "xGgAGPm",
-        "name": "chair leg extended stretch",
-        "relativePath": "media/xGgAGPm.gif",
-        "sha256": "257310dc444d87aa419523395587eaf50c52785c21dec5b57b197f4256419045",
-        "bytes": 101703,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "99rWm7w",
+        "name": "hamstring stretch",
+        "relativePath": "media/99rWm7w.gif",
+        "sha256": "536d069f05a4001b47526656e1349861be60a3f524207ff5a6b9375060f5dd30",
+        "bytes": 77100,
         "width": 180,
         "height": 180,
         "frameCount": 12
@@ -411,11 +585,17 @@
     },
     {
       "exerciseId": "calf-stretch",
-      "classification": "near",
-      "manualReviewBasis": "full-loop-frame-review-against-current-catalog-contract",
-      "reason": "坐地并用手拉脚，合同要求坐稳椅面且不借助外力主动勾脚。",
-      "releaseEligible": false,
+      "classification": "exact",
+      "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
+      "reason": "当前目录按本地GIF坐姿小腿拉伸执行，主动勾脚牵拉语义已对齐。",
+      "releaseEligible": true,
+      "formalManifest": {
+        "currentPath": "assets/gifs/18_小腿拉伸.gif",
+        "replacementPath": "assets/exercises/calf-stretch.gif",
+        "productionStatus": "approved"
+      },
       "candidate": {
+        "provider": "local ExerciseDB V1 library",
         "exerciseDbId": "17bqEXD",
         "name": "seated calf stretch (male)",
         "relativePath": "media/17bqEXD.gif",

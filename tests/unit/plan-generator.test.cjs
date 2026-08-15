@@ -9,7 +9,7 @@ const { NORMAL_CAPABILITY_RESULT } = require('../helpers/capability-fixture.cjs'
 
 const fixtures = JSON.parse(fs.readFileSync(path.join(projectRoot,'tests','fixtures','generator-cases.json'),'utf8'));
 const { scheduleCases, capabilityCases } = fixtures;
-const gymEquipment = ['stable_chair','exercise_mat','wall','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
+const gymEquipment = ['stable_chair','exercise_mat','wall','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const homeEquipment = ['stable_chair','exercise_mat','resistance_band','wall','flat_walking_route'];
 const baseIntake = Object.freeze({
   age:30,finalConfirmed:true,daysPerWeek:'3',sessionMinutes:'45',weekdays:['mon','wed','fri'],setting:'gym',equipment:gymEquipment,
@@ -169,16 +169,15 @@ test('器械与动作回避生效，缺少关键动作时整份计划原子失�
   assert.ok(floor.weeks.flatMap(week=>week.sessions).flatMap(session=>session.actions).every(action=>!['glute-bridge','dead-bug'].includes(action.exerciseId)));
 });
 
-test('居家完整器械使用approved band-row生成完整计划', () => {
+test('居家完整器械仍因缺少已审核膝主导动作而原子人工复核', () => {
   const api=loadGenerator();
   const intake={setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall','flat_walking_route'],daysPerWeek:'2',weekdays:['mon','thu'],sessionMinutes:'30'};
   const result=generate(api,intake);
-  assert.equal(result.status,'generated',JSON.stringify(result.errors));
-  assert.equal(result.weeks.length,4);
-  const actions=result.weeks.flatMap(week=>week.sessions).flatMap(session=>session.actions);
-  const rows=actions.filter(action=>action.pattern==='horizontal_pull');
-  assert.ok(rows.length>0);
-  assert.ok(rows.every(action=>action.exerciseId==='band-row'));
+  assert.equal(result.status,'manual_review');
+  assert.equal(result.plan,null);
+  assert.equal(result.errors[0].code,'REQUIRED_MOVEMENT_UNAVAILABLE');
+  assert.equal(result.errors[0].pattern,'knee_dominant');
+  assert.equal(result.errors[0].cause.code,'NO_APPROVED_MATCH');
   assert.equal(api.exerciseCatalog.find(item=>item.id==='band-row').reviewStatus,'approved');
 });
 
@@ -306,7 +305,7 @@ test('经典script与CommonJS均暴露纯生成API且不依赖DOM/storage/时间
   assert.equal(result.status,'generated');
 });
 
-test('公开发布模式下25项本地图库健身房与居家计划均可生成', () => {
+test('公开发布模式下25项本地图库支持健身房生成且居家缺膝主导动作时原子复核', () => {
   const api = loadGenerator();
   const gymResult = generate(api, {}, 'normal', { mediaRequirement: 'public_release' });
   assert.equal(gymResult.status, 'generated');
@@ -319,10 +318,9 @@ test('公开发布模式下25项本地图库健身房与居家计划均可生成
   }
 
   const homeResult = generate(api, { setting: 'home', equipment: homeEquipment }, 'normal', { mediaRequirement: 'public_release' });
-  assert.equal(homeResult.status, 'generated');
-  for (const week of homeResult.weeks) {
-    for (const session of week.sessions) {
-      for (const action of session.actions) assert.equal(eligible.has(action.exerciseId), true, action.exerciseId);
-    }
-  }
+  assert.equal(homeResult.status, 'manual_review');
+  assert.equal(homeResult.plan, null);
+  assert.equal(homeResult.errors[0].code, 'REQUIRED_MOVEMENT_UNAVAILABLE');
+  assert.equal(homeResult.errors[0].pattern, 'knee_dominant');
+  assert.equal(homeResult.errors[0].cause.code, 'NO_APPROVED_MATCH');
 });

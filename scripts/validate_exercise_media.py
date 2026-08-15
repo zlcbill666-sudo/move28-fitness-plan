@@ -119,6 +119,11 @@ def main() -> int:
     assets = manifest.get("assets")
     if manifest.get("schemaVersion") != 1:
         errors.append("manifest.schemaVersion must equal 1")
+    policy = manifest.get("policy") if isinstance(manifest, dict) else None
+    if not isinstance(policy, dict):
+        errors.append("manifest.policy must be an object")
+    elif policy.get("releaseRequiresReplacementFormats") != list(REQUIRED_OUTPUTS):
+        errors.append("manifest.policy.releaseRequiresReplacementFormats must match validator-required outputs")
     if not isinstance(assets, list):
         errors.append("manifest.assets must be an array")
         assets = []

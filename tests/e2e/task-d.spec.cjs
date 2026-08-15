@@ -82,6 +82,7 @@ test('file:// pending_review 刷新 CTA 只重读同一浏览器本机状态', a
   await completeOnboarding(page);
   await page.getByRole('button', { name: '完成，返回首页' }).click();
   await page.getByRole('button', { name: '复核后刷新状态' }).click();
+  await page.waitForFunction(() => window.Move28?.storage?.loadState);
 
   expect(new URL(page.url()).protocol).toBe('file:');
   expect(await page.evaluate(() => Move28.storage.loadState().plan.status)).toBe('pending_review');

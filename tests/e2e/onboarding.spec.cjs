@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const runtime = new WeakMap();
-const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
+const gymEquipment=['stable_chair','exercise_mat','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const safe = {
   boundaryAccepted:true, age:30, pregnancyPostpartum:'no', goal:'habit', activityDays:'3', walkCapacity:'20_40', strengthExperience:'some', trainingBreak:'no',
   daysPerWeek:'3', sessionMinutes:'30', weekdays:['mon','wed','fri'], gymOftenUnavailable:'no', setting:'home', equipment:['stable_chair','resistance_band'], allowSettingSwap:'yes',

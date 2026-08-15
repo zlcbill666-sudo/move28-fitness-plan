@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Validate and render the Move28 edit/custom production specification."""
+"""Validate and render the archived Move28 edit/custom production specification."""
 from __future__ import annotations
 
 import argparse
@@ -32,25 +32,25 @@ EXPECTED_SOURCE_IDENTITY = {
     "calf-stretch": ("https://gymvisual.com/videos/20530-sitting-toe-tapping-stretch-on-a-chair-female.html", "ca42d32791559d76e71ff50da367618667f1cb90f328605960cd4cd6b5891be7"),
 }
 EXPECTED_CATALOG_HASH = {
-    "ankle-circle": "ef6e55b3ac755f4a2476eae5d6d0278feb624917e0faf1577b8a1b54289df3c3",
-    "wall-hip-hinge": "d4d734a9f26e84ef8abb8582d3bef7fb8757e3269188124e5e58dfc1612c2992",
-    "high-seat-sit-to-stand": "1de346ae2b84ee555ceaad562284b49d27b781c167d03ddfcad05ee08ab3b119",
+    "high-seat-sit-to-stand": "c138b6bc7daf37a6580ae6dded72ef3c2920f294df8f8058aca9e8743ccf3aab",
     "seated-knee-extension-unloaded": "0e8eb583e6dec7d61635470d5a154bed72b7f3ba1e9d5e330457e7b1028f93a6",
     "supported-calf-raise": "24c346c11bc4bcc228b27b0588cd8f265496175ca0815c08086288a7961b941a",
-    "dead-bug": "9b5bb95ae9dc084d24aec1a3ef7debdd7ef0e3caeee5e90cbd686a7f14a5d723",
+    "calf-stretch": "e7688ca81c46de86e602a32bc8d78f6e516d699c25da3ab57ff557ce8f51c0da",
+    "wall-hip-hinge": "d4d734a9f26e84ef8abb8582d3bef7fb8757e3269188124e5e58dfc1612c2992",
     "bird-dog-regression": "ad6eb055cea50e0e9cf43551ad6fa32fa25344adafc0af168469f49638b8ed65",
     "supported-standing-march": "8c63228b7310e8332010cd77d950490dac3660588911e2fe20513a47d2dd7c26",
-    "calf-stretch": "e7688ca81c46de86e602a32bc8d78f6e516d699c25da3ab57ff557ce8f51c0da",
+    "ankle-circle": "6d9369fd5fba2479ec57d25638580c5e3ce884ad79f8c7843be86a20ebfb96e8",
+    "dead-bug": "9b5bb95ae9dc084d24aec1a3ef7debdd7ef0e3caeee5e90cbd686a7f14a5d723",
 }
 EXPECTED_PACKAGE_HASH = {
-    "high-seat-sit-to-stand": "dea1fb823370efd88d921b97a1372a936c4e9eda3bf7edd9fcfee4da5b3d98e4",
+    "high-seat-sit-to-stand": "93775127d2b278c1daeeefa96b656ad8ee1453fdf84bc34731d28d10b3407b73",
     "seated-knee-extension-unloaded": "84587c3726de60eaa915e4f25c7de224eb461a18c3642b9fa4fb69359c2838dc",
     "supported-calf-raise": "74cabb36612671f3105f3f8327bbf57923cd09e8c30a4ccc9e783161aac3f405",
     "calf-stretch": "19b317f948e16eef4d80cca3b8ddce6931687a84b93aa69ffd6a012ea632e5ec",
     "wall-hip-hinge": "c934f71001e0ecc1c5a2c664ac6490cbd71b19304c1fa72643597ae0ec8d041c",
     "bird-dog-regression": "2c45899f1024e8660d324d3d291c5d4fd933b1c9df1771e82c3f87a614c9d68b",
     "supported-standing-march": "e8fca19e55aed9a192b2ea542a6dfad33962c55a59349810bbeb0bbc8b0f88a8",
-    "ankle-circle": "06d1db8ab2604dbc6d70607b0fcdc8a7a195bdc26b2443a14fbdc999b22dda21",
+    "ankle-circle": "289ebebae1cecb0b51528020b82e3e49878ea0549b4ea3112b18b5a9ccc6e17d",
     "dead-bug": "a673abdf1f071ea527005dc45c85076b2aa5933bffb4b7835ed30dfef380c6ef",
 }
 OPERATORS = {"eq", "gte", "lte", "between"}
@@ -59,7 +59,7 @@ EXPECTED_STANDARD_HASH = {
     "technicalStandard": "9d048bce55118af11e445f3efaddf7dc8d1b9a264140bf53f971196196469150",
     "productionPackageSchema": "b62c8956d80553a48b9b8cad23c779b5240511d04702f33a18882b0776feebe3",
 }
-EXPECTED_SPEC_HASH = "e5ed6ee9c3ea0e5edacdd449d51775fbf2b19eb673a6370f51cd3e1b08cf9d49"
+EXPECTED_SPEC_HASH = "ae4ddc661fea721a5ba5a9e4d131a52832b31e4ecbeac66f3d0ed7e8203dfb56"
 EXPECTED_MATRIX_HASH = "75da1b45909e34634756f153a4d08861777f953fbd8cb766320f951de803980b"
 SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 
@@ -445,7 +445,7 @@ def render(spec: dict[str, object], edits: list[dict[str, object]], customs: lis
             warnings = item.get("forbiddenOperations", item.get("forbiddenPatterns", []))
             warning_list = "".join(f"<li>{html.escape(entry)}</li>" for entry in warnings)
             cards.append(f"<article><h2>{html.escape(item['exerciseId'])}</h2><p class='kind'>{kind}</p><h3>失败关闭项</h3><ul>{warning_list}</ul><h3>机器验收</h3><ul>{metrics}</ul><p><b>releaseBlocked=true</b></p></article>")
-    return f"""<!doctype html><html lang='zh-CN'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Move28媒体生产规格审核</title><style>body{{font:15px system-ui;margin:24px;background:#f5f5f5;color:#222}}header{{background:#fff;border-left:5px solid #b51f2e;padding:18px;margin-bottom:18px}}main{{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}}article{{background:#fff;padding:16px;border:1px solid #ddd;border-radius:8px}}code{{word-break:break-word}}.kind{{color:#b51f2e;font-weight:700}}li{{margin:5px 0}}</style><header><h1>Move28 4项编辑＋5项定制生产规格</h1><p>仅为内部生产合同，不表示素材已编辑、已制作、已采购或可发布。正式manifest继续25/25阻塞。</p><p>规格SHA-256：<code>{spec_hash}</code></p></header><main>{''.join(cards)}</main></html>"""
+    return f"""<!doctype html><html lang='zh-CN'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Move28媒体生产规格审核</title><style>body{{font:15px system-ui;margin:24px;background:#f5f5f5;color:#222}}header{{background:#fff;border-left:5px solid #b51f2e;padding:18px;margin-bottom:18px}}main{{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}}article{{background:#fff;padding:16px;border:1px solid #ddd;border-radius:8px}}code{{word-break:break-word}}.kind{{color:#b51f2e;font-weight:700}}li{{margin:5px 0}}</style><header><h1>Move28 4项编辑＋5项定制生产规格</h1><p>仅为内部生产合同，不表示素材已编辑、已制作、已采购或可发布。该旧生产合同不再作为当前25项GIF发布门；当前正式manifest以GIF-only方式开放25项。</p><p>规格SHA-256：<code>{spec_hash}</code></p></header><main>{''.join(cards)}</main></html>"""
 
 
 def main() -> int:

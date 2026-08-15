@@ -48,7 +48,7 @@ test('离线资源清单包含全部本地CSS、JS、内部审计GIF和四段音
   expect(packagedGifs).toEqual(referencedGifs);
 });
 
-test('file://完成问卷、生成、刷新、审核和Exact10跟练音乐加载', async ({ page }) => {
+test('file://完成问卷、生成、刷新、审核和25项动图跟练音乐加载', async ({ page }) => {
   const issues = [];
   const legacyGifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))legacyGifRequests.push(request.url())});
   page.on('pageerror', error => issues.push(`pageerror:${error.message}`));
@@ -68,9 +68,8 @@ test('file://完成问卷、生成、刷新、审核和Exact10跟练音乐加载
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
-  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
-  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(1);
-  await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作动图暂停展示');
+  await expect(page.locator('#guideBody img')).toHaveCount(1);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(0);
   const audio = page.locator('#workoutAudio');
   await expect(audio).toHaveAttribute('src', /assets\/audio\/strength-deep-urban\.mp3$/);
   await expect.poll(() => audio.evaluate(node => node.readyState)).toBeGreaterThanOrEqual(1);

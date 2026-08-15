@@ -29,35 +29,26 @@ function run(args) {
   return spawnSync(python, ['-B', ...args], { cwd: root, encoding: 'utf8' });
 }
 
-test('本地ExerciseDB严格映射完整覆盖25项且仍阻止正式发布', () => {
+test('当前媒体发布证据完整覆盖25项且与正式manifest一致', () => {
   const report = loadReport();
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(report.schemaVersion, 1);
   assert.deepEqual(report.mapping.map(item => item.exerciseId), catalog.map(item => item.id));
-  assert.deepEqual(report.counts, { exact: 10, near: 5, reject: 10 });
-  assert.equal(report.releaseEligibleCount, 0);
-  assert.ok(report.mapping.every(item => item.releaseEligible === false));
+  assert.deepEqual(report.mapping.map(item => item.exerciseId), manifest.assets.map(item => item.id));
+  assert.deepEqual(report.counts, { exact: 17, project_owned: 8 });
+  assert.equal(report.releaseEligibleCount, 25);
+  assert.ok(report.mapping.every(item => item.releaseEligible === true));
+  assert.equal(report.decision, 'current-formal-manifest-25-item-gif-release-evidence');
   assert.equal(report.reviewMethod.semanticClassificationIsManual, true);
   assert.deepEqual(report.reviewMethod.automatedChecks, [
-    'source-sha256', 'record-identity', 'gif-format', 'dimensions', 'frame-count',
+    'catalog-sha256', 'formal-manifest-sha256', 'source-sha256', 'record-identity',
+    'gif-format', 'dimensions', 'frame-count', 'release-gate-binding',
   ]);
-});
-
-test('十项精确候选身份固定且推胸机使用水平轨迹替代候选', () => {
-  const report = loadReport();
-  const exact = Object.fromEntries(report.mapping.filter(item => item.classification === 'exact').map(item => [item.exerciseId, item.candidate.exerciseDbId]));
-  assert.deepEqual(exact, {
-    'seated-leg-press': '10Z2DXU',
-    'seated-leg-curl': 'Zg3XY7P',
-    'glute-bridge': 'u0cNiij',
-    'chest-press-machine': 'T0yTjgW',
-    'seated-row': '7I6LNUG',
-    'pallof-press': '9pa4H5m',
-    'seated-leg-extension': 'my33uHU',
-    'hip-abduction-machine': 'CHpahtl',
-    'wall-push-up': 'LEH9jxP',
-    'elliptical-trainer': 'rjtuP6X',
-  });
-  for (const item of report.mapping.filter(row => row.candidate)) {
+  for (const item of report.mapping) {
+    const asset = manifest.assets.find(entry => entry.id === item.exerciseId);
+    assert.ok(asset, item.exerciseId);
+    assert.equal(item.formalManifest.replacementPath, asset.replacement.gif.path);
+    assert.equal(item.formalManifest.productionStatus, 'approved');
     assert.match(item.candidate.sha256, /^[a-f0-9]{64}$/);
     assert.equal(item.candidate.width, 180);
     assert.equal(item.candidate.height, 180);
@@ -65,16 +56,48 @@ test('十项精确候选身份固定且推胸机使用水平轨迹替代候选',
   }
 });
 
-test('旧报告中的动作语义误判已失败关闭', () => {
-  const byId = Object.fromEntries(loadReport().mapping.map(item => [item.exerciseId, item]));
-  assert.equal(byId['dead-bug'].classification, 'reject');
-  assert.match(byId['dead-bug'].reason, /对侧手脚伸展.*交替脚跟点地/);
-  assert.equal(byId['heel-slide'].classification, 'reject');
-  assert.match(byId['heel-slide'].reason, /双腿伸直开始.*双膝屈曲起始/);
-  assert.equal(byId['hamstring-stretch'].classification, 'reject');
-  assert.match(byId['hamstring-stretch'].reason, /动态抬放直腿.*静态牵拉/);
-  assert.equal(byId['seated-leg-raise'].classification, 'reject');
-  assert.equal(byId['supported-calf-raise'].classification, 'near');
+test('十七项本地ExerciseDB候选身份固定且三项重审结论不再保留旧near/reject语义', () => {
+  const report = loadReport();
+  const exact = Object.fromEntries(report.mapping.filter(item => item.classification === 'exact').map(item => [item.exerciseId, item.candidate.exerciseDbId]));
+  assert.deepEqual(exact, {
+    'seated-leg-raise': 'Hgs6Nl1',
+    'ankle-circle': 'uL9CsKm',
+    'seated-leg-press': '10Z2DXU',
+    'seated-leg-curl': 'Zg3XY7P',
+    'glute-bridge': 'u0cNiij',
+    'chest-press-machine': 'T0yTjgW',
+    'seated-row': '7I6LNUG',
+    'pallof-press': '9pa4H5m',
+    'high-seat-sit-to-stand': 'Gu2rNJd',
+    'seated-leg-extension': 'my33uHU',
+    'hip-abduction-machine': 'CHpahtl',
+    'wall-push-up': 'LEH9jxP',
+    'dead-bug': 'iny3m5y',
+    'elliptical-trainer': 'rjtuP6X',
+    'flat-walk': 'rjiM4L3',
+    'hamstring-stretch': '99rWm7w',
+    'calf-stretch': '17bqEXD',
+  });
+  const byId = Object.fromEntries(report.mapping.map(item => [item.exerciseId, item]));
+  assert.equal(byId['ankle-circle'].classification, 'exact');
+  assert.match(byId['ankle-circle'].reason, /站姿脚踝绕环/);
+  assert.equal(byId['high-seat-sit-to-stand'].classification, 'exact');
+  assert.match(byId['high-seat-sit-to-stand'].reason, /史密斯机/);
+  assert.equal(byId['flat-walk'].classification, 'exact');
+  assert.match(byId['flat-walk'].reason, /坡度跑台慢走/);
+  assert.doesNotMatch(JSON.stringify([byId['ankle-circle'], byId['high-seat-sit-to-stand'], byId['flat-walk']]), /0坡度|reject|near/);
+});
+
+test('八项项目自有Pillow动图作为正式manifest发布证据而非ExerciseDB候选', () => {
+  const report = loadReport();
+  const projectOwned = report.mapping.filter(item => item.classification === 'project_owned');
+  assert.deepEqual(projectOwned.map(item => item.exerciseId), [
+    'wall-hip-hinge','standing-band-chest-press','band-row','seated-knee-extension-unloaded',
+    'supported-calf-raise','heel-slide','bird-dog-regression','supported-standing-march'
+  ]);
+  assert.ok(projectOwned.every(item => item.candidate.provider === 'MOVE 28 Pillow'));
+  assert.ok(projectOwned.every(item => item.candidate.exerciseDbId === null));
+  assert.ok(projectOwned.every(item => item.formalManifest.replacementPath === `assets/exercises/${item.exerciseId}.gif`));
 });
 
 test('联系表与报告绑定且本地冻结库可重复生成字节一致输出', { skip: !fs.existsSync(library) }, () => {
@@ -149,9 +172,9 @@ print(json.dumps({'a':a.read_text(),'b':b.read_text(),'files':sorted(x.name for 
   fs.rmSync(temp, { recursive: true, force: true });
 });
 
-test('研究映射不得绕过正式manifest的前台质量门', () => {
+test('研究映射不得改写正式manifest的25项前台媒体门', () => {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(manifest.assets.length, 25);
-  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), []);
-  assert.equal(manifest.policy.frontendMediaMode, 'text_only_quality_review');
+  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), ['seated-leg-raise','ankle-circle','seated-leg-press','seated-leg-curl','glute-bridge','wall-hip-hinge','chest-press-machine','standing-band-chest-press','seated-row','band-row','pallof-press','high-seat-sit-to-stand','seated-leg-extension','seated-knee-extension-unloaded','supported-calf-raise','hip-abduction-machine','wall-push-up','dead-bug','heel-slide','bird-dog-regression','elliptical-trainer','flat-walk','supported-standing-march','hamstring-stretch','calf-stretch']);
+  assert.equal(manifest.policy.frontendMediaMode, 'media_enabled');
 });
