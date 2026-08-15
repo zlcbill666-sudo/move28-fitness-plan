@@ -49,9 +49,9 @@ test('完整试用链：问卷、生成、审核、跟练、记录和刷新恢�
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
   await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
-  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(1);
-  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(0);
-  await expect(page.locator('#guideBody img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
+  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(1);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作动图暂停展示');
 
   await completeGuideActions(page);
   state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));

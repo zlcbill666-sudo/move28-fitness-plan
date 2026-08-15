@@ -149,8 +149,9 @@ print(json.dumps({'a':a.read_text(),'b':b.read_text(),'files':sorted(x.name for 
   fs.rmSync(temp, { recursive: true, force: true });
 });
 
-test('研究映射不得修改正式manifest的25项本地图库开放边界', () => {
+test('研究映射不得绕过正式manifest的前台质量门', () => {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(manifest.assets.length, 25);
-  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), manifest.assets.map(item => item.id));
+  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), []);
+  assert.equal(manifest.policy.frontendMediaMode, 'text_only_quality_review');
 });

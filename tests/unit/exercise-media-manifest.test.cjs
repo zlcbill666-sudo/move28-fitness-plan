@@ -31,24 +31,24 @@ test('公开产品媒体台账完整覆盖25个动作且与目录一一对应', 
   for (const item of manifest.assets) {
     assert.match(item.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
     assert.equal(item.rights.status, 'confirmed');
-    assert.equal(item.production.status, 'approved');
-    assert.equal(item.production.releaseEligible, true);
+    assert.equal(item.production.status, 'replacement_required');
+    assert.equal(item.production.releaseEligible, false);
     assert.equal(item.reviews.rights, 'approved');
     assert.equal(item.reviews.motion, 'approved');
-    assert.equal(item.reviews.visual, 'approved');
+    assert.equal(item.reviews.visual, 'blocked');
     assert.equal(item.reviews.safety, 'approved');
     assert.equal(typeof item.current.sha256, 'string');
     assert.match(item.current.sha256, /^[a-f0-9]{64}$/);
   }
 });
 
-test('25项本地动图库GIF均安装为正式参与者资产', () => {
+test('25项本地动图库GIF保留为候选资产但前台全部暂停展示', () => {
   const manifest = loadManifest();
-  const released = manifest.assets.filter(item => item.production.releaseEligible);
-  assert.equal(released.length, 25);
-  const providers = new Set(released.map(item => item.origin.provider));
+  const candidates = manifest.assets;
+  assert.equal(candidates.filter(item => item.production.releaseEligible).length, 0);
+  const providers = new Set(candidates.map(item => item.origin.provider));
   assert.deepEqual([...providers].sort(), ['MOVE 28 Pillow', 'local ExerciseDB V1 library']);
-  for (const item of released) {
+  for (const item of candidates) {
     assert.equal(item.replacement.source, `assets/exercises/${item.id}.gif`);
     assert.equal(item.replacement.gif.path, `assets/exercises/${item.id}.gif`);
     const file = path.join(projectRoot, ...item.replacement.gif.path.split('/'));
@@ -66,16 +66,17 @@ test('旧assets/gifs仅作为本地来源库，参与者引用统一走assets/ex
   }
 });
 
-test('参与者媒体策略与正式manifest逐项一致且未知动作失败关闭', () => {
+test('参与者媒体策略因视觉质量门暂停前台展示全部动图', () => {
   const manifest = loadManifest();
-  const eligible = manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id);
-  assert.equal(eligible.length, 25);
-  assert.deepEqual(mediaPolicy.releaseEligibleIds, eligible);
-  assert.equal(mediaPolicy.mode, 'media_enabled');
+  assert.equal(manifest.assets.filter(item => item.production.releaseEligible).length, 0);
+  assert.deepEqual(mediaPolicy.releaseEligibleIds, []);
+  assert.equal(mediaPolicy.mode, 'text_only_quality_review');
   for (const item of manifest.assets) {
-    assert.equal(mediaPolicy.isReleaseEligible(item.id), true, item.id);
-    assert.equal(mediaPolicy.presentationFor(item.id).status, 'released');
-    assert.equal(mediaPolicy.presentationFor(item.id).src, `assets/exercises/${item.id}.gif`);
+    assert.equal(mediaPolicy.isReleaseEligible(item.id), false, item.id);
+    const presentation = mediaPolicy.presentationFor(item.id);
+    assert.equal(presentation.status, 'blocked');
+    assert.match(presentation.title, /暂停展示/);
+    assert.match(presentation.message, /视觉质量未达到公开产品标准/);
   }
   assert.equal(mediaPolicy.isReleaseEligible('unknown-exercise'), false);
   assert.equal(mediaPolicy.presentationFor('unknown-exercise').status, 'blocked');
@@ -92,11 +93,10 @@ test('经典脚本先加载媒体策略再加载参与者渲染器且首页不�
   assert.ok(policyIndex < scripts.indexOf('src/ui/dashboard.js'));
   assert.ok(policyIndex < scripts.indexOf('src/ui/workout-guide.js'));
   assert.doesNotMatch(html, /<img[^>]+assets\/gifs\//i);
-  assert.match(html, /25项本地动图库GIF已开放/);
-  assert.match(html, /25项动图已开放/);
-  assert.match(html, /剩余15项已完成本地上架/);
-  assert.match(html, /0项继续阻止/);
-  assert.doesNotMatch(html, /首批动图已开放|10项Exact|15项未匹配|未匹配动作继续文字模式|Exact10已完成本阶段复核|TEXT GUIDE|REVIEW GATE/);
+  assert.match(html, /动图暂停展示/);
+  assert.match(html, /低质动图已从前台撤回/);
+  assert.match(html, /仅保留文字指导/);
+  assert.doesNotMatch(html, /25项动图已开放|25项本地动图库GIF已开放|剩余15项已完成本地上架|0项继续阻止|10项Exact|15项未匹配|未匹配动作继续文字模式|Exact10已完成本阶段复核|ALL25 READY|GIF GUIDE/);
   const context = {}; vm.createContext(context);
   for (const relative of ['src/namespace.js', 'src/data/exercise-media-policy.js']) {
     vm.runInContext(fs.readFileSync(path.join(projectRoot, ...relative.split('/')), 'utf8'), context);
@@ -104,7 +104,7 @@ test('经典脚本先加载媒体策略再加载参与者渲染器且首页不�
   assert.equal(context.Move28.data.exerciseMediaPolicy.presentationFor('unknown').status, 'blocked');
 });
 
-test('媒体校验器审计和发布模式均允许25项本地动图库正式动图', () => {
+test('媒体校验器审计和发布模式允许零动图质量门', () => {
   const script = path.join(projectRoot, 'scripts', 'validate_exercise_media.py');
   const audit = spawnSync('python', [script], { cwd: projectRoot, encoding: 'utf8' });
   assert.equal(audit.status, 0, audit.stderr || audit.stdout);
@@ -116,7 +116,7 @@ test('媒体校验器审计和发布模式均允许25项本地动图库正式动
   assert.equal(release.status, 0, release.stderr || release.stdout);
   const releaseReport = JSON.parse(release.stdout);
   assert.equal(releaseReport.ok, true);
-  assert.equal(releaseReport.releaseEligible, 25);
-  assert.equal(releaseReport.releaseBlocked, 0);
+  assert.equal(releaseReport.releaseEligible, 0);
+  assert.equal(releaseReport.releaseBlocked, 25);
   assert.deepEqual(releaseReport.errors, []);
 });

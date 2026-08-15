@@ -13,7 +13,9 @@
       "mp4",
       "poster",
       "gif"
-    ]
+    ],
+    "frontendMediaMode": "text_only_quality_review",
+    "frontendMediaReason": "当前本地 ExerciseDB 动图视觉质量未达到公开产品标准；前台暂停展示，替换为合格素材后再开放。"
   },
   "assets": [
     {
@@ -35,14 +37,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -73,14 +75,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -111,14 +113,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -149,14 +151,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -187,14 +189,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -223,14 +225,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -261,14 +263,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -297,14 +299,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -335,14 +337,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -371,14 +373,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -409,14 +411,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -447,14 +449,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -485,14 +487,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -521,14 +523,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -557,14 +559,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -595,14 +597,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -633,14 +635,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -671,14 +673,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -707,14 +709,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -743,14 +745,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -781,14 +783,14 @@
         "reason": "项目负责人批准本地ExerciseDB精确候选进入本阶段应用展示；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "Exact本地动图已安装到assets/exercises并通过本阶段运动、视觉和安全复核。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -819,14 +821,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -855,14 +857,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -893,14 +895,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {
@@ -931,14 +933,14 @@
         "reason": "项目负责人明确要求本阶段使用本地动图库素材完成本地上架；源文件SHA-256已冻结。"
       },
       "production": {
-        "status": "approved",
-        "releaseEligible": true,
-        "reason": "本地动图库素材已安装到assets/exercises并按本阶段全动作上架要求开放；外部发布前仍需统一复核动作语义差异。"
+        "status": "replacement_required",
+        "releaseEligible": false,
+        "reason": "当前本地动图视觉质量未达到公开产品标准，前台暂停展示；替换为合格素材后再开放。"
       },
       "reviews": {
         "rights": "approved",
         "motion": "approved",
-        "visual": "approved",
+        "visual": "blocked",
         "safety": "approved"
       },
       "replacement": {

@@ -183,9 +183,9 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     const item=expected.actions[index];
     await expect(page.locator('#guideBody .guide-action')).toHaveCount(1);
     await expect(page.locator('#guideBody h3')).toHaveText(item.exercise.name);
-    await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(1);
-    await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(0);
-    await expect(page.locator('#guideBody img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
+    await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
+    await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(1);
+    await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作动图暂停展示');
     const dose=item.action.phase==='main'?`${item.action.sets}组 × ${item.action.reps}次`: `${item.action.durationMin}分钟`;
     await expect(page.locator('.guide-dose')).toContainText(dose);
     await expect(page.locator('#guideBody input,#guideBody select,#guideBody textarea')).toHaveCount(0);

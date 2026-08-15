@@ -68,9 +68,9 @@ test('file://完成问卷、生成、刷新、审核和Exact10跟练音乐加载
   await page.getByRole('button', { name: '检查今天状态' }).click();
   await page.getByRole('button', { name: '按原计划继续' }).click();
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
-  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(1);
-  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(0);
-  await expect(page.locator('#guideBody img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
+  await expect(page.locator('#guideBody img,#guideBody picture,#guideBody video,#guideBody source')).toHaveCount(0);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toHaveCount(1);
+  await expect(page.locator('#guideBody .guide-media-blocked')).toContainText('动作动图暂停展示');
   const audio = page.locator('#workoutAudio');
   await expect(audio).toHaveAttribute('src', /assets\/audio\/strength-deep-urban\.mp3$/);
   await expect.poll(() => audio.evaluate(node => node.readyState)).toBeGreaterThanOrEqual(1);

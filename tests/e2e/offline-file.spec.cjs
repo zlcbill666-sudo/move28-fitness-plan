@@ -78,9 +78,9 @@ test('双击打开时首屏、全量本地图库动作库和跟练入口均可�
   ]);
 
   await expect(page.locator('#exerciseGrid article.exercise')).toHaveCount(25);
-  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(25);
-  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(0);
-  await expect(page.locator('#exerciseGrid img').first()).toHaveAttribute('src', /assets\/exercises\/.+\.gif$/);
+  await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(0);
+  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(25);
+  await expect(page.locator('#exerciseGrid .media-blocked').first()).toContainText('动作动图暂停展示');
   expect(legacyGifRequests).toEqual([]);
 
   expect(await page.evaluate(() => ({

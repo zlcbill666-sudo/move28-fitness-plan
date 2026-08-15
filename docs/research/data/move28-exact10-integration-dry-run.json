@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "kind": "internal-media-integration-dry-run",
   "candidateManifestSha256": "46c9467440c71ee0e4e6507b16af4712f7b54ac142bbf5c03da3dc0c0cdfb843",
-  "productionPolicySha256": "52520b8d09c256544d47138fab9fd65c77dbf385f94ca1863c5ee7dca9446bc4",
-  "formalManifestSha256": "79475dd86501f384ae2109965a32c2f55294f768d2e80e8b5665dbbb74e7a818",
+  "productionPolicySha256": "d42e7665426117d62aab2d171a578d748830b099057a6fc90d544e35e18eb2dc",
+  "formalManifestSha256": "25627970744392c4e59906308409bdac31655c8988c647438aa2680c9adc7dc5",
   "runtimeManifestSha256": "3c37436ba58c48cb589b4c6190ae32e8d0184cd90e7ad07bffc3369b53a9ddf9",
   "runtimeFileSha256": {
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -39,13 +39,13 @@
     "assets/exercises/wall-hip-hinge.gif": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a",
     "assets/exercises/wall-push-up.gif": "8025415b2ce801699ecf32864a622883bc623ae10cd48653d4bc689b6c7147e0",
     "docs/pilot/issue-log-template.md": "65d74871ba6e355579757784ae9a47f0e1d2431598bb01789a07468d68faf7ef",
-    "docs/pilot/participant-guide.md": "c454f7e35b808a392c261cda4967a2767bb7f943b01d6c2684a12d325f989054",
-    "docs/pilot/reviewer-checklist.md": "8356d8e3aeed1cdd91bccb7b11aaf2aff6b44f40b8815f9241bd1381c11ff0a9",
-    "index.html": "cb99f5b8afce1535f07ab5196a37b4f72f081020397f3d9bcac5ac32c7603460",
+    "docs/pilot/participant-guide.md": "bb3af1bbe2f9660528f24cac994339f8378428df44926ea8c3e543bcaddc502d",
+    "docs/pilot/reviewer-checklist.md": "8b2fa3ba5f77810d7bfb84813c1098eced6e5ba6a54cf9578e1bf8cc842f374a",
+    "index.html": "3f5e3f4e6d7e1a65ef9035c749f065a596c43d5cb06ff607090913dd59651e42",
     "README.md": "50dbadaac03455578982f2b06c9bbaf929972e455726fb8ce8ded7cb318fa969",
     "src/app.js": "8e7e1112325910431a3dfd36441a7551bf4d24998ff90ccb56f472792b9849da",
     "src/data/exercise-catalog.js": "dda57ea5063208e0515c8778921e8155fb42f22bb59c89f6f71d99862d3014ed",
-    "src/data/exercise-media-policy.js": "52520b8d09c256544d47138fab9fd65c77dbf385f94ca1863c5ee7dca9446bc4",
+    "src/data/exercise-media-policy.js": "d42e7665426117d62aab2d171a578d748830b099057a6fc90d544e35e18eb2dc",
     "src/data/legacy-demo-plan.js": "3fa5c281135b8cc64a46b7a643f5d24313a37857358818b920198ad63ac856ce",
     "src/data/tracker-fields.js": "b38c354c5b0aea7943c1ecde92f5e56459baf41ddeab00ace08484d0209bf736",
     "src/domain/capability-engine.js": "ddb600de6c1ddd73debe2969b0e0d58f643bf03e2c749448f5aa48c3a8609806",
@@ -86,7 +86,7 @@
   "expectedDryRun": {
     "released": 10,
     "blocked": 15,
-    "formalReleaseEligible": 25
+    "formalReleaseEligible": 0
   },
   "gates": {
     "motion": "approved-for-internal-candidate",

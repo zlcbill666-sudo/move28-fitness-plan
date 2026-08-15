@@ -143,8 +143,6 @@ def main() -> int:
         1 for item in assets
         if isinstance(item, dict) and (item.get("production") or {}).get("releaseEligible") is not True
     )
-    if args.release and release_eligible <= 0:
-        errors.append("release mode requires at least one release-eligible asset")
     report = {
         "ok": not errors,
         "mode": "release" if args.release else "audit",

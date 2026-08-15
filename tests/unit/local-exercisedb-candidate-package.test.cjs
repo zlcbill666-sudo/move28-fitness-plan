@@ -218,7 +218,7 @@ test('CLI在解析前拒绝本地素材库根目录链接或Windows junction', {
   fs.rmSync(temp, { recursive: true, force: true });
 });
 
-test('正式manifest在候选包构建前后保持字节不变且当前开放25项本地图库', { skip: !fs.existsSync(library) }, () => {
+test('正式manifest在候选包构建前后保持字节不变且当前前台质量门阻止本地图库开放', { skip: !fs.existsSync(library) }, () => {
   const before = hash(formalManifest);
   const temp = temporary();
   const result = run(['--library', library, '--output', path.join(temp, 'package')]);
@@ -226,7 +226,8 @@ test('正式manifest在候选包构建前后保持字节不变且当前开放25�
   assert.equal(hash(formalManifest), before);
   const manifest = JSON.parse(fs.readFileSync(formalManifest, 'utf8'));
   assert.equal(manifest.assets.length, 25);
-  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), manifest.assets.map(item => item.id));
+  assert.deepEqual(manifest.assets.filter(item => item.production.releaseEligible).map(item => item.id), []);
+  assert.equal(manifest.policy.frontendMediaMode, 'text_only_quality_review');
   fs.rmSync(temp, { recursive: true, force: true });
 });
 
