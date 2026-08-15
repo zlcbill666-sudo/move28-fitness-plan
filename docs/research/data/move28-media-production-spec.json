@@ -126,7 +126,7 @@
       ],
       "fallback": "custom-3d",
       "releaseBlocked": true,
-      "catalogContractSha256": "1de346ae2b84ee555ceaad562284b49d27b781c167d03ddfcad05ee08ab3b119"
+      "catalogContractSha256": "c138b6bc7daf37a6580ae6dded72ef3c2920f294df8f8058aca9e8743ccf3aab"
     },
     {
       "exerciseId": "seated-knee-extension-unloaded",
@@ -607,7 +607,7 @@
         }
       ],
       "releaseBlocked": true,
-      "catalogContractSha256": "ef6e55b3ac755f4a2476eae5d6d0278feb624917e0faf1577b8a1b54289df3c3"
+      "catalogContractSha256": "6d9369fd5fba2479ec57d25638580c5e3ce884ad79f8c7843be86a20ebfb96e8"
     },
     {
       "exerciseId": "dead-bug",

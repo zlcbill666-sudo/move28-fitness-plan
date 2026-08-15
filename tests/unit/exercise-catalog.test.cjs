@@ -7,10 +7,10 @@ const test = require('node:test');
 const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/load-script.cjs');
 
 const EXPECTED_NAMES = [
-  '坐姿抬腿', '脚踝绕环', '坐姿腿举', '坐姿腿弯举', '臀桥', '墙触髋铰链', '推胸机',
-  '站姿弹力带推胸', '坐姿划船', '弹力带划船', '抗旋转推压', '高位坐姿起立', '坐姿腿屈伸',
+  '坐姿抬腿', '站姿脚踝绕环', '坐姿腿举', '坐姿腿弯举', '臀桥', '墙触髋铰链', '推胸机',
+  '站姿弹力带推胸', '坐姿划船', '弹力带划船', '抗旋转推压', '史密斯椅子深蹲', '坐姿腿屈伸',
   '坐姿徒手伸膝', '扶椅提踵', '髋外展机', '墙壁俯卧撑', '死虫式', '仰卧脚跟滑动',
-  '四点支撑单肢滑动', '椭圆机／交叉训练机', '平地慢走', '扶椅原地踏步', '大腿后侧拉伸', '小腿拉伸'
+  '四点支撑单肢滑动', '椭圆机／交叉训练机', '坡度跑台慢走', '扶椅原地踏步', '大腿后侧拉伸', '小腿拉伸'
 ];
 const EXPECTED_GIFS = [
   'assets/gifs/02_坐姿抬腿.gif', 'assets/gifs/03_脚踝绕环.gif', 'assets/gifs/04_坐姿腿举.gif',
@@ -27,7 +27,7 @@ const REQUIRED_FIELDS = [
   'regressionIds', 'progressionIds', 'gif', 'reviewStatus', 'cues'
 ];
 const EXPECTED_EQUIPMENT_IDS = [
-  'stable_chair', 'stable_high_bench', 'exercise_mat', 'leg_press_machine', 'leg_curl_machine',
+  'stable_chair', 'stable_high_bench', 'smith_machine', 'exercise_mat', 'leg_press_machine', 'leg_curl_machine',
   'chest_press_machine', 'seated_row_machine', 'resistance_band', 'cable_machine',
   'leg_extension_machine', 'hip_abduction_machine', 'wall', 'elliptical_trainer', 'treadmill',
   'flat_walking_route'
@@ -117,23 +117,24 @@ test('替代器械使用any-of方案表达，索引equipment是所有方案的�
   assert.deepEqual(byId['pallof-press'].equipmentOptions, [['resistance_band'], ['cable_machine']]);
   assert.deepEqual(byId['flat-walk'].equipmentOptions, [['treadmill'], ['flat_walking_route']]);
   assert.deepEqual(byId['hamstring-stretch'].equipmentOptions, [['stable_chair'], ['exercise_mat']]);
-  assert.deepEqual(byId['high-seat-sit-to-stand'].equipmentOptions, [['stable_high_bench'], ['stable_chair']]);
+  assert.deepEqual(byId['high-seat-sit-to-stand'].equipmentOptions, [['smith_machine','stable_high_bench'], ['smith_machine','stable_chair']]);
+  assert.deepEqual(byId['high-seat-sit-to-stand'].settings, ['gym']);
   for (const exercise of exerciseCatalog) {
     assert.deepEqual(exercise.equipment, [...new Set(exercise.equipmentOptions.flat())]);
   }
 });
 
-test('平地慢走与坐姿小腿拉伸锁定精确动作语义', () => {
+test('坡度跑台慢走与坐姿小腿拉伸锁定精确动作语义', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
   const byId = Object.fromEntries(exerciseCatalog.map(exercise => [exercise.id, exercise]));
   const walk = byId['flat-walk'];
   const calf = byId['calf-stretch'];
 
   assert.deepEqual(walk.equipmentOptions, [['treadmill'], ['flat_walking_route']]);
-  assert.equal(walk.cues.setup, '跑步机坡度必须设为0；若在室内或户外步行，必须选择平整、无坡度、无障碍的路线。先站稳、系好鞋带，再从舒适慢速开始。');
-  assert.equal(walk.cues.movement, '力量日前慢走8～10分钟热身；有氧阶段保持自然小步幅，结束前逐步降速3～5分钟。全程只走路，不跑步、不爬坡。');
-  assert.equal(walk.errors, '扶住扶手悬挂身体；跨大步；跑步机坡度不是0；选择有坡度或不平整路线；突然下机。');
-  assert.match(walk.cues.pain, /始终保持0坡度/);
+  assert.equal(walk.cues.setup, '按动图使用跑步机低速慢走，坡度保持在能稳定说短句的轻度范围；没有跑步机时选择平整路线慢走。先站稳、系好鞋带，再逐步启动。');
+  assert.equal(walk.cues.movement, '力量日前慢走8～10分钟热身；有氧阶段保持自然小步幅和低速，结束前逐步降速3～5分钟。全程只走路，不跑步。');
+  assert.equal(walk.errors, '扶住扶手悬挂身体；跨大步；速度或坡度过高；突然下机；为了跟动图而超出自身稳定范围。');
+  assert.match(walk.cues.pain, /坡度和速度都以稳定、无痛、能说短句为上限/);
 
   assert.deepEqual(calf.equipmentOptions, [['stable_chair']]);
   assert.equal(calf.cues.setup, '坐在稳固椅子前半部，躯干直立，一腿向前伸，脚跟着地，膝盖保持微屈或自然伸直；双手放在大腿或椅面，不拿毛巾、弹力带等拉力工具。');
@@ -207,9 +208,9 @@ test('受控变式指导仅存在于匹配动作，结构和值均为审核后�
   const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
   assert.deepEqual(byId['high-seat-sit-to-stand'].variantGuidance, {
     high_seat:{
-      label:'高位座椅变式',
-      setup:'使用稳固、不会滑动的较高座椅；座面高度以起立时膝部无明显疼痛为准。',
-      range:'只在可控、无痛范围内起立和坐回；若仍需猛冲或膝痛，继续提高座面或停止。'
+      label:'史密斯椅子深蹲变式',
+      setup:'仅在健身房同时具备史密斯机和稳定座椅/高凳时使用；只用空杆或极轻负重。',
+      range:'臀部轻触座椅后站起，膝部无痛且动作可控；不能稳定触椅、无史密斯机或站起失稳时停止。'
     }
   });
   assert.deepEqual(byId['wall-push-up'].variantGuidance, {

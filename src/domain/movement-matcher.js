@@ -11,7 +11,7 @@ if(isCommonJS)module.exports=api;
 const MOVEMENT_INTENTS=Object.freeze(['knee_dominant','posterior_chain','horizontal_push','horizontal_pull','core_stability','low_impact_cardio']);
 const SUPPORTED_SETTINGS=Object.freeze(['gym','home']);
 const MATCH_PRIORITIES=Object.freeze({
-  knee_dominant:Object.freeze({gym:Object.freeze(['seated-leg-press','high-seat-sit-to-stand']),home:Object.freeze(['high-seat-sit-to-stand'])}),
+  knee_dominant:Object.freeze({gym:Object.freeze(['seated-leg-press','high-seat-sit-to-stand']),home:Object.freeze([])}),
   posterior_chain:Object.freeze({gym:Object.freeze(['seated-leg-curl','glute-bridge','wall-hip-hinge']),home:Object.freeze(['glute-bridge','wall-hip-hinge'])}),
   horizontal_push:Object.freeze({gym:Object.freeze(['chest-press-machine','wall-push-up']),home:Object.freeze(['wall-push-up'])}),
   horizontal_pull:Object.freeze({gym:Object.freeze(['seated-row','band-row']),home:Object.freeze(['band-row'])}),

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "exerciseId": "calf-stretch",
-  "productionSpecSha256": "db6ec82abf96b9d98fb7382e0be134d4ae2d647db883b87ff3a7f7d5bc461686",
+  "productionSpecSha256": "c6de2bafffae1328783a1ec0c0345a08dc78dc6ed0bee2a36914b0397010e242",
   "source": {
     "sha256": "ca42d32791559d76e71ff50da367618667f1cb90f328605960cd4cd6b5891be7",
     "frameCount": 281,

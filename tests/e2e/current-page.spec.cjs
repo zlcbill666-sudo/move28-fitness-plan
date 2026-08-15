@@ -122,7 +122,7 @@ test('四周计划和安全区保持完整行为基线', async ({ page }) => {
   ]);
 });
 
-test('动作库25项完整保留文字指导，低质本地动图暂停前台展示且不请求旧GIF', async ({ page }) => {
+test('动作库25项动作图全部上架且不请求旧GIF', async ({ page }) => {
   const legacyGifRequests=[];page.on('request',request=>{if(request.url().includes('/assets/gifs/'))legacyGifRequests.push(request.url())});
   await openCurrentPage(page);
   const { catalogSize, releaseEligibleCount } = await page.evaluate(() => ({
@@ -133,8 +133,8 @@ test('动作库25项完整保留文字指导，低质本地动图暂停前台展
   await expect(page.locator('#exerciseGrid img,#exerciseGrid picture,#exerciseGrid video,#exerciseGrid source')).toHaveCount(releaseEligibleCount);
   await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(catalogSize - releaseEligibleCount);
   await expect(page.locator('#exerciseGrid img')).toHaveCount(releaseEligibleCount);
-  expect(releaseEligibleCount).toBe(0);
-  await expect(page.locator('#exerciseGrid .media-blocked').first()).toContainText('动作动图暂停展示');
+  expect(releaseEligibleCount).toBe(25);
+  await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(0);
   await expect(page.locator('#exerciseGrid')).toContainText('弹力带划船');
   await expect(page.locator('#exerciseGrid')).toContainText('安全保护要点');
   for(const label of ['力量A','力量B','有氧C','全部'])await page.getByRole('button',{name:label,exact:true}).click();

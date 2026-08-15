@@ -8,7 +8,7 @@ const {projectRoot,clearMove28ModuleCache}=require('../helpers/load-script.cjs')
 const {capabilityInput}=require('../helpers/capability-fixture.cjs');
 
 const fixtures=JSON.parse(fs.readFileSync(path.join(projectRoot,'tests','fixtures','invalid-plans.json'),'utf8'));
-const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
+const gymEquipment=['stable_chair','exercise_mat','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const baseIntake={age:30,finalConfirmed:true,daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],setting:'gym',equipment:gymEquipment,avoidMovements:[],avoidEquipment:[],cardioPreference:'none',cardioAvoid:'none',strengthExperience:'some',trainingBreak:'no'};
 function risk(level='normal'){return {level,ruleVersion:'pilot-v2',reasons:[]}}
 function loadApis(){
@@ -112,16 +112,16 @@ test('能力上下文与计划能力revision缺失或为0时统一fail closed',(
 
 test('动作身份与受控variant双向一致，不能把高位或近墙动作伪装为standard',()=>{
   const apis=loadApis();
-  const intake={...baseIntake,setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall']};
-  const capability=capabilityInput();
-  const plan=apis.generator.generatePlan({intake,risk:risk(),intakeRevision:1,...capability});
+  const intake={...baseIntake,trainingBreak:'yes',equipment:[...gymEquipment,'wall']};
+  const capability={capabilityRevision:1,capabilityResult:{status:'conservative',difficultyCap:1,exclusions:[],variants:{knee_dominant:'high_seat',horizontal_push:'close_wall'},cardioStartMinutes:15,reasonCodes:['CHAIR_RISE_HANDS_SUPPORTED','WALL_PUSHUP_LIMITED_RANGE']}};
+  const plan=apis.generator.generatePlan({intake,risk:risk('conservative'),intakeRevision:1,...capability});
   assert.equal(plan.status,'generated',JSON.stringify(plan));
   for(const [pattern,expectedVariant] of [['knee_dominant','high_seat'],['horizontal_push','close_wall']]){
     const action=plan.weeks[0].sessions[0].actions.find(item=>item.pattern===pattern);
     assert.equal(action.variant,expectedVariant);
     const changed=structuredClone(plan),changedAction=changed.weeks[0].sessions[0].actions.find(item=>item.pattern===pattern);
     changedAction.variant='standard';
-    const result=apis.validator.validatePlan({plan:changed,intake,risk:risk(),catalog:apis.catalog,...capability});
+    const result=apis.validator.validatePlan({plan:changed,intake,risk:risk('conservative'),catalog:apis.catalog,...capability});
     assert.ok(result.errors.some(error=>error.code==='CAPABILITY_VARIANT_MISMATCH'&&error.path.endsWith('.variant')));
   }
 });

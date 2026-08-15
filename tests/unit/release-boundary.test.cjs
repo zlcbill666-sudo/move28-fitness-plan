@@ -66,8 +66,8 @@ test('entry document, styles and dynamic audio close over the release allowlist'
 
 test('participant artifact only includes allowlisted local-library media and excludes research media',()=>{
   const mediaFiles=files.filter(file=>/\.(?:gif|jpe?g|png|webp|mp4)$/i.test(file));
-  assert.deepEqual(mediaPolicy.releaseEligibleIds, []);
-  assert.equal(mediaPolicy.mode, 'text_only_quality_review');
+  assert.equal(mediaPolicy.releaseEligibleIds.length, 25);
+  assert.equal(mediaPolicy.mode, 'media_enabled');
   assert.equal(mediaFiles.every(file=>file.startsWith('assets/exercises/')&&file.endsWith('.gif')), true);
   assert.equal(manifest.forbiddenPrefixes.includes('assets/exercises/'), false);
   for(const prefix of ['assets/gifs/','media-build/','media-src/','docs/research/']){
@@ -79,7 +79,7 @@ test('participant artifact only includes allowlisted local-library media and exc
   }
 });
 
-test('ordinary pilot review instructions require visible local handoff and text-only media quality gate',()=>{
+test('ordinary pilot review instructions require visible local handoff and media-enabled safety gate',()=>{
   const reviewer=fs.readFileSync(path.join(root,'docs/pilot/reviewer-checklist.md'),'utf8');
   const participant=fs.readFileSync(path.join(root,'docs/pilot/participant-guide.md'),'utf8');
   for(const document of [reviewer,participant]){
@@ -87,11 +87,11 @@ test('ordinary pilot review instructions require visible local handoff and text-
     assert.match(document,/文字(?:步骤|说明|指导)/);
     assert.match(document,/文字(?:步骤|说明|指导)/);
     assert.match(document,/动图/);
-    assert.match(document,/暂停展示|不依赖动图示范/);
+    assert.match(document,/25项动作图|动图作为动作姿势参考|动图只作辅助示范/);
     assert.doesNotMatch(document,/25项本地动图库GIF(?:会|均)|首批10项Exact|仍blocked|文字替代/);
   }
   assert.match(reviewer,/下载复核 dossier/);
   assert.match(reviewer,/导入/);
   assert.match(reviewer,/拒绝并要求返工/);
-  assert.match(reviewer,/不显示低质本地GIF/);
+  assert.match(reviewer,/25项动作|已上架动图/);
 });

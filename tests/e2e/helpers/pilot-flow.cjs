@@ -1,7 +1,7 @@
 'use strict';
 
 const gymEquipment = [
-  'stable_chair', 'exercise_mat', 'leg_press_machine', 'leg_curl_machine',
+  'stable_chair', 'exercise_mat', 'smith_machine', 'leg_press_machine', 'leg_curl_machine',
   'chest_press_machine', 'seated_row_machine', 'resistance_band',
   'cable_machine', 'elliptical_trainer', 'treadmill'
 ];

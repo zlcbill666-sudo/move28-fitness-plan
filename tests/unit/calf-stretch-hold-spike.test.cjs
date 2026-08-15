@@ -12,7 +12,7 @@ const spec = path.join(root, 'docs/research/data/move28-media-production-spec.js
 const frozenReport = path.join(root, 'docs/research/data/calf-stretch-hold-spike.json');
 const evidence = path.join(root, 'docs/research/evidence/move28-spikes/calf-stretch/contact-2fps-numbered.jpg');
 const python = process.env.PYTHON || 'python';
-const specSha256 = 'db6ec82abf96b9d98fb7382e0be134d4ae2d647db883b87ff3a7f7d5bc461686';
+const specSha256 = 'c6de2bafffae1328783a1ec0c0345a08dc78dc6ed0bee2a36914b0397010e242';
 
 function run(args, options = {}) {
   return spawnSync(python, ['-B', ...args], { cwd: root, encoding: 'utf8', ...options });

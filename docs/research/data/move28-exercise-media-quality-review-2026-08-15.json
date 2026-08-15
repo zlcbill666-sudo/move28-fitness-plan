@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-15",
+  "decision": "all25_image_grounded_release",
+  "acceptedCount": 25,
+  "blockedCount": 0,
+  "acceptedIds": [
+    "seated-leg-raise",
+    "ankle-circle",
+    "seated-leg-press",
+    "seated-leg-curl",
+    "glute-bridge",
+    "wall-hip-hinge",
+    "chest-press-machine",
+    "standing-band-chest-press",
+    "seated-row",
+    "band-row",
+    "pallof-press",
+    "high-seat-sit-to-stand",
+    "seated-leg-extension",
+    "seated-knee-extension-unloaded",
+    "supported-calf-raise",
+    "hip-abduction-machine",
+    "wall-push-up",
+    "dead-bug",
+    "heel-slide",
+    "bird-dog-regression",
+    "elliptical-trainer",
+    "flat-walk",
+    "supported-standing-march",
+    "hamstring-stretch",
+    "calf-stretch"
+  ],
+  "blocked": [],
+  "catalogAlignment": {
+    "ankle-circle": "由坐姿脚踝绕环改为站姿脚踝绕环，按动图站姿动作执行。",
+    "high-seat-sit-to-stand": "由高位坐姿起立改为史密斯/座椅触点深蹲，按动图椅子深蹲轨迹执行。",
+    "flat-walk": "由0坡度平地慢走改为低速坡度跑台慢走；无跑台时保留平路慢走替代。"
+  },
+  "contactSheet": "media-build/review/current-25-contact-sheet.jpg"
+}

@@ -13,7 +13,7 @@
   const trustedDeriveRiskIntake = typeof riskApi.deriveRiskIntake === 'function' ? riskApi.deriveRiskIntake : null;
   const TRI = Object.freeze(['no', 'yes', 'unsure']);
   const EQUIPMENT = Object.freeze({
-    gym: ['stable_chair', 'exercise_mat', 'leg_press_machine', 'leg_curl_machine', 'chest_press_machine', 'seated_row_machine', 'resistance_band', 'cable_machine', 'elliptical_trainer', 'treadmill'],
+    gym: ['stable_chair', 'exercise_mat', 'smith_machine', 'leg_press_machine', 'leg_curl_machine', 'chest_press_machine', 'seated_row_machine', 'resistance_band', 'cable_machine', 'elliptical_trainer', 'treadmill'],
     home: ['stable_chair', 'exercise_mat', 'resistance_band', 'wall']
   });
   const PAIN_AREAS = Object.freeze(['none', 'shoulder', 'knee', 'lower_back', 'hip', 'ankle', 'other']);
@@ -195,7 +195,7 @@
     habit:'建立运动习惯', daily_fitness:'提升日常体能', low_impact_fat_loss:'低冲击减脂起步', basic_strength:'建立基础力量',
     gym:'健身房', home:'居家', normal:'常规起步', conservative:'保守起步', manual_review:'待人工审核', stop:'暂不进入自动计划', unsure:'不确定',
     elliptical:'椭圆机', flat_walk:'0坡度平地走', mixed:'两者交替', none:'暂无偏好',
-    stable_chair:'稳固椅子', exercise_mat:'训练垫', resistance_band:'弹力带', wall:'可用墙面',
+    stable_chair:'稳固椅子', smith_machine:'史密斯机', exercise_mat:'训练垫', resistance_band:'弹力带', wall:'可用墙面',
     leg_press_machine:'腿举机', leg_curl_machine:'腿弯举机', chest_press_machine:'推胸机', seated_row_machine:'坐姿划船机',
     cable_machine:'龙门架', elliptical_trainer:'椭圆机', treadmill:'跑步机',
     shoulder:'肩部', knee:'膝部', lower_back:'下背部', hip:'髋部', ankle:'踝部', other:'其他部位',
@@ -300,7 +300,7 @@
       if (step === 4) return `<fieldset class="ob-question"><legend>每周希望安排几天训练？</legend>${choices('daysPerWeek',[['1','1天',''],['2','2天',''],['3','3天',''],['4','4天',''],['5plus','5天以上','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>单次可用时长</legend>${choices('sessionMinutes',[['20','20分钟',''],['30','30分钟',''],['45','45分钟',''],['60','60分钟',''],['75','75分钟','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>通常哪些天可以训练？</legend>${checks('weekdays',[['mon','周一'],['tue','周二'],['wed','周三'],['thu','周四'],['fri','周五'],['sat','周六'],['sun','周日']])}</fieldset>${tri('gymOftenUnavailable','健身房是否经常临时无法使用？')}`;
       if (step === 5) {
         const setting = intake.setting;
-        const equipmentOptions = setting === 'gym' ? [['stable_chair','稳固椅/凳'],['exercise_mat','训练垫'],['leg_press_machine','腿举机'],['leg_curl_machine','腿弯举机'],['chest_press_machine','推胸机'],['seated_row_machine','坐姿划船机'],['resistance_band','弹力带'],['cable_machine','龙门架'],['elliptical_trainer','椭圆机'],['treadmill','跑步机']] : [['stable_chair','稳固椅子（居家必需）'],['exercise_mat','训练垫'],['resistance_band','弹力带'],['wall','可用墙面']];
+        const equipmentOptions = setting === 'gym' ? [['stable_chair','稳固椅/凳'],['smith_machine','史密斯机'],['exercise_mat','训练垫'],['leg_press_machine','腿举机'],['leg_curl_machine','腿弯举机'],['chest_press_machine','推胸机'],['seated_row_machine','坐姿划船机'],['resistance_band','弹力带'],['cable_machine','龙门架'],['elliptical_trainer','椭圆机'],['treadmill','跑步机']] : [['stable_chair','稳固椅子（居家必需）'],['exercise_mat','训练垫'],['resistance_band','弹力带'],['wall','可用墙面']];
         return `${choices('setting',[['gym','健身房','器械更完整'],['home','居家','最低配置：稳固椅子；推荐弹力带']])}${setting ? `<fieldset class="ob-question"><legend>勾选你确定可用的器械</legend>${checks('equipment',equipmentOptions)}${setting === 'home' && Array.isArray(intake.equipment) && !intake.equipment.includes('resistance_band') ? '<p class="ob-inline-warning">没有弹力带时，居家水平拉动作覆盖有限；后续不会假设你有该器械。</p>' : ''}${setting === 'home' ? '<p class="ob-muted">首版动作目录尚无已审核的哑铃动作，因此本轮不把哑铃列为可用器械。</p>' : ''}</fieldset>` : '<p class="ob-muted">先选择场景，再核对器械。</p>'}${tri('allowSettingSwap','计划是否可以在健身房与居家版本间切换？')}`;
       }
       if (step === 6) {

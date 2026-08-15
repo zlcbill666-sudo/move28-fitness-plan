@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const test=require('node:test');
 const {clearMove28ModuleCache}=require('../helpers/load-script.cjs');
-const gymEquipment=['stable_chair','exercise_mat','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
+const gymEquipment=['stable_chair','exercise_mat','smith_machine','leg_press_machine','leg_curl_machine','chest_press_machine','seated_row_machine','resistance_band','cable_machine','elliptical_trainer','treadmill'];
 const intake={boundaryAccepted:true,age:30,pregnancyPostpartum:'no',goal:'habit',activityDays:'3',walkCapacity:'20_40',strengthExperience:'some',trainingBreak:'no',daysPerWeek:'2',sessionMinutes:'30',weekdays:['mon','thu'],gymOftenUnavailable:'no',setting:'gym',equipment:gymEquipment,allowSettingSwap:'no',painAreas:['none'],painTrend:'none',acuteInjury:'no',unableToBearWeight:'no',visibleSwelling:'no',dailyActivityLimited:'no',chairStand:'yes',walkTenMinutes:'yes',chestSymptoms:'no',exertionalDizziness:'no',unexplainedFainting:'no',restingShortnessOfBreath:'no',unresolvedConcussion:'no',doctorRestriction:'none',recentSurgery:'no',complexCondition:'no',uncontrolledBloodPressure:'no',cardioPreference:'none',cardioAvoid:'none',avoidMovements:[],avoidEquipment:[],trackingItems:['completion'],sessionPreference:'short_frequent',musicEnabled:'no',finalConfirmed:true};
 const risk={level:'normal',ruleVersion:'pilot-v2',reasons:[]};
 const capabilityProfile={version:1,completed:true,chairRise:'independent_controlled',wallPushup:'controlled',wallHinge:'controlled',floorAccess:'comfortable',walkTolerance:'comfortable'};
@@ -200,18 +200,16 @@ test('workout-guide加载后篡改安全边界intrinsic不会执行外部代码�
   assert.deepEqual(after,before);assert.equal(calls,0);
 });
 
-test('媒体质量门开启时动作库与跟练输出文字占位且不泄漏旧GIF路径',()=>{
+test('媒体策略开启时动作库与跟练输出正式动作图且不泄漏旧GIF路径',()=>{
   const {catalog,guide}=setup();
   const dashboard=require('../../src/ui/dashboard.js'),exercise=catalog.exerciseCatalog[0];
   const libraryHtml=dashboard.exerciseMediaHtml(exercise),guideHtml=guide.guideMediaHtml(exercise);
-  assert.doesNotMatch(libraryHtml,/<img\s+src="assets\/exercises\/seated-leg-raise\.gif"/);
-  assert.doesNotMatch(guideHtml,/<img\s+src="assets\/exercises\/seated-leg-raise\.gif"/);
+  assert.match(libraryHtml,/<img\s+src="assets\/exercises\/seated-leg-raise\.gif"/);
+  assert.match(guideHtml,/<img\s+src="assets\/exercises\/seated-leg-raise\.gif"/);
   for(const html of [libraryHtml,guideHtml]){
     assert.doesNotMatch(html,/assets\/gifs\//);
-    assert.match(html,/动作动图暂停展示/);
+    assert.doesNotMatch(html,/动作动图暂停展示|TEXT GUIDE|TEXT-ONLY MODE/);
   }
-  assert.match(libraryHtml,/TEXT GUIDE/);
-  assert.match(guideHtml,/TEXT-ONLY MODE/);
 });
 
 test('plan-view 跟练队列逐项忠实映射session.actions且不自行匹配或提供任选项',()=>{
@@ -248,7 +246,7 @@ test('workout-guide 从审核时长与固定剂量派生保守完成时长且畸
   assert.deepEqual(guide.deriveCompletionTiming(cardio),{minimumElapsedMs:600000,maximumElapsedMs:86400000});
 });
 
-test('跟练步骤忠实传递0坡度慢走和无拉力工具坐姿小腿拉伸语义',()=>{
+test('跟练步骤忠实传递坡度跑台慢走和无拉力工具坐姿小腿拉伸语义',()=>{
   const {catalog,guide}=setup();
   const session={id:'semantic-contract',weekday:'mon',intent:'recovery',actions:[
     {phase:'cardio',pattern:'locomotion',exerciseId:'flat-walk',durationMin:10,rpe:3,restSec:0},
@@ -256,8 +254,8 @@ test('跟练步骤忠实传递0坡度慢走和无拉力工具坐姿小腿拉伸�
   ]};
   const steps=guide.buildWorkoutSteps(session,catalog.exerciseCatalog);
   assert.ok(steps);
-  assert.equal(steps[0].exercise.cues.setup,'跑步机坡度必须设为0；若在室内或户外步行，必须选择平整、无坡度、无障碍的路线。先站稳、系好鞋带，再从舒适慢速开始。');
-  assert.match(steps[0].exercise.cues.movement,/不跑步、不爬坡/);
+  assert.equal(steps[0].exercise.cues.setup,'按动图使用跑步机低速慢走，坡度保持在能稳定说短句的轻度范围；没有跑步机时选择平整路线慢走。先站稳、系好鞋带，再逐步启动。');
+  assert.match(steps[0].exercise.cues.movement,/全程只走路，不跑步/);
   assert.equal(steps[1].exercise.cues.setup,'坐在稳固椅子前半部，躯干直立，一腿向前伸，脚跟着地，膝盖保持微屈或自然伸直；双手放在大腿或椅面，不拿毛巾、弹力带等拉力工具。');
   assert.match(steps[1].exercise.cues.movement,/不要用手或任何器械拉脚尖/);
 });
@@ -270,9 +268,9 @@ test('plan-view 只把动作目录审核过的受控变式指导带入跟练步�
   let steps=guide.buildWorkoutSteps(base,catalog.exerciseCatalog);
   let step=steps.find(item=>item.action.pattern==='knee_dominant');
   assert.deepEqual(step.variantGuidance,{
-    label:'高位座椅变式',
-    setup:'使用稳固、不会滑动的较高座椅；座面高度以起立时膝部无明显疼痛为准。',
-    range:'只在可控、无痛范围内起立和坐回；若仍需猛冲或膝痛，继续提高座面或停止。'
+    label:'史密斯椅子深蹲变式',
+    setup:'仅在健身房同时具备史密斯机和稳定座椅/高凳时使用；只用空杆或极轻负重。',
+    range:'臀部轻触座椅后站起，膝部无痛且动作可控；不能稳定触椅、无史密斯机或站起失稳时停止。'
   });
   assert.equal(JSON.stringify(step.variantGuidance).includes('high_seat'),false);
   assert.equal(JSON.stringify(step.variantGuidance).includes('PLAN_FORGED'),false);
