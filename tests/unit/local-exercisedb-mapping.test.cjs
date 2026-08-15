@@ -35,10 +35,10 @@ test('当前媒体发布证据完整覆盖25项且与正式manifest一致', () =
   assert.equal(report.schemaVersion, 1);
   assert.deepEqual(report.mapping.map(item => item.exerciseId), catalog.map(item => item.id));
   assert.deepEqual(report.mapping.map(item => item.exerciseId), manifest.assets.map(item => item.id));
-  assert.deepEqual(report.counts, { exact: 17, project_owned: 8 });
+  assert.deepEqual(report.counts, { exact: 17, approved_near: 8, project_owned: 0 });
   assert.equal(report.releaseEligibleCount, 25);
   assert.ok(report.mapping.every(item => item.releaseEligible === true));
-  assert.equal(report.decision, 'current-formal-manifest-25-item-gif-release-evidence');
+  assert.equal(report.decision, 'current-formal-manifest-25-item-mixed-local-exercisedb-release-evidence');
   assert.equal(report.reviewMethod.semanticClassificationIsManual, true);
   assert.deepEqual(report.reviewMethod.automatedChecks, [
     'catalog-sha256', 'formal-manifest-sha256', 'source-sha256', 'record-identity',
@@ -88,16 +88,27 @@ test('十七项本地ExerciseDB候选身份固定且三项重审结论不再保�
   assert.doesNotMatch(JSON.stringify([byId['ankle-circle'], byId['high-seat-sit-to-stand'], byId['flat-walk']]), /0坡度|reject|near/);
 });
 
-test('八项项目自有Pillow动图作为正式manifest发布证据而非ExerciseDB候选', () => {
+test('八项按用户指示替换为approved-near本地ExerciseDB，不再保留项目自有动图', () => {
   const report = loadReport();
   const projectOwned = report.mapping.filter(item => item.classification === 'project_owned');
-  assert.deepEqual(projectOwned.map(item => item.exerciseId), [
-    'wall-hip-hinge','standing-band-chest-press','band-row','seated-knee-extension-unloaded',
-    'supported-calf-raise','heel-slide','bird-dog-regression','supported-standing-march'
-  ]);
-  assert.ok(projectOwned.every(item => item.candidate.provider === 'MOVE 28 Pillow'));
-  assert.ok(projectOwned.every(item => item.candidate.exerciseDbId === null));
-  assert.ok(projectOwned.every(item => item.formalManifest.replacementPath === `assets/exercises/${item.exerciseId}.gif`));
+  assert.deepEqual(projectOwned.map(item => item.exerciseId), []);
+  assert.equal(projectOwned.length, 0);
+  const approvedNear = Object.fromEntries(report.mapping.filter(item => item.classification === 'approved_near').map(item => [item.exerciseId, item.candidate.exerciseDbId]));
+  assert.deepEqual(approvedNear, {
+    'wall-hip-hinge': 'VtTbiP3',
+    'standing-band-chest-press': '4x5Okof',
+    'band-row': 'km0sQC0',
+    'supported-calf-raise': 'bJYHBIN',
+    'heel-slide': 'LNE3wfo',
+    'supported-standing-march': 'ealLwvX',
+    'seated-knee-extension-unloaded': 'Y1MsI1l',
+    'bird-dog-regression': 'h1ezqSu',
+  });
+  for (const item of report.mapping.filter(entry => entry.classification === 'approved_near')) {
+    assert.equal(item.candidate.provider, 'local ExerciseDB V1 library');
+    assert.equal(item.formalManifest.replacementPath, `assets/exercises/${item.exerciseId}.gif`);
+    assert.match(item.reason, /用户授权|按用户授权/);
+  }
 });
 
 test('联系表与报告绑定且本地冻结库可重复生成字节一致输出', { skip: !fs.existsSync(library) }, () => {

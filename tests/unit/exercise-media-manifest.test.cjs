@@ -48,42 +48,13 @@ test('25项本地动图库GIF全部进入前台发布清单', () => {
   const candidates = manifest.assets;
   assert.equal(candidates.filter(item => item.production.releaseEligible).length, 25);
   const providers = new Set(candidates.map(item => item.origin.provider));
-  assert.deepEqual([...providers].sort(), ['MOVE 28 Pillow', 'local ExerciseDB V1 library']);
+  assert.deepEqual([...providers].sort(), ['local ExerciseDB V1 library']);
   for (const item of candidates) {
     assert.equal(item.replacement.source, `assets/exercises/${item.id}.gif`);
     assert.equal(item.replacement.gif.path, `assets/exercises/${item.id}.gif`);
     const file = path.join(projectRoot, ...item.replacement.gif.path.split('/'));
     assert.equal(fs.statSync(file).size, item.replacement.gif.bytes);
     assert.equal(sha256(file), item.replacement.gif.sha256);
-  }
-});
-
-test('8项MOVE 28 Pillow方形动图使用深色画布，避免16:10卡片出现白色竖边', () => {
-  const manifest = loadManifest();
-  const css = fs.readFileSync(path.join(projectRoot, 'assets', 'css', 'app.css'), 'utf8');
-  const pillowAssets = manifest.assets.filter(item => item.origin.provider === 'MOVE 28 Pillow');
-  assert.deepEqual(pillowAssets.map(item => item.id), [
-    'wall-hip-hinge',
-    'standing-band-chest-press',
-    'band-row',
-    'seated-knee-extension-unloaded',
-    'supported-calf-raise',
-    'heel-slide',
-    'bird-dog-regression',
-    'supported-standing-march'
-  ]);
-  assert.match(css, /\.exercise-media\{aspect-ratio:16\/10;background:#e7e7e0/);
-  assert.match(css, /background:#0b1018;mix-blend-mode:normal/);
-  for (const item of pillowAssets) {
-    const gifName = `${item.id}.gif`;
-    const bytes = fs.readFileSync(path.join(projectRoot, ...item.replacement.gif.path.split('/')));
-    assert.equal(bytes.toString('ascii', 0, 3), 'GIF', item.id);
-    const width = bytes.readUInt16LE(6);
-    const height = bytes.readUInt16LE(8);
-    assert.equal(width, 180, item.id);
-    assert.equal(height, 180, item.id);
-    assert.match(css, new RegExp(`\\.exercise-media img\\[src\\*="${gifName}"\\]`), item.id);
-    assert.match(css, new RegExp(`\\.motion-card img\\[src\\*="${gifName}"\\]`), item.id);
   }
 });
 

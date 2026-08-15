@@ -61,16 +61,16 @@ test('难度上限只允许同级或更简单动作，并兼容旧difficulty请�
 
 test('能力排除可在臀桥与墙触髋铰链之间安全回退', () => {
   const api = loadMatcher();
-  const noFloor = match(api, 'posterior_chain', 'home', ['exercise_mat','wall'], { exclusions:['floor'] });
+  const noFloor = match(api, 'posterior_chain', 'home', ['exercise_mat','resistance_band'], { exclusions:['floor'] });
   assert.equal(noFloor.ok, true);
   assert.equal(noFloor.exerciseId, 'wall-hip-hinge');
-  const noHinge = match(api, 'posterior_chain', 'home', ['exercise_mat','wall'], { exclusions:['hinge'] });
+  const noHinge = match(api, 'posterior_chain', 'home', ['exercise_mat','resistance_band'], { exclusions:['hinge'] });
   assert.equal(noHinge.ok, true);
   assert.equal(noHinge.exerciseId, 'glute-bridge');
   const neither = match(api, 'posterior_chain', 'home', ['stable_chair'], { exclusions:[] });
   assert.equal(neither.ok, false);
   assert.equal(neither.error.code, 'INSUFFICIENT_EQUIPMENT');
-  assert.deepEqual(neither.error.requiredOptions, [['exercise_mat'],['wall']]);
+  assert.deepEqual(neither.error.requiredOptions, [['exercise_mat'],['resistance_band']]);
 });
 
 test('禁忌标签、动作ID和动作模式均能排除候选', () => {
@@ -129,7 +129,7 @@ test('居家低冲击有氧优先平地慢走，缺少路线时回退扶椅原�
   const unavailable = match(api, 'low_impact_cardio', 'home', []);
   assert.equal(unavailable.ok, false);
   assert.equal(unavailable.error.code, 'INSUFFICIENT_EQUIPMENT');
-  assert.deepEqual(unavailable.error.requiredOptions, [['treadmill'],['flat_walking_route'],['stable_chair']]);
+  assert.deepEqual(unavailable.error.requiredOptions, [['treadmill'],['flat_walking_route'],['wall'],['stable_chair']]);
 });
 
 test('匹配结果不会冻结或改写调用方提供的自定义目录', () => {
@@ -303,7 +303,7 @@ test('媒体硬门在公开发布模式允许25项本地图库候选', () => {
 
   const wallHinge = api.exerciseCatalog.find(item => item.id === 'wall-hip-hinge');
   const gapOnly = api.matchExercise({
-    pattern: 'posterior_chain', setting: 'home', equipment: ['wall'], exclusions: [], difficulty: 1,
+    pattern: 'posterior_chain', setting: 'home', equipment: ['resistance_band'], exclusions: [], difficulty: 1,
     catalog: [wallHinge], mediaRequirement: 'public_release'
   });
   assert.equal(gapOnly.ok, true);

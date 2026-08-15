@@ -33,23 +33,23 @@ EXPECTED_SOURCE_IDENTITY = {
 }
 EXPECTED_CATALOG_HASH = {
     "high-seat-sit-to-stand": "c138b6bc7daf37a6580ae6dded72ef3c2920f294df8f8058aca9e8743ccf3aab",
-    "seated-knee-extension-unloaded": "0e8eb583e6dec7d61635470d5a154bed72b7f3ba1e9d5e330457e7b1028f93a6",
-    "supported-calf-raise": "24c346c11bc4bcc228b27b0588cd8f265496175ca0815c08086288a7961b941a",
+    "seated-knee-extension-unloaded": "b323bc280a6f94bc7ddee014fd39481777c024df62b14f1d14dc4d6f5e25afcd",
+    "supported-calf-raise": "fcfc7234fe741a748bb8fcfe5a909986ab1eb15f7d796b888b9bbd0dc97e5261",
     "calf-stretch": "e7688ca81c46de86e602a32bc8d78f6e516d699c25da3ab57ff557ce8f51c0da",
-    "wall-hip-hinge": "d4d734a9f26e84ef8abb8582d3bef7fb8757e3269188124e5e58dfc1612c2992",
-    "bird-dog-regression": "ad6eb055cea50e0e9cf43551ad6fa32fa25344adafc0af168469f49638b8ed65",
-    "supported-standing-march": "8c63228b7310e8332010cd77d950490dac3660588911e2fe20513a47d2dd7c26",
+    "wall-hip-hinge": "f7bddbae627c3b591c02769dfedc901d173e1a852281e67fff6e8ef7f46bed21",
+    "bird-dog-regression": "a533f761203952728dc8f3682797e0c25226e09b5346d6b50fea5bd8d63d80e1",
+    "supported-standing-march": "6e9d819627754d0fa26b887947a71039ac420779cc528412886619d5046526bc",
     "ankle-circle": "6d9369fd5fba2479ec57d25638580c5e3ce884ad79f8c7843be86a20ebfb96e8",
     "dead-bug": "9b5bb95ae9dc084d24aec1a3ef7debdd7ef0e3caeee5e90cbd686a7f14a5d723",
 }
 EXPECTED_PACKAGE_HASH = {
     "high-seat-sit-to-stand": "93775127d2b278c1daeeefa96b656ad8ee1453fdf84bc34731d28d10b3407b73",
-    "seated-knee-extension-unloaded": "84587c3726de60eaa915e4f25c7de224eb461a18c3642b9fa4fb69359c2838dc",
-    "supported-calf-raise": "74cabb36612671f3105f3f8327bbf57923cd09e8c30a4ccc9e783161aac3f405",
+    "seated-knee-extension-unloaded": "a72b598e7d63ed91040e42236c2121990b20750d4f559b9f330ca10109b6883d",
+    "supported-calf-raise": "7007ad8b1d3fdce507bbd6e66e74884fee36a0af3f540a0b31ea80f19d8aff8b",
     "calf-stretch": "19b317f948e16eef4d80cca3b8ddce6931687a84b93aa69ffd6a012ea632e5ec",
-    "wall-hip-hinge": "c934f71001e0ecc1c5a2c664ac6490cbd71b19304c1fa72643597ae0ec8d041c",
-    "bird-dog-regression": "2c45899f1024e8660d324d3d291c5d4fd933b1c9df1771e82c3f87a614c9d68b",
-    "supported-standing-march": "e8fca19e55aed9a192b2ea542a6dfad33962c55a59349810bbeb0bbc8b0f88a8",
+    "wall-hip-hinge": "f8ef661b6f6aae0d60d81f7ce7f2bc1883ebab7b18606887c37dcbdde24c81f3",
+    "bird-dog-regression": "7a71e226ab704f0946060204b5ec798fbbb5a836912dd36b112089c08653e9ae",
+    "supported-standing-march": "4d1a79e7c157a850b66d59a92cae7fed64dec6674a5e92ff2c87b4d956396225",
     "ankle-circle": "289ebebae1cecb0b51528020b82e3e49878ea0549b4ea3112b18b5a9ccc6e17d",
     "dead-bug": "a673abdf1f071ea527005dc45c85076b2aa5933bffb4b7835ed30dfef380c6ef",
 }
@@ -59,7 +59,7 @@ EXPECTED_STANDARD_HASH = {
     "technicalStandard": "9d048bce55118af11e445f3efaddf7dc8d1b9a264140bf53f971196196469150",
     "productionPackageSchema": "b62c8956d80553a48b9b8cad23c779b5240511d04702f33a18882b0776feebe3",
 }
-EXPECTED_SPEC_HASH = "ae4ddc661fea721a5ba5a9e4d131a52832b31e4ecbeac66f3d0ed7e8203dfb56"
+EXPECTED_SPEC_HASH = "f534a01029dd3bf713f20ff7d3cd3ea626b395f247e4bdd1ba2c1491a83b4f51"
 EXPECTED_MATRIX_HASH = "75da1b45909e34634756f153a4d08861777f953fbd8cb766320f951de803980b"
 SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 

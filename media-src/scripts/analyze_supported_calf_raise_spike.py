@@ -21,9 +21,9 @@ CATALOG = ROOT / "src/data/exercise-catalog.js"
 REPORT = ROOT / "docs/research/data/supported-calf-raise-spike.json"
 CONTACT = ROOT / "docs/research/evidence/move28-spikes/supported-calf-raise/contact-numbered.jpg"
 SOURCE_SHA256 = "0880cf0843e5c957a38f9c3ebc1e0fa2670e4615ae71df18c017fe20096c7cfa"
-SPEC_SHA256 = "c6de2bafffae1328783a1ec0c0345a08dc78dc6ed0bee2a36914b0397010e242"
+SPEC_SHA256 = "4a74392ce0631ee82e7e136dd7cfcb2a3f5afd8f534406ffc498056bfd62a397"
 MATRIX_SHA256 = "69d8c340163f311a645be99feba0ffea1df2acedf0e981e9c3fa7f38d43813c8"
-CATALOG_SHA256 = "4bfdcc11a0f8652a44eb130d0247dce400d9e3a8e7a2265c4ce09e4a3d675220"
+CATALOG_SHA256 = "89e2c278eb0cbb961e445b0824d095ad5cdce5ce48fbf3b776fb21150935f6fb"
 CONTACT_SHA256 = "c16672018862c1403b3ddafbd04ed1a2b058da4314b0cb67f13f572a77576365"
 FRAME_COUNT = 12
 DURATION_SECONDS = 3.0
@@ -112,8 +112,8 @@ def load_frozen_inputs(spec_path: Path, matrix_path: Path, catalog_path: Path) -
     catalog = catalog_path.read_text(encoding="utf-8")
     catalog_tokens = (
         "id:'supported-calf-raise'",
-        "equipmentOptions:[['stable_chair']]",
-        "双手只轻扶椅背保持平衡",
+        "equipmentOptions:[['stable_chair'],['wall']]",
+        "只用指尖轻扶墙面或椅背",
         "停顿1秒，再受控落回，不弹跳",
     )
     if not all(token in catalog for token in catalog_tokens):

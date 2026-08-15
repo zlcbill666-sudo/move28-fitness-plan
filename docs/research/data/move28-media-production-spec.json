@@ -193,7 +193,7 @@
       ],
       "fallback": "custom-3d",
       "releaseBlocked": true,
-      "catalogContractSha256": "0e8eb583e6dec7d61635470d5a154bed72b7f3ba1e9d5e330457e7b1028f93a6"
+      "catalogContractSha256": "b323bc280a6f94bc7ddee014fd39481777c024df62b14f1d14dc4d6f5e25afcd"
     },
     {
       "exerciseId": "supported-calf-raise",
@@ -256,7 +256,7 @@
       ],
       "fallback": "custom-3d",
       "releaseBlocked": true,
-      "catalogContractSha256": "24c346c11bc4bcc228b27b0588cd8f265496175ca0815c08086288a7961b941a"
+      "catalogContractSha256": "fcfc7234fe741a748bb8fcfe5a909986ab1eb15f7d796b888b9bbd0dc97e5261"
     },
     {
       "exerciseId": "calf-stretch",
@@ -393,7 +393,7 @@
         }
       ],
       "releaseBlocked": true,
-      "catalogContractSha256": "d4d734a9f26e84ef8abb8582d3bef7fb8757e3269188124e5e58dfc1612c2992"
+      "catalogContractSha256": "f7bddbae627c3b591c02769dfedc901d173e1a852281e67fff6e8ef7f46bed21"
     },
     {
       "exerciseId": "bird-dog-regression",
@@ -460,7 +460,7 @@
         }
       ],
       "releaseBlocked": true,
-      "catalogContractSha256": "ad6eb055cea50e0e9cf43551ad6fa32fa25344adafc0af168469f49638b8ed65"
+      "catalogContractSha256": "a533f761203952728dc8f3682797e0c25226e09b5346d6b50fea5bd8d63d80e1"
     },
     {
       "exerciseId": "supported-standing-march",
@@ -531,7 +531,7 @@
         }
       ],
       "releaseBlocked": true,
-      "catalogContractSha256": "8c63228b7310e8332010cd77d950490dac3660588911e2fe20513a47d2dd7c26"
+      "catalogContractSha256": "6e9d819627754d0fa26b887947a71039ac420779cc528412886619d5046526bc"
     },
     {
       "exerciseId": "ankle-circle",

@@ -17,12 +17,12 @@ CATALOG = ROOT / "src/data/exercise-catalog.js"
 MANIFEST = ROOT / "assets/exercises/manifest.json"
 REPORT = ROOT / "docs/research/data/move28-local-exercisedb-mapping.json"
 CONTACT = ROOT / "docs/research/evidence/local-exercisedb/move28-local-candidates.jpg"
-CATALOG_SHA256 = "4bfdcc11a0f8652a44eb130d0247dce400d9e3a8e7a2265c4ce09e4a3d675220"
-MANIFEST_SHA256 = "41ff3bf6d5b87dd7e0e2f1c83efc6e7bef2f393c1513ff26f6d371de54375477"
+CATALOG_SHA256 = "89e2c278eb0cbb961e445b0824d095ad5cdce5ce48fbf3b776fb21150935f6fb"
+MANIFEST_SHA256 = "af99f3e3d6f068b3ea9a5d7f3d92bb0eef482d5bcec670eb62bd8bdb7faf0bfd"
 DATABASE_SHA256 = "a28dfeafa409fcaf737a6d27c4694d9bddc52ba69f12b37121be1e81b90b5c2d"
 
 # Classification is a frozen manual full-loop review against the current release catalog and manifest.
-# Local ExerciseDB rows are exact matches to the current catalog semantics. Project-owned rows are
+# Local ExerciseDB rows are exact or explicitly approved-near matches to current catalog semantics. Project-owned rows are
 # approved MOVE 28 Pillow GIFs recorded here so this report covers the full 25-item release gate.
 MAPPING = [
     ("seated-leg-raise", "exact", "Hgs6Nl1", "当前目录按本地GIF坐姿抬腿执行，坐姿抬膝热身语义、支撑和幅度已对齐。"),
@@ -30,24 +30,24 @@ MAPPING = [
     ("seated-leg-press", "exact", "10Z2DXU", "双脚45度腿举机，屈伸轨迹、器械和支撑匹配。"),
     ("seated-leg-curl", "exact", "Zg3XY7P", "坐姿腿弯举机，脚跟向下后方屈膝并受控返回。"),
     ("glute-bridge", "exact", "u0cNiij", "仰卧屈膝双脚支撑，抬髋至肩髋膝接近直线。"),
-    ("wall-hip-hinge", "project_owned", None, "项目自有Pillow动图已作为墙触髋铰链发布素材并通过正式manifest四项复核。"),
+    ("wall-hip-hinge", "approved_near", "VtTbiP3", "用户授权将原墙触髋铰链改为动作库相近的弹力带拉髋；已替换为本地ExerciseDB band pull through 并同步为低位弹力带髋铰链口径。"),
     ("chest-press-machine", "exact", "T0yTjgW", "坐姿背贴垫，双手从胸高近水平向前推压。"),
-    ("standing-band-chest-press", "project_owned", None, "项目自有Pillow动图已作为站姿弹力带推胸发布素材并通过正式manifest四项复核。"),
+    ("standing-band-chest-press", "approved_near", "4x5Okof", "用户授权明确将原站姿弹力带推胸改为坐姿弹力带推胸；已替换为本地ExerciseDB坐姿弹力带推胸动图并同步动作步骤。"),
     ("seated-row", "exact", "7I6LNUG", "坐姿划船机，双肘水平向后拉并受控伸臂。"),
-    ("band-row", "project_owned", None, "项目自有Pillow动图已作为弹力带划船发布素材并通过正式manifest四项复核。"),
+    ("band-row", "approved_near", "km0sQC0", "按用户授权和本地图库复核结果替换为单臂站姿弹力带低位划船；与弹力带划船训练目标一致，但文案已同步为左右单臂执行。"),
     ("pallof-press", "exact", "9pa4H5m", "身体侧对胸高弹力带，双手前推且躯干保持抗旋转。"),
     ("high-seat-sit-to-stand", "exact", "Gu2rNJd", "当前目录已约束为健身房史密斯机加座椅/高凳门槛，匹配本地GIF smith chair squat。"),
     ("seated-leg-extension", "exact", "my33uHU", "坐姿腿屈伸机完成双膝伸展与返回，未见明显膝反曲。"),
-    ("seated-knee-extension-unloaded", "project_owned", None, "项目自有Pillow动图已作为坐姿徒手伸膝发布素材并通过正式manifest四项复核。"),
-    ("supported-calf-raise", "project_owned", None, "项目自有Pillow动图已作为扶椅提踵发布素材并通过正式manifest四项复核。"),
+    ("seated-knee-extension-unloaded", "approved_near", "Y1MsI1l", "用户授权明确将原坐姿徒手伸膝改为坐姿弹力带伸膝；已替换为本地ExerciseDB弹力带伸膝动图，视觉复核为坐姿版本。"),
+    ("supported-calf-raise", "approved_near", "bJYHBIN", "按用户授权和本地图库复核结果替换为站姿自重提踵；动作本体一致，支撑要求在文案中限定为必要时扶墙或椅背。"),
     ("hip-abduction-machine", "exact", "CHpahtl", "坐姿髋外展机，双膝从并拢位置向外打开并返回。"),
     ("wall-push-up", "exact", "LEH9jxP", "双手撑墙、身体保持直线，胸靠近墙面后推回。"),
     ("dead-bug", "exact", "iny3m5y", "当前目录按本地GIF死虫式执行，对侧手脚伸展轨迹已纳入动作语义。"),
-    ("heel-slide", "project_owned", None, "项目自有Pillow动图已作为仰卧脚跟滑动发布素材并通过正式manifest四项复核。"),
-    ("bird-dog-regression", "project_owned", None, "项目自有Pillow动图已作为四点支撑单肢滑动发布素材并通过正式manifest四项复核。"),
+    ("heel-slide", "approved_near", "LNE3wfo", "按用户授权和本地图库复核结果替换为仰卧单腿平台滑动；与脚跟滑动目标接近，文案已同步为毛巾/滑垫/光滑地面滑动。"),
+    ("bird-dog-regression", "approved_near", "h1ezqSu", "用户授权将原四点支撑单肢滑动改为动作库相近的跪姿平板肩触碰；已替换为本地ExerciseDB kneeling plank tap shoulder 并同步为核心稳定退阶口径。"),
     ("elliptical-trainer", "exact", "rjtuP6X", "直立使用椭圆机并扶内侧固定把手，步幅连续且较小。"),
     ("flat-walk", "exact", "rjiM4L3", "当前目录已改为坡度跑台慢走，匹配本地GIF walking on incline treadmill；平路为无跑台替代。"),
-    ("supported-standing-march", "project_owned", None, "项目自有Pillow动图已作为扶椅原地踏步发布素材并通过正式manifest四项复核。"),
+    ("supported-standing-march", "approved_near", "ealLwvX", "按用户授权和本地图库复核结果替换为扶墙高抬腿；与支撑踏步目标接近，文案已同步为扶墙或稳定椅背的小幅受控抬膝。"),
     ("hamstring-stretch", "exact", "99rWm7w", "当前目录按本地GIF大腿后侧拉伸执行，拉伸姿势和无痛保持提示已对齐。"),
     ("calf-stretch", "exact", "17bqEXD", "当前目录按本地GIF坐姿小腿拉伸执行，主动勾脚牵拉语义已对齐。"),
 ]
@@ -70,6 +70,14 @@ EXPECTED_HASHES = {
     "rjiM4L3": "e57e8ade4fff7ad586f0de6dea582a776838e76069923f8bd31ad206b4d33f90",
     "99rWm7w": "536d069f05a4001b47526656e1349861be60a3f524207ff5a6b9375060f5dd30",
     "17bqEXD": "021201135a98e527c2fc0648f31f0a0887887c2d82f87f21af010d96de194799",
+    "km0sQC0": "a7a39f7b5a1295714d6d9fd8fa2ea3601991e9ef7751db68ee1b12130110f459",
+    "bJYHBIN": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e",
+    "LNE3wfo": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693",
+    "ealLwvX": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a",
+    "4x5Okof": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6",
+    "Y1MsI1l": "8e729c35488838a6834ba8207f80b5ddd1fcf666481b2e3918f224e91f73ce76",
+    "VtTbiP3": "ca37d5b276261259b68bd5069c71988d55e263a7a0a672189945ff6b0ca9ba72",
+    "h1ezqSu": "ed2ca1ed7dd11fc42ecc4493f2cdd2dd5e0595f1d63861bdd8befc7bbe587d6d",
 }
 
 
@@ -142,7 +150,7 @@ def build(library: Path) -> tuple[dict[str, object], bytes]:
                 "productionStatus": production["status"],
             },
         }
-        if classification == "exact":
+        if classification in ("exact", "approved_near"):
             if not candidate_id or candidate_id not in by_id:
                 raise ValueError("local exact candidate is missing from database")
             source = media / f"{candidate_id}.gif"
@@ -181,8 +189,8 @@ def build(library: Path) -> tuple[dict[str, object], bytes]:
         rows.append(row)
         cards.append((exercise_id, classification, row["candidate"]["exerciseDbId"] or "MOVE28", frames))
 
-    counts = {kind: sum(row["classification"] == kind for row in rows) for kind in ("exact", "project_owned")}
-    if counts != {"exact": 17, "project_owned": 8}:
+    counts = {kind: sum(row["classification"] == kind for row in rows) for kind in ("exact", "approved_near", "project_owned")}
+    if counts != {"exact": 17, "approved_near": 8, "project_owned": 0}:
         raise ValueError("classification counts changed")
 
     card_width, card_height = 600, 240
@@ -203,7 +211,7 @@ def build(library: Path) -> tuple[dict[str, object], bytes]:
 
     report = {
         "schemaVersion": 1,
-        "reviewedAt": "2026-08-15",
+        "reviewedAt": "2026-08-16",
         "source": {
             "provider": "current formal manifest plus local ExerciseDB V1 library",
             "libraryRoot": str(DEFAULT_LIBRARY),
@@ -220,7 +228,7 @@ def build(library: Path) -> tuple[dict[str, object], bytes]:
         },
         "counts": counts,
         "releaseEligibleCount": 25,
-        "decision": "current-formal-manifest-25-item-gif-release-evidence",
+        "decision": "current-formal-manifest-25-item-mixed-local-exercisedb-release-evidence",
         "mapping": rows,
     }
     return report, contact

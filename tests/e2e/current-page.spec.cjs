@@ -135,7 +135,7 @@ test('动作库25项动作图全部上架且不请求旧GIF', async ({ page }) =
   await expect(page.locator('#exerciseGrid img')).toHaveCount(releaseEligibleCount);
   expect(releaseEligibleCount).toBe(25);
   await expect(page.locator('#exerciseGrid .media-blocked')).toHaveCount(0);
-  await expect(page.locator('#exerciseGrid')).toContainText('弹力带划船');
+  await expect(page.locator('#exerciseGrid')).toContainText('单臂弹力带低位划船');
   await expect(page.locator('#exerciseGrid')).toContainText('安全保护要点');
   for(const label of ['力量A','力量B','有氧C','全部'])await page.getByRole('button',{name:label,exact:true}).click();
   expect(legacyGifRequests).toEqual([]);

@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LIBRARY = Path(r"E:\个人用\健身\健身动作动画\bootstrapping-lab-exercisedb-api")
 MAPPING = ROOT / "docs/research/data/move28-local-exercisedb-strict-mapping-2026-08-13.json"
 DEFAULT_OUTPUT = ROOT / "media-build/internal-candidates/local-exercisedb-exact10"
-MAPPING_SHA256 = "729c164aeecabdbc441ccd5f0abc64df9dacf9b00d207e03b06c6bd896c8136f"
+MAPPING_SHA256 = "65db5b03cece45a4fc5222b59628bfe1c32eb47ffe917a8a21ddb1c1d13b07af"
 EXPECTED_EXACT = {
     "seated-leg-press": "10Z2DXU",
     "seated-leg-curl": "Zg3XY7P",

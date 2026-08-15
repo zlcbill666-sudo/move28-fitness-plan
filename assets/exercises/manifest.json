@@ -207,15 +207,17 @@
     },
     {
       "id": "wall-hip-hinge",
-      "name": "墙触髋铰链",
+      "name": "弹力带拉髋",
       "current": {
         "path": "assets/gifs/20_墙触髋铰链.gif",
-        "sha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a"
+        "sha256": "ca37d5b276261259b68bd5069c71988d55e263a7a0a672189945ff6b0ca9ba72"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/20_墙触髋铰链.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "VtTbiP3",
+        "exerciseName": "band pull through",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/VtTbiP3.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -224,7 +226,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作定义已按用户授权改为本地ExerciseDB相近替换图口径；已复核进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -236,8 +238,8 @@
         "source": "assets/exercises/wall-hip-hinge.gif",
         "gif": {
           "path": "assets/exercises/wall-hip-hinge.gif",
-          "sha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a",
-          "bytes": 74802
+          "sha256": "ca37d5b276261259b68bd5069c71988d55e263a7a0a672189945ff6b0ca9ba72",
+          "bytes": 74514
         }
       }
     },
@@ -281,15 +283,17 @@
     },
     {
       "id": "standing-band-chest-press",
-      "name": "站姿弹力带推胸",
+      "name": "坐姿弹力带推胸",
       "current": {
         "path": "assets/gifs/21_站姿弹力带推胸.gif",
-        "sha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16"
+        "sha256": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/21_站姿弹力带推胸.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "4x5Okof",
+        "exerciseName": "resistance band seated chest press",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/4x5Okof.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -298,7 +302,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作定义已按用户授权改为本地ExerciseDB替换图口径；已复核进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -310,8 +314,8 @@
         "source": "assets/exercises/standing-band-chest-press.gif",
         "gif": {
           "path": "assets/exercises/standing-band-chest-press.gif",
-          "sha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16",
-          "bytes": 88868
+          "sha256": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6",
+          "bytes": 85825
         }
       }
     },
@@ -355,15 +359,17 @@
     },
     {
       "id": "band-row",
-      "name": "弹力带划船",
+      "name": "单臂弹力带低位划船",
       "current": {
         "path": "assets/gifs/19_弹力带划船.gif",
-        "sha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c"
+        "sha256": "a7a39f7b5a1295714d6d9fd8fa2ea3601991e9ef7751db68ee1b12130110f459"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/19_弹力带划船.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "km0sQC0",
+        "exerciseName": "band one arm standing low row",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/km0sQC0.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -372,7 +378,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作内容已按本地ExerciseDB替换图重新对齐；已复核近似动作进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -384,8 +390,8 @@
         "source": "assets/exercises/band-row.gif",
         "gif": {
           "path": "assets/exercises/band-row.gif",
-          "sha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c",
-          "bytes": 50264
+          "sha256": "a7a39f7b5a1295714d6d9fd8fa2ea3601991e9ef7751db68ee1b12130110f459",
+          "bytes": 78645
         }
       }
     },
@@ -505,15 +511,17 @@
     },
     {
       "id": "seated-knee-extension-unloaded",
-      "name": "坐姿徒手伸膝",
+      "name": "坐姿弹力带伸膝",
       "current": {
         "path": "assets/gifs/22_坐姿徒手伸膝.gif",
-        "sha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8"
+        "sha256": "8e729c35488838a6834ba8207f80b5ddd1fcf666481b2e3918f224e91f73ce76"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/22_坐姿徒手伸膝.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "Y1MsI1l",
+        "exerciseName": "resistance band leg extension",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/Y1MsI1l.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -522,7 +530,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作定义已按用户授权改为本地ExerciseDB替换图口径；已复核进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -534,22 +542,24 @@
         "source": "assets/exercises/seated-knee-extension-unloaded.gif",
         "gif": {
           "path": "assets/exercises/seated-knee-extension-unloaded.gif",
-          "sha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8",
-          "bytes": 86488
+          "sha256": "8e729c35488838a6834ba8207f80b5ddd1fcf666481b2e3918f224e91f73ce76",
+          "bytes": 104233
         }
       }
     },
     {
       "id": "supported-calf-raise",
-      "name": "扶椅提踵",
+      "name": "站姿支撑提踵",
       "current": {
         "path": "assets/gifs/23_扶椅提踵.gif",
-        "sha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872"
+        "sha256": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/23_扶椅提踵.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "bJYHBIN",
+        "exerciseName": "bodyweight standing calf raise",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/bJYHBIN.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -558,7 +568,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作内容已按本地ExerciseDB替换图重新对齐；已复核近似动作进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -570,8 +580,8 @@
         "source": "assets/exercises/supported-calf-raise.gif",
         "gif": {
           "path": "assets/exercises/supported-calf-raise.gif",
-          "sha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872",
-          "bytes": 82480
+          "sha256": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e",
+          "bytes": 62166
         }
       }
     },
@@ -691,15 +701,17 @@
     },
     {
       "id": "heel-slide",
-      "name": "仰卧脚跟滑动",
+      "name": "仰卧单腿滑动",
       "current": {
         "path": "assets/gifs/25_仰卧脚跟滑动.gif",
-        "sha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93"
+        "sha256": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/25_仰卧脚跟滑动.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "LNE3wfo",
+        "exerciseName": "single leg platform slide",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/LNE3wfo.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -708,7 +720,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作内容已按本地ExerciseDB替换图重新对齐；已复核近似动作进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -720,22 +732,24 @@
         "source": "assets/exercises/heel-slide.gif",
         "gif": {
           "path": "assets/exercises/heel-slide.gif",
-          "sha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93",
-          "bytes": 75530
+          "sha256": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693",
+          "bytes": 66510
         }
       }
     },
     {
       "id": "bird-dog-regression",
-      "name": "四点支撑单肢滑动",
+      "name": "跪姿平板肩触碰",
       "current": {
         "path": "assets/gifs/26_四点支撑单肢滑动.gif",
-        "sha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49"
+        "sha256": "ed2ca1ed7dd11fc42ecc4493f2cdd2dd5e0595f1d63861bdd8befc7bbe587d6d"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/26_四点支撑单肢滑动.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "h1ezqSu",
+        "exerciseName": "kneeling plank tap shoulder (male)",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/h1ezqSu.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -744,7 +758,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作定义已按用户授权改为本地ExerciseDB相近替换图口径；已复核进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -756,8 +770,8 @@
         "source": "assets/exercises/bird-dog-regression.gif",
         "gif": {
           "path": "assets/exercises/bird-dog-regression.gif",
-          "sha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49",
-          "bytes": 89851
+          "sha256": "ed2ca1ed7dd11fc42ecc4493f2cdd2dd5e0595f1d63861bdd8befc7bbe587d6d",
+          "bytes": 95127
         }
       }
     },
@@ -839,15 +853,17 @@
     },
     {
       "id": "supported-standing-march",
-      "name": "扶椅原地踏步",
+      "name": "扶墙支撑原地抬膝",
       "current": {
         "path": "assets/gifs/24_扶椅原地踏步.gif",
-        "sha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed"
+        "sha256": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a"
       },
       "origin": {
-        "provider": "MOVE 28 Pillow",
-        "sourceUrl": "local://move28/assets/gifs/24_扶椅原地踏步.gif",
-        "retrievedAt": "2026-08-15"
+        "provider": "local ExerciseDB V1 library",
+        "exerciseId": "ealLwvX",
+        "exerciseName": "high knee against wall",
+        "sourceUrl": "local://bootstrapping-lab-exercisedb-api/media/ealLwvX.gif",
+        "retrievedAt": "2026-08-16"
       },
       "rights": {
         "status": "confirmed",
@@ -856,7 +872,7 @@
       "production": {
         "status": "approved",
         "releaseEligible": true,
-        "reason": "动作内容已按当前动作图重新对齐；本地动作图进入公开前台展示。"
+        "reason": "动作内容已按本地ExerciseDB替换图重新对齐；已复核近似动作进入公开前台展示。"
       },
       "reviews": {
         "rights": "approved",
@@ -868,8 +884,8 @@
         "source": "assets/exercises/supported-standing-march.gif",
         "gif": {
           "path": "assets/exercises/supported-standing-march.gif",
-          "sha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed",
-          "bytes": 93827
+          "sha256": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a",
+          "bytes": 56086
         }
       }
     },

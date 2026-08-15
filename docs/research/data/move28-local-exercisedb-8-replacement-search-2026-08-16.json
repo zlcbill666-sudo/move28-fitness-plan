@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 3,
+  "reviewedAt": "2026-08-16",
+  "sourceLibrary": {
+    "root": "E:\\个人用\\健身\\健身动作动画\\bootstrapping-lab-exercisedb-api",
+    "mediaRoot": "E:\\个人用\\健身\\健身动作动画\\bootstrapping-lab-exercisedb-api\\media",
+    "metadata": "src/data/exercises.json",
+    "records": 1500,
+    "gifs": 1500,
+    "databaseSha256": "a28dfeafa409fcaf737a6d27c4694d9bddc52ba69f12b37121be1e81b90b5c2d"
+  },
+  "finalDecision": "user-approved-8-approved-near-local-exercisedb-replacement-with-definition-changes",
+  "contactSheet": {
+    "path": "docs/research/evidence/local-exercisedb/move28-approved-replacements-2026-08-16.jpg",
+    "sha256": "39eb8a328ec5eb09832511e2c70940549b92fbfc9d58a8236afa3c7b0c45282a"
+  },
+  "formalManifestSha256": "af99f3e3d6f068b3ea9a5d7f3d92bb0eef482d5bcec670eb62bd8bdb7faf0bfd",
+  "exerciseCatalogSha256": "89e2c278eb0cbb961e445b0824d095ad5cdce5ce48fbf3b776fb21150935f6fb",
+  "decisions": [
+    {
+      "exerciseId": "wall-hip-hinge",
+      "action": "replace_and_change_definition_to_near_library_action",
+      "classification": "approved_near",
+      "newName": "弹力带拉髋",
+      "sourceExerciseDbId": "VtTbiP3",
+      "sourceName": "band pull through",
+      "sourceRelativePath": "media/VtTbiP3.gif",
+      "gifSha256": "ca37d5b276261259b68bd5069c71988d55e263a7a0a672189945ff6b0ca9ba72",
+      "formalManifestReplacementPath": "assets/exercises/wall-hip-hinge.gif",
+      "releaseEligible": true,
+      "reason": "用户授权将原墙触髋铰链改为动作库相近的弹力带拉髋；已替换为本地ExerciseDB band pull through 并同步为低位弹力带髋铰链口径。"
+    },
+    {
+      "exerciseId": "standing-band-chest-press",
+      "action": "replace_and_change_definition",
+      "classification": "approved_near",
+      "newName": "坐姿弹力带推胸",
+      "sourceExerciseDbId": "4x5Okof",
+      "sourceName": "resistance band seated chest press",
+      "sourceRelativePath": "media/4x5Okof.gif",
+      "gifSha256": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6",
+      "formalManifestReplacementPath": "assets/exercises/standing-band-chest-press.gif",
+      "releaseEligible": true,
+      "reason": "用户授权明确将原站姿弹力带推胸改为坐姿弹力带推胸；已替换为本地ExerciseDB坐姿弹力带推胸动图并同步动作步骤。"
+    },
+    {
+      "exerciseId": "band-row",
+      "action": "replace_and_sync_copy",
+      "classification": "approved_near",
+      "newName": "单臂弹力带低位划船",
+      "sourceExerciseDbId": "km0sQC0",
+      "sourceName": "band one arm standing low row",
+      "sourceRelativePath": "media/km0sQC0.gif",
+      "gifSha256": "a7a39f7b5a1295714d6d9fd8fa2ea3601991e9ef7751db68ee1b12130110f459",
+      "formalManifestReplacementPath": "assets/exercises/band-row.gif",
+      "releaseEligible": true,
+      "reason": "按用户授权和本地图库复核结果替换为单臂站姿弹力带低位划船；与弹力带划船训练目标一致，但文案已同步为左右单臂执行。"
+    },
+    {
+      "exerciseId": "seated-knee-extension-unloaded",
+      "action": "replace_and_change_definition",
+      "classification": "approved_near",
+      "newName": "坐姿弹力带伸膝",
+      "sourceExerciseDbId": "Y1MsI1l",
+      "sourceName": "resistance band leg extension",
+      "sourceRelativePath": "media/Y1MsI1l.gif",
+      "gifSha256": "8e729c35488838a6834ba8207f80b5ddd1fcf666481b2e3918f224e91f73ce76",
+      "formalManifestReplacementPath": "assets/exercises/seated-knee-extension-unloaded.gif",
+      "releaseEligible": true,
+      "reason": "用户授权明确将原坐姿徒手伸膝改为坐姿弹力带伸膝；已替换为本地ExerciseDB弹力带伸膝动图，视觉复核为坐姿版本。"
+    },
+    {
+      "exerciseId": "supported-calf-raise",
+      "action": "replace_and_sync_copy",
+      "classification": "approved_near",
+      "newName": "站姿支撑提踵",
+      "sourceExerciseDbId": "bJYHBIN",
+      "sourceName": "bodyweight standing calf raise",
+      "sourceRelativePath": "media/bJYHBIN.gif",
+      "gifSha256": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e",
+      "formalManifestReplacementPath": "assets/exercises/supported-calf-raise.gif",
+      "releaseEligible": true,
+      "reason": "按用户授权和本地图库复核结果替换为站姿自重提踵；动作本体一致，支撑要求在文案中限定为必要时扶墙或椅背。"
+    },
+    {
+      "exerciseId": "heel-slide",
+      "action": "replace_and_sync_copy",
+      "classification": "approved_near",
+      "newName": "仰卧单腿滑动",
+      "sourceExerciseDbId": "LNE3wfo",
+      "sourceName": "single leg platform slide",
+      "sourceRelativePath": "media/LNE3wfo.gif",
+      "gifSha256": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693",
+      "formalManifestReplacementPath": "assets/exercises/heel-slide.gif",
+      "releaseEligible": true,
+      "reason": "按用户授权和本地图库复核结果替换为仰卧单腿平台滑动；与脚跟滑动目标接近，文案已同步为毛巾/滑垫/光滑地面滑动。"
+    },
+    {
+      "exerciseId": "bird-dog-regression",
+      "action": "replace_and_change_definition_to_near_library_action",
+      "classification": "approved_near",
+      "newName": "跪姿平板肩触碰",
+      "sourceExerciseDbId": "h1ezqSu",
+      "sourceName": "kneeling plank tap shoulder (male)",
+      "sourceRelativePath": "media/h1ezqSu.gif",
+      "gifSha256": "ed2ca1ed7dd11fc42ecc4493f2cdd2dd5e0595f1d63861bdd8befc7bbe587d6d",
+      "formalManifestReplacementPath": "assets/exercises/bird-dog-regression.gif",
+      "releaseEligible": true,
+      "reason": "用户授权将原四点支撑单肢滑动改为动作库相近的跪姿平板肩触碰；已替换为本地ExerciseDB kneeling plank tap shoulder 并同步为核心稳定退阶口径。"
+    },
+    {
+      "exerciseId": "supported-standing-march",
+      "action": "replace_and_sync_copy",
+      "classification": "approved_near",
+      "newName": "扶墙支撑原地抬膝",
+      "sourceExerciseDbId": "ealLwvX",
+      "sourceName": "high knee against wall",
+      "sourceRelativePath": "media/ealLwvX.gif",
+      "gifSha256": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a",
+      "formalManifestReplacementPath": "assets/exercises/supported-standing-march.gif",
+      "releaseEligible": true,
+      "reason": "按用户授权和本地图库复核结果替换为扶墙高抬腿；与支撑踏步目标接近，文案已同步为扶墙或稳定椅背的小幅受控抬膝。"
+    }
+  ],
+  "finalCounts": {
+    "exact": 17,
+    "approved_near": 8,
+    "project_owned": 0,
+    "releaseEligible": 25,
+    "releaseBlocked": 0
+  },
+  "auditConclusion": "The two previously unresolved project-owned items are now explicitly definition-changed and replaced from the local ExerciseDB library: wall-hip-hinge -> VtTbiP3, bird-dog-regression -> h1ezqSu. No project-owned media remains in the formal release manifest."
+}

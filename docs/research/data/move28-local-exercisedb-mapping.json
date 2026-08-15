@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-08-15",
+  "reviewedAt": "2026-08-16",
   "source": {
     "provider": "current formal manifest plus local ExerciseDB V1 library",
     "libraryRoot": "E:\\个人用\\健身\\健身动作动画\\bootstrapping-lab-exercisedb-api",
     "databaseRelativePath": "src/data/exercises.json",
     "databaseSha256": "a28dfeafa409fcaf737a6d27c4694d9bddc52ba69f12b37121be1e81b90b5c2d",
     "recordCount": 1500,
-    "exerciseCatalogSha256": "4bfdcc11a0f8652a44eb130d0247dce400d9e3a8e7a2265c4ce09e4a3d675220",
-    "formalManifestSha256": "41ff3bf6d5b87dd7e0e2f1c83efc6e7bef2f393c1513ff26f6d371de54375477"
+    "exerciseCatalogSha256": "89e2c278eb0cbb961e445b0824d095ad5cdce5ce48fbf3b776fb21150935f6fb",
+    "formalManifestSha256": "af99f3e3d6f068b3ea9a5d7f3d92bb0eef482d5bcec670eb62bd8bdb7faf0bfd"
   },
   "reviewMethod": {
     "semanticClassificationIsManual": true,
@@ -22,14 +22,15 @@
       "frame-count",
       "release-gate-binding"
     ],
-    "contactSheetSha256": "f98aa621ddc29b81d5c525cda66db294b920951838c8d02f02292124e9051200"
+    "contactSheetSha256": "317341170c9df6a35cc45f0afff4500c3d0610573a3d43960d68efa249865d61"
   },
   "counts": {
     "exact": 17,
-    "project_owned": 8
+    "approved_near": 8,
+    "project_owned": 0
   },
   "releaseEligibleCount": 25,
-  "decision": "current-formal-manifest-25-item-gif-release-evidence",
+  "decision": "current-formal-manifest-25-item-mixed-local-exercisedb-release-evidence",
   "mapping": [
     {
       "exerciseId": "seated-leg-raise",
@@ -148,9 +149,9 @@
     },
     {
       "exerciseId": "wall-hip-hinge",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为墙触髋铰链发布素材并通过正式manifest四项复核。",
+      "reason": "用户授权将原墙触髋铰链改为动作库相近的弹力带拉髋；已替换为本地ExerciseDB band pull through 并同步为低位弹力带髋铰链口径。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/20_墙触髋铰链.gif",
@@ -158,15 +159,15 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "墙触髋铰链",
-        "relativePath": "assets/exercises/wall-hip-hinge.gif",
-        "sha256": "0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a",
-        "bytes": 74802,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "VtTbiP3",
+        "name": "band pull through",
+        "relativePath": "media/VtTbiP3.gif",
+        "sha256": "ca37d5b276261259b68bd5069c71988d55e263a7a0a672189945ff6b0ca9ba72",
+        "bytes": 74514,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {
@@ -194,9 +195,9 @@
     },
     {
       "exerciseId": "standing-band-chest-press",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为站姿弹力带推胸发布素材并通过正式manifest四项复核。",
+      "reason": "用户授权明确将原站姿弹力带推胸改为坐姿弹力带推胸；已替换为本地ExerciseDB坐姿弹力带推胸动图并同步动作步骤。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/21_站姿弹力带推胸.gif",
@@ -204,15 +205,15 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "站姿弹力带推胸",
-        "relativePath": "assets/exercises/standing-band-chest-press.gif",
-        "sha256": "34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16",
-        "bytes": 88868,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "4x5Okof",
+        "name": "resistance band seated chest press",
+        "relativePath": "media/4x5Okof.gif",
+        "sha256": "01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6",
+        "bytes": 85825,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {
@@ -240,9 +241,9 @@
     },
     {
       "exerciseId": "band-row",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为弹力带划船发布素材并通过正式manifest四项复核。",
+      "reason": "按用户授权和本地图库复核结果替换为单臂站姿弹力带低位划船；与弹力带划船训练目标一致，但文案已同步为左右单臂执行。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/19_弹力带划船.gif",
@@ -250,15 +251,15 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "弹力带划船",
-        "relativePath": "assets/exercises/band-row.gif",
-        "sha256": "29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c",
-        "bytes": 50264,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "km0sQC0",
+        "name": "band one arm standing low row",
+        "relativePath": "media/km0sQC0.gif",
+        "sha256": "a7a39f7b5a1295714d6d9fd8fa2ea3601991e9ef7751db68ee1b12130110f459",
+        "bytes": 78645,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {
@@ -332,9 +333,9 @@
     },
     {
       "exerciseId": "seated-knee-extension-unloaded",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为坐姿徒手伸膝发布素材并通过正式manifest四项复核。",
+      "reason": "用户授权明确将原坐姿徒手伸膝改为坐姿弹力带伸膝；已替换为本地ExerciseDB弹力带伸膝动图，视觉复核为坐姿版本。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/22_坐姿徒手伸膝.gif",
@@ -342,22 +343,22 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "坐姿徒手伸膝",
-        "relativePath": "assets/exercises/seated-knee-extension-unloaded.gif",
-        "sha256": "3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8",
-        "bytes": 86488,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "Y1MsI1l",
+        "name": "resistance band leg extension",
+        "relativePath": "media/Y1MsI1l.gif",
+        "sha256": "8e729c35488838a6834ba8207f80b5ddd1fcf666481b2e3918f224e91f73ce76",
+        "bytes": 104233,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {
       "exerciseId": "supported-calf-raise",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为扶椅提踵发布素材并通过正式manifest四项复核。",
+      "reason": "按用户授权和本地图库复核结果替换为站姿自重提踵；动作本体一致，支撑要求在文案中限定为必要时扶墙或椅背。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/23_扶椅提踵.gif",
@@ -365,15 +366,15 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "扶椅提踵",
-        "relativePath": "assets/exercises/supported-calf-raise.gif",
-        "sha256": "c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872",
-        "bytes": 82480,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "bJYHBIN",
+        "name": "bodyweight standing calf raise",
+        "relativePath": "media/bJYHBIN.gif",
+        "sha256": "0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e",
+        "bytes": 62166,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {
@@ -447,9 +448,9 @@
     },
     {
       "exerciseId": "heel-slide",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为仰卧脚跟滑动发布素材并通过正式manifest四项复核。",
+      "reason": "按用户授权和本地图库复核结果替换为仰卧单腿平台滑动；与脚跟滑动目标接近，文案已同步为毛巾/滑垫/光滑地面滑动。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/25_仰卧脚跟滑动.gif",
@@ -457,22 +458,22 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "仰卧脚跟滑动",
-        "relativePath": "assets/exercises/heel-slide.gif",
-        "sha256": "91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93",
-        "bytes": 75530,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "LNE3wfo",
+        "name": "single leg platform slide",
+        "relativePath": "media/LNE3wfo.gif",
+        "sha256": "d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693",
+        "bytes": 66510,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {
       "exerciseId": "bird-dog-regression",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为四点支撑单肢滑动发布素材并通过正式manifest四项复核。",
+      "reason": "用户授权将原四点支撑单肢滑动改为动作库相近的跪姿平板肩触碰；已替换为本地ExerciseDB kneeling plank tap shoulder 并同步为核心稳定退阶口径。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/26_四点支撑单肢滑动.gif",
@@ -480,15 +481,15 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "四点支撑单肢滑动",
-        "relativePath": "assets/exercises/bird-dog-regression.gif",
-        "sha256": "496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49",
-        "bytes": 89851,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "h1ezqSu",
+        "name": "kneeling plank tap shoulder (male)",
+        "relativePath": "media/h1ezqSu.gif",
+        "sha256": "ed2ca1ed7dd11fc42ecc4493f2cdd2dd5e0595f1d63861bdd8befc7bbe587d6d",
+        "bytes": 95127,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 18
       }
     },
     {
@@ -539,9 +540,9 @@
     },
     {
       "exerciseId": "supported-standing-march",
-      "classification": "project_owned",
+      "classification": "approved_near",
       "manualReviewBasis": "full-loop-frame-review-against-current-release-catalog-and-formal-manifest",
-      "reason": "项目自有Pillow动图已作为扶椅原地踏步发布素材并通过正式manifest四项复核。",
+      "reason": "按用户授权和本地图库复核结果替换为扶墙高抬腿；与支撑踏步目标接近，文案已同步为扶墙或稳定椅背的小幅受控抬膝。",
       "releaseEligible": true,
       "formalManifest": {
         "currentPath": "assets/gifs/24_扶椅原地踏步.gif",
@@ -549,15 +550,15 @@
         "productionStatus": "approved"
       },
       "candidate": {
-        "provider": "MOVE 28 Pillow",
-        "exerciseDbId": null,
-        "name": "扶椅原地踏步",
-        "relativePath": "assets/exercises/supported-standing-march.gif",
-        "sha256": "4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed",
-        "bytes": 93827,
+        "provider": "local ExerciseDB V1 library",
+        "exerciseDbId": "ealLwvX",
+        "name": "high knee against wall",
+        "relativePath": "media/ealLwvX.gif",
+        "sha256": "fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a",
+        "bytes": 56086,
         "width": 180,
         "height": 180,
-        "frameCount": 15
+        "frameCount": 12
       }
     },
     {

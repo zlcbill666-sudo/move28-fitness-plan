@@ -7,10 +7,10 @@ const test = require('node:test');
 const { projectRoot, clearMove28ModuleCache, loadScript } = require('../helpers/load-script.cjs');
 
 const EXPECTED_NAMES = [
-  '坐姿抬腿', '站姿脚踝绕环', '坐姿腿举', '坐姿腿弯举', '臀桥', '墙触髋铰链', '推胸机',
-  '站姿弹力带推胸', '坐姿划船', '弹力带划船', '抗旋转推压', '史密斯椅子深蹲', '坐姿腿屈伸',
-  '坐姿徒手伸膝', '扶椅提踵', '髋外展机', '墙壁俯卧撑', '死虫式', '仰卧脚跟滑动',
-  '四点支撑单肢滑动', '椭圆机／交叉训练机', '坡度跑台慢走', '扶椅原地踏步', '大腿后侧拉伸', '小腿拉伸'
+  '坐姿抬腿', '站姿脚踝绕环', '坐姿腿举', '坐姿腿弯举', '臀桥', '弹力带拉髋', '推胸机',
+  '坐姿弹力带推胸', '坐姿划船', '单臂弹力带低位划船', '抗旋转推压', '史密斯椅子深蹲', '坐姿腿屈伸',
+  '坐姿弹力带伸膝', '站姿支撑提踵', '髋外展机', '墙壁俯卧撑', '死虫式', '仰卧单腿滑动',
+  '跪姿平板肩触碰', '椭圆机／交叉训练机', '坡度跑台慢走', '扶墙支撑原地抬膝', '大腿后侧拉伸', '小腿拉伸'
 ];
 const EXPECTED_GIFS = [
   'assets/gifs/02_坐姿抬腿.gif', 'assets/gifs/03_脚踝绕环.gif', 'assets/gifs/04_坐姿腿举.gif',
@@ -48,7 +48,7 @@ function loadCatalogAndPlan() {
   return { ...catalogApi, ...planApi };
 }
 
-function assertOriginalGif(filename, expectedHash, label) {
+function assertOriginalGif(filename, expectedHash, label, expectedFrameCount = 15) {
   const gif = fs.readFileSync(path.join(projectRoot, 'assets', 'gifs', filename));
   assert.match(gif.subarray(0, 6).toString('ascii'), /^GIF8[79]a$/);
   assert.equal(gif.readUInt16LE(6), 180);
@@ -57,7 +57,7 @@ function assertOriginalGif(filename, expectedHash, label) {
   for (let index = 0; index <= gif.length - 3; index++) {
     if (gif[index] === 0x21 && gif[index + 1] === 0xf9 && gif[index + 2] === 0x04) frameCount += 1;
   }
-  assert.equal(frameCount, 15, `${label}必须是15帧`);
+  assert.equal(frameCount, expectedFrameCount, `${label}必须是${expectedFrameCount}帧`);
   assert.ok(gif.includes(Buffer.from('NETSCAPE2.0')), `${label}必须包含循环播放标记`);
   assert.equal(crypto.createHash('sha256').update(gif).digest('hex'), expectedHash);
 }
@@ -307,11 +307,11 @@ test('band-row和wall-hip-hinge关闭居家必需动作缺口', () => {
   assert.equal(homePatterns.has('hinge'), true);
 });
 
-test('band-row元数据、四类提示、legacy字段与原创动画契约精确锁定', () => {
+test('band-row元数据、四类提示、legacy字段与本地ExerciseDB动画契约精确锁定', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
   const bandRow = exerciseCatalog.find(exercise => exercise.id === 'band-row');
   assert.ok(bandRow);
-  assert.equal(bandRow.name, '弹力带划船');
+  assert.equal(bandRow.name, '单臂弹力带低位划船');
   assert.equal(bandRow.pattern, 'horizontal_pull');
   assert.deepEqual(bandRow.settings, ['home', 'gym']);
   assert.deepEqual(bandRow.equipment, ['resistance_band']);
@@ -323,8 +323,8 @@ test('band-row元数据、四类提示、legacy字段与原创动画契约精确
   assert.deepEqual(bandRow.progressionIds, ['seated-row']);
   assert.equal(bandRow.reviewStatus, 'approved');
   assert.deepEqual(bandRow.cues, {
-    setup:'将弹力带牢固固定在胸口高度，面对固定点稳定站立，双脚与髋同宽，躯干中立，双手握住弹力带并伸臂。',
-    movement:'肩膀保持远离耳朵，肘沿身体两侧向后拉至手靠近肋骨；短暂停顿，再受控伸臂回到起点，全程不后仰借力。',
+    setup:'将弹力带牢固固定在低位至腰部高度，面对固定点稳定站立，双脚与髋同宽；单手握住弹力带，另一手可轻扶髋部或固定支撑。',
+    movement:'保持肩膀远离耳朵，一侧手肘贴近身体向后拉至手靠近髋部或下肋；短暂停顿，再受控伸臂回到起点，完成次数后换侧。',
     breathing:'后拉时呼气，受控回位时吸气。',
     pain:'先确认固定点牢固并使用轻阻力；肩、肘或腰出现锐痛时立即停止。'
   });
@@ -333,19 +333,19 @@ test('band-row元数据、四类提示、legacy字段与原创动画契约精确
   assert.equal(bandRow.cues.breathing, bandRow.breath);
   assert.equal(bandRow.cues.pain, bandRow.safety);
   assert.equal(typeof bandRow.errors, 'string');
-  assert.ok(bandRow.errors.includes('后仰借力'));
+  assert.ok(bandRow.errors.includes('身体旋转或后仰借力'));
   assert.deepEqual(bandRow.groups, ['力量A', '力量B']);
 
-  assertOriginalGif('19_弹力带划船.gif', '29cb4c95531f1c003159e3b3f69bef8c9999ea0c47a8e8b764cab1345e35dc4c', '弹力带划船GIF');
+  assertOriginalGif('19_弹力带划船.gif', 'a7a39f7b5a1295714d6d9fd8fa2ea3601991e9ef7751db68ee1b12130110f459', '单臂弹力带低位划船GIF', 12);
 });
 
 test('Task6第一组动作元数据、关系与原创媒体契约精确锁定', () => {
   const { exerciseCatalog } = loadCatalogAndPlan();
   const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
   const expected = {
-    'wall-hip-hinge': { name:'墙触髋铰链', pattern:'hinge', equipment:'wall', contraindications:['hinge'], progressionIds:['glute-bridge'], gif:'20_墙触髋铰链.gif', hash:'0295ad78498e4d3ce7a1a5363230c2c661539fdaeab1418d7ba0a879dff6e23a' },
-    'standing-band-chest-press': { name:'站姿弹力带推胸', pattern:'horizontal_push', equipment:'resistance_band', contraindications:[], progressionIds:['chest-press-machine'], gif:'21_站姿弹力带推胸.gif', hash:'34397eb48b7654597f7ab89d5ff4426ae6a853483f1c9cb4217830ef2687de16' },
-    'seated-knee-extension-unloaded': { name:'坐姿徒手伸膝', pattern:'knee_extension', equipment:'stable_chair', contraindications:[], progressionIds:['seated-leg-extension'], gif:'22_坐姿徒手伸膝.gif', hash:'3a87632b92ad6b25d49046b58feb2ba2930e775922775bc49c63614e8318c5c8' }
+    'wall-hip-hinge': { name:'弹力带拉髋', pattern:'hinge', equipmentOptions:[['resistance_band']], contraindications:['hinge'], progressionIds:['glute-bridge'], gif:'20_墙触髋铰链.gif', hash:'ca37d5b276261259b68bd5069c71988d55e263a7a0a672189945ff6b0ca9ba72', frameCount:12 },
+    'standing-band-chest-press': { name:'坐姿弹力带推胸', pattern:'horizontal_push', equipmentOptions:[['stable_chair','resistance_band']], contraindications:[], progressionIds:['chest-press-machine'], gif:'21_站姿弹力带推胸.gif', hash:'01b7cd33c0aa11b2fd5ed47eb16029b8d4d9fcaad218af8690ae71fb883a41a6', frameCount:12 },
+    'seated-knee-extension-unloaded': { name:'坐姿弹力带伸膝', pattern:'knee_extension', equipmentOptions:[['stable_chair','resistance_band']], contraindications:[], progressionIds:['seated-leg-extension'], gif:'22_坐姿徒手伸膝.gif', hash:'8e729c35488838a6834ba8207f80b5ddd1fcf666481b2e3918f224e91f73ce76', frameCount:12 }
   };
   for (const [id, contract] of Object.entries(expected)) {
     const item = byId[id];
@@ -353,7 +353,7 @@ test('Task6第一组动作元数据、关系与原创媒体契约精确锁定', 
     assert.equal(item.name, contract.name);
     assert.equal(item.pattern, contract.pattern);
     assert.deepEqual(item.settings, ['home','gym']);
-    assert.deepEqual(item.equipmentOptions, [[contract.equipment]]);
+    assert.deepEqual(item.equipmentOptions, contract.equipmentOptions || [[contract.equipment]]);
     assert.equal(item.difficulty, 1);
     assert.deepEqual(item.dose, { sets:[2,3], reps:[8,12], rpe:[5,6], restSec:[60,90] });
     assert.deepEqual(item.contraindications, contract.contraindications);
@@ -361,7 +361,7 @@ test('Task6第一组动作元数据、关系与原创媒体契约精确锁定', 
     assert.equal(item.reviewStatus, 'approved');
     assert.deepEqual(Object.keys(item.cues), ['setup','movement','breathing','pain']);
     assert.ok(Object.values(item.cues).every(value => typeof value === 'string' && value.length > 0));
-    assertOriginalGif(contract.gif, contract.hash, `${contract.name}GIF`);
+    assertOriginalGif(contract.gif, contract.hash, `${contract.name}GIF`, contract.frameCount || 15);
   }
 });
 
@@ -370,10 +370,10 @@ test('Task6第二组动作元数据、关系与原创媒体契约精确锁定', 
   const byId = Object.fromEntries(exerciseCatalog.map(item => [item.id, item]));
   const strengthDose = { sets:[2,3], reps:[8,12], rpe:[5,6], restSec:[60,90] };
   const expected = {
-    'supported-calf-raise': { name:'扶椅提踵', pattern:'mobility', equipment:'stable_chair', dose:strengthDose, contraindications:[], progressionIds:[], gif:'23_扶椅提踵.gif', hash:'c37dc201599f59f37f47fd09100e562251500aed349ca08df7489e0e7d449872' },
-    'supported-standing-march': { name:'扶椅原地踏步', pattern:'locomotion', equipment:'stable_chair', dose:{sets:[1,1],reps:[1,1],rpe:[2,4],restSec:[0,60],durationMin:[2,10]}, contraindications:[], progressionIds:['flat-walk'], gif:'24_扶椅原地踏步.gif', hash:'4a3af28d4fbf1af4ea09ffb6115e072603417e5ccb84f3b7da799b5cddfff1ed' },
-    'heel-slide': { name:'仰卧脚跟滑动', pattern:'anti_extension', equipment:'exercise_mat', dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'25_仰卧脚跟滑动.gif', hash:'91ce2e1c8574a80deae6f62dcff7562a8bc1940e2846e2047f3533f57544ef93' },
-    'bird-dog-regression': { name:'四点支撑单肢滑动', pattern:'anti_extension', equipment:'exercise_mat', dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'26_四点支撑单肢滑动.gif', hash:'496256aeafebeb85251491078dc21db17fe3a1b9c79e5573693a309fca9fec49' }
+    'supported-calf-raise': { name:'站姿支撑提踵', pattern:'mobility', equipmentOptions:[['stable_chair'],['wall']], dose:strengthDose, contraindications:[], progressionIds:[], gif:'23_扶椅提踵.gif', hash:'0e5f92103f2e6578a944b22dd23d40a9867250264914aa127481ba5e4147357e', frameCount:12 },
+    'supported-standing-march': { name:'扶墙支撑原地抬膝', pattern:'locomotion', equipmentOptions:[['wall'],['stable_chair']], dose:{sets:[1,1],reps:[1,1],rpe:[2,4],restSec:[0,60],durationMin:[2,10]}, contraindications:[], progressionIds:['flat-walk'], gif:'24_扶椅原地踏步.gif', hash:'fe96a7dfa0e5d61804b960bded9ca2d2c20a01edb94be16b97152d9ff485cf7a', frameCount:12 },
+    'heel-slide': { name:'仰卧单腿滑动', pattern:'anti_extension', equipmentOptions:[['exercise_mat']], dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'25_仰卧脚跟滑动.gif', hash:'d1b952cced3a26f9793ec0dfffe968edefa00001a5f75c30380f3ed88ca89693', frameCount:12 },
+    'bird-dog-regression': { name:'跪姿平板肩触碰', pattern:'anti_extension', equipmentOptions:[['exercise_mat']], dose:strengthDose, contraindications:['floor'], progressionIds:['dead-bug'], gif:'26_四点支撑单肢滑动.gif', hash:'ed2ca1ed7dd11fc42ecc4493f2cdd2dd5e0595f1d63861bdd8befc7bbe587d6d', frameCount:18 }
   };
   for (const [id, contract] of Object.entries(expected)) {
     const item = byId[id];
@@ -381,7 +381,7 @@ test('Task6第二组动作元数据、关系与原创媒体契约精确锁定', 
     assert.equal(item.name, contract.name);
     assert.equal(item.pattern, contract.pattern);
     assert.deepEqual(item.settings, ['home','gym']);
-    assert.deepEqual(item.equipmentOptions, [[contract.equipment]]);
+    assert.deepEqual(item.equipmentOptions, contract.equipmentOptions || [[contract.equipment]]);
     assert.equal(item.difficulty, 1);
     assert.deepEqual(item.dose, contract.dose);
     assert.deepEqual(item.contraindications, contract.contraindications);
@@ -389,7 +389,7 @@ test('Task6第二组动作元数据、关系与原创媒体契约精确锁定', 
     assert.equal(item.reviewStatus, 'approved');
     assert.deepEqual(Object.keys(item.cues), ['setup','movement','breathing','pain']);
     assert.ok(Object.values(item.cues).every(value => typeof value === 'string' && value.length > 0));
-    assertOriginalGif(contract.gif, contract.hash, `${contract.name}GIF`);
+    assertOriginalGif(contract.gif, contract.hash, `${contract.name}GIF`, contract.frameCount || 15);
   }
 });
 
@@ -528,7 +528,7 @@ test('媒体可选性合同覆盖25项本地动图库上架边界', () => {
   }
   assert.equal(byId['seated-leg-press'].mediaMatchVerdict, 'exact');
   assert.equal(byId['seated-leg-raise'].mediaMatchVerdict, 'approved_near');
-  assert.equal(byId['wall-hip-hinge'].mediaMatchVerdict, 'exact');
+  assert.equal(byId['wall-hip-hinge'].mediaMatchVerdict, 'approved_near');
   assert.ok(Object.isFrozen(api.MEDIA_LAUNCH_STATUSES));
   assert.ok(Object.isFrozen(api.MEDIA_MATCH_VERDICTS));
   assert.ok(Object.isFrozen(api.MEDIA_RIGHTS_STATUSES));
