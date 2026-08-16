@@ -29,13 +29,16 @@ test('each step rejects missing required answers and accepts explicit uncertaint
   assert.notEqual(onboarding.evaluateOnboarding(uncertain).risk.level, 'normal');
 });
 
-test('numeric bounds, pain mutual exclusion and schedule counts are enforced', () => {
+test('numeric bounds, pain mutual exclusion and schedule defaults are enforced', () => {
   assert.equal(onboarding.validateStep('basics', { ...safe, age:121 }).ok, false);
   assert.equal(onboarding.validateStep('basics', { ...safe, age:30.5 }).ok, false);
   assert.equal(onboarding.validateStep('basics', { ...safe, heightCm:79 }).ok, false);
   assert.equal(onboarding.validateStep('movement', { ...safe, painAreas:['none','knee'] }).ok, false);
   assert.equal(onboarding.validateStep('movement', { ...safe, painAreas:['knee'], painScore:11 }).ok, false);
-  assert.equal(onboarding.validateStep('schedule', { ...safe, daysPerWeek:'3', weekdays:['mon'] }).ok, false);
+  assert.equal(onboarding.validateStep('schedule', { ...safe, weekdays:undefined }).ok, true);
+  assert.equal(onboarding.validateStep('schedule', { ...safe, daysPerWeek:'3', weekdays:['mon'] }).ok, true);
+  assert.deepEqual(onboarding.defaultWeekdaysFor('3'), ['mon','wed','fri']);
+  assert.equal(onboarding.evaluateOnboarding({ ...safe, daysPerWeek:'3', weekdays:['mon'] }).canGenerate, true);
 });
 
 test('equipment IDs are setting-scoped and home requires a stable chair', () => {
@@ -142,9 +145,9 @@ test('summary omits unfilled optional measurements and contains no PII fields', 
   assert.match(serialized, /首要目标/);
   assert.match(serialized, /安全路由/);
   const filled = JSON.stringify(onboarding.buildIntakeSummary({ ...safe, heightCm:170, weightKg:80, waistCm:90 }, risk));
-  assert.match(filled, /170 cm/);
-  assert.match(filled, /80 kg/);
-  assert.match(filled, /90 cm/);
+  assert.match(filled, /170厘米/);
+  assert.match(filled, /80千克/);
+  assert.match(filled, /90厘米/);
 });
 
 test('module can be required without document, window, localStorage or sessionStorage', () => {

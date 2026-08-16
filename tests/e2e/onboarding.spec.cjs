@@ -65,6 +65,14 @@ test('入口打开单屏问卷，边界未确认不能前进，且没有身份�
   await page.locator('input[name="boundaryAccepted"]').check();
   await page.getByRole('button',{name:'继续 →'}).click();
   await expect(page.getByRole('heading',{name:'告诉我们训练起点'})).toBeVisible();
+  await expect(page.locator('label:has(input[name="heightCm"])')).toContainText('身高（厘米）');
+  await expect(page.locator('label:has(input[name="weightKg"])')).toContainText('体重（千克）');
+  await expect(page.locator('label:has(input[name="heightCm"]) i')).toHaveText('厘米');
+  await expect(page.locator('label:has(input[name="weightKg"]) i')).toHaveText('千克');
+  await page.evaluate(()=>Move28.onboardingController.goTo(4));
+  await expect(page.getByText('通常哪些天可以训练？')).toHaveCount(0);
+  await expect(page.locator('input[name="weekdays"]')).toHaveCount(0);
+  await expect(page.getByText('具体哪天训练由你每周自主安排')).toBeVisible();
   await expect(page.locator('input[name="name"],input[name="phone"],input[name="idcard"],input[name="birthday"]')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('#onboardingView')).toHaveAttribute('aria-hidden','true');
@@ -90,6 +98,14 @@ test('完整成年安全答案确认后只保存intake并打开能力校准，�
   expect(state.capabilityProfile).toBeNull(); expect(state.capabilityRevision).toBe(0); expect(state.plan).toBeNull();
   expect(state.intake.name).toBeUndefined(); expect(state.intake.phone).toBeUndefined();
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-onboarding-draft-v1'))).toBeNull();
+});
+
+test('问卷不要求具体星期，仍写入内部默认训练日并进入计划确认', async ({ page }) => {
+  await open(page); await inject(page,{setting:'gym',equipment:gymEquipment,cardioPreference:'none',weekdays:['mon']}); await confirm(page);
+  await answerCapability(page);
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
+  expect(state.intake.weekdays).toEqual(['mon','wed','fri']);
+  expect(state.plan.status).toBe('pending_review');
 });
 
 test('能力校准严格三屏验证，允许逐项跳过，完整档案保存revision且器械组合不足时进入需要确认', async ({ page }) => {
@@ -278,8 +294,14 @@ test('390×844单列无横滚且长偏好屏可滚动、底部按钮固定可见
   expect(dimensions.panelHeight).toBe(dimensions.height);
   expect(dimensions.contentScrollHeight).toBeGreaterThan(dimensions.contentHeight);
   expect(dimensions.footerBottom).toBeLessThanOrEqual(dimensions.height);
-  await page.locator('.ob-content').evaluate(element=>{ element.scrollTop=element.scrollHeight; });
+  const beforeScroll=await page.locator('.ob-content').evaluate(element=>{ element.scrollTop=element.scrollHeight; return element.scrollTop; });
   await expect(page.locator('input[name="musicEnabled"][value="no"]')).toBeInViewport();
+  await page.locator('input[name="musicEnabled"][value="no"]').check();
+  const afterScroll=await page.locator('.ob-content').evaluate(element=>element.scrollTop);
+  expect(afterScroll).toBeGreaterThanOrEqual(beforeScroll-8);
+  await expect(page.locator('input[name="musicEnabled"][value="no"]')).toBeChecked();
+  await expect(page.locator('input[name="musicEnabled"][value="no"]')).toBeFocused();
+  expect(await page.evaluate(()=>document.querySelector('#onboardingView').contains(document.activeElement))).toBe(true);
 });
 
 test('390×844能力校准保持单列、底部操作可见且无横向溢出', async ({ page }) => {

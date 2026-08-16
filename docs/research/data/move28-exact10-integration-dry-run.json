@@ -63,7 +63,7 @@
     "src/storage/local-store.js": "b6d2a2b6595c1bf07dc2d93cecbdc08fb1f1e9213b690481a096dc90b824fba5",
     "src/ui/capability-assessment.js": "cd587a3d4b920196f0b92be5c07643438783a472f9a348c700811bc2fa6e7a1e",
     "src/ui/dashboard.js": "99f5c4608aee1d809f1fa1d593cd3ab5fe374a6596c7dc77d301f0ba34efe4d8",
-    "src/ui/onboarding.js": "d9b480f4137c7974517e26d55dfd77fb239c3df18f27bca57b2f313c15b4bc1b",
+    "src/ui/onboarding.js": "46cde716921342e3903acf5b2a2d32c2cceef84aa2423a8e66fb465655f708db",
     "src/ui/privacy-tools.js": "1689d4f059358b7dfe704dd2570a3ce1d08826f655120284d232a054e97e15da",
     "src/ui/review-handoff.js": "891107423f66a0fcca3173f8d7bff3c36158041d0fd7cba0d9a69b84edea72bb",
     "src/ui/session-readiness.js": "18ba9ae1d4eb16f43c80fab1e6cf4392101599f7bf6241405bcacf876aebb45d",

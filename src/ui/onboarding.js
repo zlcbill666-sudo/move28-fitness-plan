@@ -56,6 +56,13 @@
     avoidEquipment: [...new Set([...EQUIPMENT.gym, ...EQUIPMENT.home])],
     trackingItems: ['none','completion','rpe','pain','sleep']
   });
+  const DEFAULT_WEEKDAYS = Object.freeze({
+    '1': Object.freeze(['mon']),
+    '2': Object.freeze(['mon','thu']),
+    '3': Object.freeze(['mon','wed','fri']),
+    '4': Object.freeze(['mon','tue','thu','sat']),
+    '5plus': Object.freeze(['mon','tue','wed','fri','sat'])
+  });
   const NUMBER_FIELDS = Object.freeze(['age','heightCm','weightKg','waistCm','painScore']);
   const BOOLEAN_FIELDS = Object.freeze(['boundaryAccepted','finalConfirmed']);
   const INTAKE_FIELDS = Object.freeze([
@@ -116,9 +123,20 @@
     } catch (_error) { return {}; }
     return output;
   }
+  function defaultWeekdaysFor(daysPerWeek) {
+    const defaults = DEFAULT_WEEKDAYS[String(daysPerWeek)] || [];
+    return defaults.slice();
+  }
+  function intakeWithDefaultWeekdays(value) {
+    const output = sanitizeIntake(value);
+    const defaults = defaultWeekdaysFor(output.daysPerWeek);
+    if (defaults.length) output.weekdays = defaults;
+    else delete output.weekdays;
+    return output;
+  }
 
   function validateStep(stepId, intake) {
-    const data = sanitizeIntake(intake);
+    const data = intakeWithDefaultWeekdays(intake);
     const errors = [];
     const addEnum = (field, message) => { const item = enumError(data, field, message); if (item) errors.push(item); };
     if (stepId === 'boundary') {
@@ -134,12 +152,6 @@
       ['activityDays', 'walkCapacity', 'strengthExperience', 'trainingBreak'].forEach(field => addEnum(field, '请完成此项。'));
     } else if (stepId === 'schedule') {
       ['daysPerWeek', 'sessionMinutes', 'gymOftenUnavailable'].forEach(field => addEnum(field, '请完成此项。'));
-      if (!Array.isArray(data.weekdays) || data.weekdays.length < 1) errors.push(error('weekdays', '请至少选择一个可训练日。'));
-      else if (new Set(data.weekdays).size !== data.weekdays.length || data.weekdays.some(day => !['mon','tue','wed','thu','fri','sat','sun'].includes(day))) errors.push(error('weekdays', '训练日选择无效。'));
-      else {
-        const requested = data.daysPerWeek === '5plus' ? 5 : Number(data.daysPerWeek);
-        if (Number.isFinite(requested) && data.weekdays.length < requested) errors.push(error('weekdays', '可训练日数量不能少于每周训练天数。'));
-      }
     } else if (stepId === 'equipment') {
       ['setting', 'allowSettingSwap'].forEach(field => addEnum(field, '请完成此项。'));
       const allowed = EQUIPMENT[data.setting] || [];
@@ -183,7 +195,7 @@
   function evaluateOnboarding(intake, evaluator) {
     const evaluate = evaluator || riskApi.evaluateRisk;
     if (typeof evaluate !== 'function') throw new Error('Risk evaluator unavailable');
-    const canonical = sanitizeIntake(intake);
+    const canonical = intakeWithDefaultWeekdays(intake);
     const risk = evaluate(deriveRiskIntake(canonical));
     const adult = Number.isSafeInteger(canonical.age) && canonical.age >= 16;
     const intakeComplete = validateAll(canonical, false).ok;
@@ -207,9 +219,9 @@
     const rows = [];
     const push = (label, value) => { if (value !== undefined && value !== null && value !== '') rows.push({ label, value: display(value) }); };
     push('首要目标', intake.goal); push('训练场景', intake.setting);
-    push('身高', Number.isFinite(intake.heightCm) ? `${intake.heightCm} cm` : undefined);
-    push('体重', Number.isFinite(intake.weightKg) ? `${intake.weightKg} kg` : undefined);
-    push('腰围', Number.isFinite(intake.waistCm) ? `${intake.waistCm} cm` : undefined);
+    push('身高', Number.isFinite(intake.heightCm) ? `${intake.heightCm}厘米` : undefined);
+    push('体重', Number.isFinite(intake.weightKg) ? `${intake.weightKg}千克` : undefined);
+    push('腰围', Number.isFinite(intake.waistCm) ? `${intake.waistCm}厘米` : undefined);
     push('每周安排', intake.daysPerWeek ? `${intake.daysPerWeek === '5plus' ? '5+' : intake.daysPerWeek}天` : undefined);
     push('单次时长', intake.sessionMinutes ? `${intake.sessionMinutes}分钟` : undefined);
     if (Array.isArray(intake.equipment) && intake.equipment.length) push('可用器械', intake.equipment.map(display).join(' / '));
@@ -238,7 +250,7 @@
     return createMemoryStorage();
   }
   function cleanInitial(value) {
-    return sanitizeIntake(value);
+    return intakeWithDefaultWeekdays(value);
   }
 
   function createOnboarding(options) {
@@ -269,7 +281,7 @@
     } catch (_error) { try { storage.removeItem(DRAFT_KEY); } catch (_removeError) {} }
 
     function saveDraft(nextStep) {
-      try { storage.setItem(DRAFT_KEY, JSON.stringify({ version:1, step:nextStep, confirmedStep, intake:sanitizeIntake(intake) })); } catch (_error) {}
+      try { storage.setItem(DRAFT_KEY, JSON.stringify({ version:1, step:nextStep, confirmedStep, intake:intakeWithDefaultWeekdays(intake) })); } catch (_error) {}
     }
     function clearDraft() { try { storage.removeItem(DRAFT_KEY); } catch (_error) {} }
     function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
@@ -294,10 +306,10 @@
 
     function stepBody() {
       if (step === 0) return `<div class="ob-boundary"><span class="ob-big-index">01</span><h3>这是训练起步工具，不是医疗服务</h3><ul><li><b>4周建立基线</b>，用于观察可持续行动，不保证在固定期限达到体重或体型结果。</li><li>不提供诊断、康复治疗或急救。出现紧急症状请立即联系当地急救服务。</li><li>安全筛查会保守处理“不确定”，必要时停止自动路由并建议咨询合适的专业人员。</li></ul><label class="ob-consent"><input type="checkbox" name="boundaryAccepted" value="true"${intake.boundaryAccepted === true ? ' checked' : ''}><span><b>我理解</b>以上产品边界，并愿意逐项如实回答。</span></label></div>`;
-      if (step === 1) return `<div class="ob-form-grid">${numberField('age','年龄','例如 32','岁',true)}${numberField('heightCm','身高','例如 170','cm',false)}${numberField('weightKg','体重','例如 85','kg',false)}${numberField('waistCm','腰围','例如 95','cm',false)}</div><div class="ob-privacy">仅用于训练路由；不需要可识别身份的信息或精确出生日期。</div>${tri('pregnancyPostpartum','你目前是否处于孕期或产后恢复阶段？')}`;
+      if (step === 1) return `<div class="ob-form-grid">${numberField('age','年龄','例如 32','岁',true)}${numberField('heightCm','身高（厘米）','例如 170','厘米',false)}${numberField('weightKg','体重（千克）','例如 85','千克',false)}${numberField('waistCm','腰围（厘米）','例如 95','厘米',false)}</div><div class="ob-privacy">仅用于训练路由；不需要可识别身份的信息或精确出生日期。</div>${tri('pregnancyPostpartum','你目前是否处于孕期或产后恢复阶段？')}`;
       if (step === 2) return choices('goal', [['habit','建立运动习惯','先把每周行动稳定下来'],['daily_fitness','提升日常体能','走路、起身和日常活动更从容'],['low_impact_fat_loss','低冲击减脂起步','以可持续训练支持体重管理'],['basic_strength','建立基础力量','学习并稳定完成基础力量动作']]);
       if (step === 3) return `<fieldset class="ob-question"><legend>最近4周，每周有几天累计活动20分钟以上？</legend>${choices('activityDays',[['0','0天',''],['1','1天',''],['2','2天',''],['3','3天',''],['4plus','4天以上','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>你能连续平地步行多久？</legend>${choices('walkCapacity',[['under_10','不足10分钟',''],['10_20','10–20分钟',''],['20_40','20–40分钟',''],['40plus','40分钟以上','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>力量训练经验</legend>${choices('strengthExperience',[['none','从未训练',''],['some','做过少量训练',''],['regular_under_6m','规律不足6个月',''],['experienced','规律训练更久','']], 'ob-choices-compact')}</fieldset>${tri('trainingBreak','最近是否中断训练超过3个月？')}`;
-      if (step === 4) return `<fieldset class="ob-question"><legend>每周希望安排几天训练？</legend>${choices('daysPerWeek',[['1','1天',''],['2','2天',''],['3','3天',''],['4','4天',''],['5plus','5天以上','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>单次可用时长</legend>${choices('sessionMinutes',[['20','20分钟',''],['30','30分钟',''],['45','45分钟',''],['60','60分钟',''],['75','75分钟','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>通常哪些天可以训练？</legend>${checks('weekdays',[['mon','周一'],['tue','周二'],['wed','周三'],['thu','周四'],['fri','周五'],['sat','周六'],['sun','周日']])}</fieldset>${tri('gymOftenUnavailable','健身房是否经常临时无法使用？')}`;
+      if (step === 4) return `<fieldset class="ob-question"><legend>每周希望安排几天训练？</legend>${choices('daysPerWeek',[['1','1天',''],['2','2天',''],['3','3天',''],['4','4天',''],['5plus','5天以上','']], 'ob-choices-compact')}</fieldset><fieldset class="ob-question"><legend>单次可用时长</legend>${choices('sessionMinutes',[['20','20分钟',''],['30','30分钟',''],['45','45分钟',''],['60','60分钟',''],['75','75分钟','']], 'ob-choices-compact')}</fieldset><div class="ob-privacy">具体哪天训练由你每周自主安排；系统只用每周次数和单次时长生成安全剂量。</div>${tri('gymOftenUnavailable','健身房是否经常临时无法使用？')}`;
       if (step === 5) {
         const setting = intake.setting;
         const equipmentOptions = setting === 'gym' ? [['stable_chair','稳固椅/凳'],['smith_machine','史密斯机'],['exercise_mat','训练垫'],['leg_press_machine','腿举机'],['leg_curl_machine','腿弯举机'],['chest_press_machine','推胸机'],['seated_row_machine','坐姿划船机'],['resistance_band','弹力带'],['cable_machine','龙门架'],['elliptical_trainer','椭圆机'],['treadmill','跑步机']] : [['stable_chair','稳固椅子（居家必需）'],['exercise_mat','训练垫'],['resistance_band','弹力带'],['wall','可用墙面']];
@@ -323,13 +335,19 @@
       return `<div class="ob-route ${statusClass}" data-risk-level="${risk.level}">${routeCopy}</div><div class="ob-summary">${summary.map(row => `<div><span>${esc(row.label)}</span><b>${esc(row.value)}</b></div>`).join('')}</div><div class="ob-edit-links"><button type="button" data-go="1">修改基本情况</button><button type="button" data-go="4">修改时间</button><button type="button" data-go="5">修改器械</button><button type="button" data-go="6">修改疼痛与动作能力</button><button type="button" data-go="7">修改安全筛查</button></div>${risk.reasons && risk.reasons.length ? `<details class="ob-reasons"><summary>查看安全路由依据（${risk.reasons.length}项）</summary><ul>${risk.reasons.map(reason => `<li>${esc(reason.message)}</li>`).join('')}</ul></details>` : ''}<label class="ob-consent"><input type="checkbox" name="finalConfirmed" value="true"${intake.finalConfirmed === true ? ' checked' : ''}><span><b>我确认</b>以上答案准确，并理解此结果不是诊断；最终确认后才保存到本机。</span></label>`;
     }
 
-    function render() {
+    function render(options) {
+      const renderOptions = options || {};
       const meta = STEPS[step];
       const progress = ((step + 1) / STEPS.length) * 100;
       element.innerHTML = `<div class="ob-shell" role="document"><aside class="ob-rail"><a class="ob-brand" href="#top" data-cancel><i>28</i><span>MOVE 28<small>GUIDED ASSESSMENT</small></span></a><div class="ob-rail-copy"><span>ASSESSMENT ${String(step + 1).padStart(2,'0')}</span><h2>${meta.rail}</h2><p>答案只在当前标签页保存草稿；最终确认后才写入本机参与者状态。</p></div><ol aria-label="问卷进度">${STEPS.map((item,index) => `<li class="${index === step ? 'active' : index <= confirmedStep ? 'done' : ''}"><i>${String(index + 1).padStart(2,'0')}</i><span>${item.eyebrow}</span></li>`).join('')}</ol></aside><section class="ob-panel"><header class="ob-head"><div><span>${meta.eyebrow}</span><b>${step + 1} / ${STEPS.length}</b></div><button type="button" data-cancel>暂时退出 ×</button><div class="ob-progress"><i style="width:${progress}%"></i></div></header><main class="ob-content"><div class="ob-title"><span>STEP ${String(step + 1).padStart(2,'0')}</span><h1 tabindex="-1">${meta.title}</h1></div>${resultMessage ? `<div class="ob-saved" role="status">${resultMessage}</div>` : ''}<div class="ob-errors" role="alert" aria-live="polite"></div><div class="ob-step-body">${stepBody()}</div></main><footer class="ob-foot"><button type="button" class="ob-back" data-back>${step === 0 ? '暂时退出' : '← 上一步'}</button><span>草稿仅存当前标签页</span><button type="button" class="ob-next" data-next>${finished ? '完成，返回首页' : step === 9 ? '确认并保存结果 →' : '继续 →'}</button></footer></section></div>`;
       element.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
       element.classList.toggle('open', isOpen);
-      if (isOpen) {
+      if (isOpen && Number.isFinite(renderOptions.preserveScrollTop)) {
+        const content = element.querySelector('.ob-content');
+        if (content) content.scrollTop = renderOptions.preserveScrollTop;
+      }
+      if (isOpen && renderOptions.restoreControlFocus) restoreControlFocus(renderOptions.restoreControlFocus);
+      if (isOpen && renderOptions.focusTitle) {
         const focusTarget = element.querySelector('.ob-title h1');
         if (focusTarget) { focusTarget.setAttribute('tabindex','-1'); focusTarget.focus({ preventScroll:true }); }
       }
@@ -352,12 +370,27 @@
         const canonical = sanitizeIntake({ [field]:value });
         if (own(canonical, field)) intake[field] = canonical[field]; else delete intake[field];
       }
+      if (own(intake, 'daysPerWeek')) intake.weekdays = defaultWeekdaysFor(intake.daysPerWeek);
+      else delete intake.weekdays;
       if (field !== 'finalConfirmed') delete intake.finalConfirmed;
       return getState();
+    }
+    function controlFocusTarget(control) {
+      return { name:control.name, type:control.type, value:control.value };
+    }
+    function restoreControlFocus(target) {
+      if (!target || !target.name) return;
+      const controls = Array.from(element.querySelectorAll('input,select,textarea'));
+      const match = controls.find(control => control.name === target.name && control.type === target.type && control.value === target.value)
+        || controls.find(control => control.name === target.name);
+      if (match && typeof match.focus === 'function') match.focus({ preventScroll:true });
     }
     function updateFromControl(control) {
       const field = control.name;
       if (!field) return;
+      const content = element.querySelector('.ob-content');
+      const preserveScrollTop = content ? content.scrollTop : null;
+      const restoreControl = controlFocusTarget(control);
       if (control.type === 'number') {
         setField(field, control.value === '' ? undefined : Number(control.value));
       } else if (control.type === 'checkbox') {
@@ -371,7 +404,7 @@
         }
       } else setField(field, control.value);
       if (field === 'setting') { intake.equipment = []; intake.avoidEquipment = []; }
-      render();
+      render(Number.isFinite(preserveScrollTop) ? { preserveScrollTop, restoreControlFocus:restoreControl } : { restoreControlFocus:restoreControl });
     }
     function setHistory(nextStep, push) {
       if (!root.history || !root.location) return;
@@ -396,17 +429,17 @@
       if (!validation.ok) {
         if (step === 9 && validation.errors[0] && validation.errors[0].stepId !== 'confirm') {
           step = STEPS.findIndex(item => item.id === validation.errors[0].stepId);
-          saveDraft(step); setHistory(step, false); render();
+          saveDraft(step); setHistory(step, false); render({ focusTitle:true });
           showErrors(validation.errors.filter(item => item.stepId === STEPS[step].id));
         } else showErrors(validation.errors);
         return false;
       }
       confirmedStep = Math.max(confirmedStep, step);
       if (step < 9) {
-        step += 1; saveDraft(step); setHistory(step, false); render(); return true;
+        step += 1; saveDraft(step); setHistory(step, false); render({ focusTitle:true }); return true;
       }
       const evaluation = evaluateOnboarding(intake);
-      const payload = { intake:sanitizeIntake(intake), risk:evaluation.risk, pilotEligible:evaluation.pilotEligible, canGenerate:evaluation.canGenerate };
+      const payload = { intake:intakeWithDefaultWeekdays(intake), risk:evaluation.risk, pilotEligible:evaluation.pilotEligible, canGenerate:evaluation.canGenerate };
       try {
         const completionResult = onComplete(payload);
         clearDraft(); finished = true;
@@ -423,11 +456,11 @@
     function goTo(index, fromHistory) {
       const target = Math.max(0, Math.min(9, Number(index)));
       if (!Number.isInteger(target)) return false;
-      step = target; resultMessage = ''; if (!fromHistory) setHistory(step, false); render(); return true;
+      step = target; resultMessage = ''; if (!fromHistory) setHistory(step, false); render({ focusTitle:true }); return true;
     }
     function back() {
       if (step === 0) { close(); return true; }
-      step -= 1; setHistory(step, false); render(); return true;
+      step -= 1; setHistory(step, false); render({ focusTitle:true }); return true;
     }
     function open() {
       if (isOpen) return;
@@ -435,7 +468,7 @@
       isOpen = true; finished = false; resultMessage = '';
       const currentIsRoute = root.location && root.location.hash === '#onboarding';
       ownsHistoryEntry = Boolean(currentIsRoute && root.history && root.history.state && root.history.state.move28Onboarding);
-      setHistory(step, !currentIsRoute); render();
+      setHistory(step, !currentIsRoute); render({ focusTitle:true });
       if (root.document && root.document.body) root.document.body.classList.add('onboarding-open');
     }
     function close(fromPop) {
@@ -455,7 +488,7 @@
         const historyStep = event.state && event.state.move28Onboarding ? event.state.step : step;
         goTo(historyStep, true);
       } else if (isOpen && step > 0 && !finished) {
-        ownsHistoryEntry = false; step -= 1; setHistory(step, true); render();
+        ownsHistoryEntry = false; step -= 1; setHistory(step, true); render({ focusTitle:true });
       } else if (isOpen) { ownsHistoryEntry = false; close(true); }
     }
     function onClick(event) {
@@ -497,5 +530,5 @@
     return Object.freeze({ open, close, next, back, goTo, getState, setField, destroy });
   }
 
-  return Object.freeze({ createOnboarding, validateStep, validateAll, sanitizeIntake, buildIntakeSummary, deriveRiskIntake, evaluateOnboarding, deriveActivityStatus, STEPS, DRAFT_KEY, EQUIPMENT, PAIN_AREAS, INTAKE_FIELDS });
+  return Object.freeze({ createOnboarding, validateStep, validateAll, sanitizeIntake, defaultWeekdaysFor, buildIntakeSummary, deriveRiskIntake, evaluateOnboarding, deriveActivityStatus, STEPS, DRAFT_KEY, EQUIPMENT, PAIN_AREAS, INTAKE_FIELDS });
 });
