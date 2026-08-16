@@ -92,12 +92,12 @@ function contextFromState(inputState){
   const recomputedRisk=trustedRiskForIntake(state.intake);
   if(!recomputedRisk)return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机风险结果无法安全复核，请重新完成问卷。'};
   if(!risksMatch(state.risk,recomputedRisk))return{mode:recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review'?'blocked':'invalid',workflowStage:recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review'?'risk_blocked':'invalid',plan:null,logs:state.logs||{},message:'本机风险结果与当前问卷不一致，请重新完成筛查。'};
-  if(recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review')return{mode:'blocked',workflowStage:'risk_blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工复核。'};
+  if(recomputedRisk.level==='stop'||recomputedRisk.level==='manual_review')return{mode:'blocked',workflowStage:'risk_blocked',plan:null,logs:state.logs||{},message:'当前筛查结果不开放自动训练，请修改问卷或先完成人工确认。'};
   if(!state.capabilityProfile||!state.capabilityResult||!Number.isSafeInteger(state.capabilityRevision)||state.capabilityRevision<1)return{mode:'review',workflowStage:'capability_required',plan:null,logs:state.logs||{},message:'请完成能力校准，再生成与你当前起点匹配的计划。'};
   const recomputedCapability=trustedCapabilityForProfile(state.capabilityProfile);
-  if(!recomputedCapability||!capabilityResultsMatch(state.capabilityResult,recomputedCapability))return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机能力档案无法安全复核，请重新完成能力校准。'};
-  if(recomputedCapability.status==='stop'||recomputedCapability.status==='manual_review')return{mode:'blocked',workflowStage:'capability_blocked',plan:null,logs:state.logs||{},message:'当前能力校准结果不开放自动训练，请先重新安全筛查或完成人工复核。'};
-  if(!state.plan)return{mode:'review',workflowStage:'plan_required',plan:null,logs:state.logs||{},message:'档案已保存，但没有通过安全硬门槛的完整计划。'};
+  if(!recomputedCapability||!capabilityResultsMatch(state.capabilityResult,recomputedCapability))return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机能力档案无法安全确认，请重新完成能力校准。'};
+  if(recomputedCapability.status==='stop'||recomputedCapability.status==='manual_review')return{mode:'blocked',workflowStage:'capability_blocked',plan:null,logs:state.logs||{},message:'当前能力校准结果不开放自动训练，请先重新安全筛查或完成人工确认。'};
+  if(!state.plan)return{mode:'review',workflowStage:'plan_required',plan:null,logs:state.logs||{},message:'档案已保存，但还没有可以直接开始训练的完整计划。'};
   const logs=state.logs&&plainRecord(state.logs)?safeObjectValues(state.logs):[];let hasCurrentSafetyEvent=false;
   for(let index=0;index<logs.length;index+=1){const record=logs[index];if(record&&record.status==='safety_stopped'&&record.planId===state.plan.id){hasCurrentSafetyEvent=true;break}}
   if(hasCurrentSafetyEvent)return{mode:'stale',workflowStage:'rescreen_required',plan:null,logs:state.logs||{},message:'训练中已记录安全停止事件，旧计划已失效，请重新完成安全筛查。'};
@@ -106,8 +106,8 @@ function contextFromState(inputState){
   if(hasWeeklyPainRescreen)return{mode:'stale',workflowStage:'rescreen_required',plan:null,logs:state.logs||{},message:'每周复盘发现需要重新筛查的疼痛变化，旧计划已失效。'};
   if(hasCurrentPainFeedback(state))return{mode:'stale',workflowStage:'rescreen_required',plan:null,logs:state.logs||{},message:'训练反馈记录了疼痛，旧计划已失效，请重新完成安全筛查。'};
   if(state.plan.status==='stale'||state.plan.intakeRevision!==state.intakeRevision||state.plan.capabilityRevision!==state.capabilityRevision)return{mode:'stale',workflowStage:'plan_stale',plan:null,logs:state.logs||{},message:'档案已经变化，旧计划已失效，请重新确认问卷与能力校准后生成。'};
-  if(state.plan.status==='pending_review')return{mode:'review',workflowStage:'human_review',plan:null,logs:state.logs||{},message:'4周计划已生成，人工一致性复核完成前不会开放训练入口。'};
-  if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或人工复核凭据无效，请等待重新复核。'};
+  if(state.plan.status==='pending_review')return{mode:'review',workflowStage:'human_review',plan:null,logs:state.logs||{},message:'4周计划已生成，计划确认完成前不会开放训练入口。'};
+  if(state.plan.status!=='active'||!validReview(state.plan,state))return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机计划状态或确认凭据无效，请等待重新确认。'};
   const candidate=validationCandidate(state.plan);
   if(!candidate)return{mode:'invalid',workflowStage:'invalid',plan:null,logs:state.logs||{},message:'本机计划无法安全读取，请重新生成。'};
   let validation;try{validation=trustedValidatePlan&&trustedValidatePlan({plan:candidate,intake:state.intake,risk:recomputedRisk,capabilityResult:state.capabilityResult,capabilityRevision:state.capabilityRevision,catalog:trustedCatalog})}catch(_error){validation=null}
@@ -185,7 +185,7 @@ function weeklyReviewTarget(state,context){
 }
 function renderWeeklyEntry(state,context){
   if(!root.document)return;const slot=root.document.querySelector('#weeklyReviewSlot');if(!slot)return;
-  const target=weeklyReviewTarget(state,context);slot.innerHTML=target?`<button class="cta weekly-review-open" type="button">${target.reviewId?'继续决定':'第'+target.weekNumber+'周复盘'}</button><small>调整需由你确认，并重新经过人工一致性复核。</small>`:'';
+  const target=weeklyReviewTarget(state,context);slot.innerHTML=target?`<button class="cta weekly-review-open" type="button">${target.reviewId?'继续决定':'第'+target.weekNumber+'周复盘'}</button><small>调整需由你确认，并重新经过计划确认。</small>`:'';
   const button=slot.querySelector('button');if(button)button.onclick=()=>Move28.weeklyReviewController&&Move28.weeklyReviewController.open(target);
 }
 function activatePlanView(state){const context=contextFromState(state);Move28.ui.setPlanContext(context);renderWeeklyEntry(state,context);if(Move28.reviewHandoffController)Move28.reviewHandoffController.render(state);return context}
@@ -207,7 +207,7 @@ function handoffToCapability(){
 }
 function handleOnboardingComplete({intake,risk,canGenerate}){
   const saved=Move28.storage.saveIntake(intake,risk);
-  if(!canGenerate){activatePlanView(saved);return{message:'筛查结果已保存到本机；当前需要人工复核或不在试用范围，未生成训练计划。'}}
+  if(!canGenerate){activatePlanView(saved);return{message:'筛查结果已保存到本机；当前需要人工确认或不在试用范围，未生成训练计划。'}}
   activatePlanView(saved);
   handoffToCapability();
   return{message:'问卷已保存，请完成能力校准。'};
@@ -218,7 +218,7 @@ function handleCapabilityComplete(profile){
   if(!result||!['normal','conservative'].includes(result.status)){
     const saved=trustedSaveCapabilityProfile(profile);
     activatePlanView(saved);
-    return{message:result&&result.status==='stop'?'能力档案已保存；出现停止信号，请先重新安全筛查或咨询合适的专业人员。':'能力档案已保存；当前需要人工复核，未生成训练计划。'};
+    return{message:result&&result.status==='stop'?'能力档案已保存；出现停止信号，请先重新安全筛查或咨询合适的专业人员。':'能力档案已保存；当前需要人工确认，未生成训练计划。'};
   }
   if(!trustedSaveCapabilityProfileWithPlan)throw new Error('Atomic capability persistence unavailable');
   const current=Move28.storage.loadState();
@@ -227,13 +227,13 @@ function handleCapabilityComplete(profile){
   const generated=Move28.domain.generatePlan({intake:current.intake,risk:current.risk,intakeRevision:current.intakeRevision,capabilityResult:result,capabilityRevision:nextCapabilityRevision,catalog:trustedCatalog,mediaRequirement:'public_release'});
   if(!generated||generated.status!=='generated'){
     const saved=trustedSaveCapabilityProfile(profile);
-    Move28.ui.setPlanContext({mode:'review',plan:null,logs:saved.logs||{},message:'动作、器械或安全硬门槛未满足，需要人工复核。'});
-    return{message:'能力档案已保存到本机，但公开发布媒体硬门未通过，需要人工复核或继续补齐正式媒体。'};
+    Move28.ui.setPlanContext({mode:'review',plan:null,logs:saved.logs||{},message:'动作、器械或安全硬门槛未满足，需要人工确认。'});
+    return{message:'能力档案已保存到本机；当前动作或器械条件还不能直接开放训练，需要确认后再处理。'};
   }
   const capabilityBoundPlan=Object.assign({},generated,{capabilityRevision:current.capabilityRevision+1});
   const persisted=trustedSaveCapabilityProfileWithPlan(profile,capabilityBoundPlan);
   activatePlanView(persisted);
-  return{message:'待人工复核（pending_review）：候选4周计划已保存到当前浏览器。为避免未经复核的动作、器械或剂量直接进入训练，人工一致性复核完成前不会开放训练入口，训练入口保持锁定。下一步请联系指定复核人或备用联系人；复核后回到同一台设备和同一个浏览器，刷新状态。'};
+  return{message:'等待计划确认（pending_review）：4周计划已保存到当前浏览器。为确保动作、器械和训练量适合你，计划确认完成前不会开放训练入口，训练入口会保持关闭。下一步请联系指定确认人或备用联系人；确认后回到同一台设备和同一个浏览器，刷新状态。'};
 }
 function revokeAdaptation(adaptationId){
   const revoke=Move28.sessionReadiness&&Move28.sessionReadiness.revokeConfirmedAdaptation;

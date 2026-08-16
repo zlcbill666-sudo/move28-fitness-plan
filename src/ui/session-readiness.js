@@ -105,8 +105,8 @@ function showIncomplete(form,resultSlot){
 function selectedSupport(form){const result=[];for(let index=0;index<BODYWEIGHT_SUPPORT.length;index+=1){const item=BODYWEIGHT_SUPPORT[index],control=form.querySelector(`input[name="support"][value="${item.id}"]`);if(control&&control.checked)safeArrayPush(result,item.id)}return result}
 function blockedMarkup(route){
   if(route==='stop')return '<section class="readiness-status danger"><b>停止优先</b><h3>出现警示信号，请停止训练</h3><p>今天不会开放继续训练入口。请根据情况联系急救或合适的专业人员。</p></section>';
-  if(route==='manual_review')return '<section class="readiness-status warning"><b>需要复核</b><h3>今天需要人工复核</h3><p>疼痛变化不能由当日适配自动处理；当前不会开放继续训练入口。</p></section>';
-  return '<section class="readiness-status warning"><b>当前不可适配</b><h3>当前条件暂不支持安全适配</h3><p>时间、空间、噪声或精力变化尚无经过审核的减量模型，请不要自行删动作或改剂量。</p></section>';
+  if(route==='manual_review')return '<section class="readiness-status warning"><b>需要确认</b><h3>今天需要人工确认</h3><p>疼痛变化不能由当日适配自动处理；当前不会开放继续训练入口。</p></section>';
+  return '<section class="readiness-status warning"><b>当前不可适配</b><h3>当前条件暂不支持安全适配</h3><p>时间、空间、噪声或精力变化尚无确认可用的减量方式，请不要自行删动作或改剂量。</p></section>';
 }
 function createSessionReadiness(options){
   const settings=options&&typeof options==='object'?options:{},rootElement=settings.rootElement,onKeep=typeof settings.onKeep==='function'?settings.onKeep:()=>false,onAdapted=typeof settings.onAdapted==='function'?settings.onAdapted:()=>false;
@@ -125,11 +125,11 @@ function createSessionReadiness(options){
   function renderCandidate(readinessInput,equipmentSnapshot,proposal,state){
     confirming=false;const source=findSession(state.plan,sessionId),manifest=proposal.manifest;pendingRecord=clonePureData({sessionId,readinessInput,equipmentSnapshot,manifest});
     if(!pendingRecord||!source){resultSlot.innerHTML=blockedMarkup('unavailable');return}
-    resultSlot.innerHTML=`<section class="readiness-status candidate"><b>待你确认 · 仅本次</b><h3>已生成受控当日候选</h3><p>原因：器械改为已审核的徒手支持条件。四周原计划不会改变。</p><div class="readiness-comparison" data-adaptation-id="${escapeHtml(manifest.adaptationId)}"><p class="readiness-reason">器械改为已审核的徒手支持条件</p><article><span>原计划</span>${sessionSummary(source)}</article><i aria-hidden="true">→</i><article><span>本次候选</span>${sessionSummary(manifest.executionSession)}</article></div><button class="btn primary readiness-confirm" type="button">确认本次适配</button></section>`;
+    resultSlot.innerHTML=`<section class="readiness-status candidate"><b>待你确认 · 仅本次</b><h3>已生成本次安全调整</h3><p>原因：器械改为已确认可用的徒手支持条件。四周原计划不会改变。</p><div class="readiness-comparison" data-adaptation-id="${escapeHtml(manifest.adaptationId)}"><p class="readiness-reason">器械改为已确认可用的徒手支持条件</p><article><span>原计划</span>${sessionSummary(source)}</article><i aria-hidden="true">→</i><article><span>本次调整</span>${sessionSummary(manifest.executionSession)}</article></div><button class="btn primary readiness-confirm" type="button">确认本次适配</button></section>`;
     resultSlot.querySelector('.readiness-confirm').onclick=()=>{
       if(confirming)return;confirming=true;
       const record=clonePureData(pendingRecord),rerun=rerunCandidate(record);
-      if(!record||!rerun||!sameData(rerun.proposal.manifest,record.manifest)){pendingRecord=null;resultSlot.innerHTML='<section class="readiness-status warning"><h3>当前计划或能力档案已经变化</h3><p>候选已作废，请关闭后重新检查今天状态。</p></section>';return}
+      if(!record||!rerun||!sameData(rerun.proposal.manifest,record.manifest)){pendingRecord=null;resultSlot.innerHTML='<section class="readiness-status warning"><h3>当前计划或能力档案已经变化</h3><p>本次调整已作废，请关闭后重新检查今天状态。</p></section>';return}
       const adaptationId=rerun.proposal.manifest.adaptationId,confirmed=clonePureData({...record,manifest:rerun.proposal.manifest});if(!ADAPTATION_ID.test(adaptationId)||!confirmed){resultSlot.innerHTML=blockedMarkup('unavailable');return}
       safeMapSet(confirmedById,adaptationId,deepFreeze(confirmed));const loaded=loadConfirmedAdaptation(adaptationId);if(!loaded){safeMapDelete(confirmedById,adaptationId);resultSlot.innerHTML=blockedMarkup('unavailable');return}
       close();let opened=false;try{opened=onAdapted({adaptationId})===true}catch(_error){opened=false}if(!opened)safeMapDelete(confirmedById,adaptationId);

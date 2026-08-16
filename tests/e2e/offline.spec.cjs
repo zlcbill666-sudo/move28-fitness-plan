@@ -93,7 +93,7 @@ test('HTTP加载完成后断网仍可本地生成；未缓存音乐失败只降�
   await page.getByRole('button', { name: /确认并保存结果/ }).click();
   await expect(page.locator('.ob-saved')).toContainText('请完成能力校准');
   await completeCapability(page);
-  await expect(page.locator('.cap-result')).toContainText('待人工复核（pending_review）');
+  await expect(page.locator('.cap-result')).toContainText('等待计划确认（pending_review）');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityRevision).toBe(1);
   expect(state.plan.status).toBe('pending_review');

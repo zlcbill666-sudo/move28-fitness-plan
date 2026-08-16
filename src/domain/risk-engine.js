@@ -41,10 +41,10 @@
     Object.freeze({ field: 'uncontrolledBloodPressure', stem: 'uncontrolled_blood_pressure', label: '未控制血压' })
   ]);
   const FUNCTIONAL_REVIEW_DEFINITIONS = Object.freeze([
-    Object.freeze({ field:'visibleSwelling', label:'明显肿胀', safeValue:'no', triggerValue:'yes', triggerCode:'reported', triggerMessage:'已报告明显肿胀，需要人工复核。' }),
-    Object.freeze({ field:'dailyActivityLimited', label:'日常活动受限', safeValue:'no', triggerValue:'yes', triggerCode:'reported', triggerMessage:'已报告日常活动受限，需要人工复核。' }),
-    Object.freeze({ field:'chairStand', label:'独立坐站能力', safeValue:'yes', triggerValue:'no', triggerCode:'limited', triggerMessage:'独立坐站能力受限，需要人工复核。' }),
-    Object.freeze({ field:'walkTenMinutes', label:'连续步行10分钟能力', safeValue:'yes', triggerValue:'no', triggerCode:'limited', triggerMessage:'连续步行10分钟能力受限，需要人工复核。' })
+    Object.freeze({ field:'visibleSwelling', label:'明显肿胀', safeValue:'no', triggerValue:'yes', triggerCode:'reported', triggerMessage:'已报告明显肿胀，需要人工确认。' }),
+    Object.freeze({ field:'dailyActivityLimited', label:'日常活动受限', safeValue:'no', triggerValue:'yes', triggerCode:'reported', triggerMessage:'已报告日常活动受限，需要人工确认。' }),
+    Object.freeze({ field:'chairStand', label:'独立坐站能力', safeValue:'yes', triggerValue:'no', triggerCode:'limited', triggerMessage:'独立坐站能力受限，需要人工确认。' }),
+    Object.freeze({ field:'walkTenMinutes', label:'连续步行10分钟能力', safeValue:'yes', triggerValue:'no', triggerCode:'limited', triggerMessage:'连续步行10分钟能力受限，需要人工确认。' })
   ]);
   const FUNCTIONAL_REVIEW_FIELDS = Object.freeze(FUNCTIONAL_REVIEW_DEFINITIONS.map(item => item.field));
   const STOP_FIELDS = Object.freeze(STOP_FIELD_DEFINITIONS.map(item => item.field));
@@ -224,15 +224,15 @@
     }
 
     if (intakeUnreadable) {
-      add('manual_review', 'intake_unreadable', 'intake', '部分输入无法安全读取，需要人工复核。');
+      add('manual_review', 'intake_unreadable', 'intake', '部分输入无法安全读取，需要人工确认。');
     }
 
     if (!presentFields.has('age') || typeof source.age !== 'number' || Number.isNaN(source.age)) {
-      add('manual_review', 'age_invalid_or_missing', 'age', '年龄缺失或不是有限整数，需要人工复核。');
+      add('manual_review', 'age_invalid_or_missing', 'age', '年龄缺失或不是有限整数，需要人工确认。');
     } else if (!Number.isSafeInteger(source.age) || source.age < MIN_AGE || source.age > MAX_AGE) {
-      add('manual_review', 'age_out_of_range', 'age', '年龄超出产品支持的有效输入范围，需要人工复核。');
+      add('manual_review', 'age_out_of_range', 'age', '年龄超出产品支持的有效输入范围，需要人工确认。');
     } else if (source.age < 16) {
-      add('manual_review', 'age_below_16', 'age', '年龄低于16岁，需要人工复核。');
+      add('manual_review', 'age_below_16', 'age', '年龄低于16岁，需要人工确认。');
     }
 
     const hasRedFlags = presentFields.has('redFlags');
@@ -240,7 +240,7 @@
       if (source.redFlags === true) {
         add('stop', 'red_flags_reported', 'redFlags', '已报告健康红旗，应停止自动生成计划。');
       } else if (source.redFlags !== false) {
-        add('manual_review', 'red_flags_invalid', 'redFlags', '红旗汇总值无效，需要人工复核。');
+        add('manual_review', 'red_flags_invalid', 'redFlags', '红旗汇总值无效，需要人工确认。');
       }
     }
 
@@ -264,15 +264,15 @@
     if (presentFields.has('doctorRestriction')) {
       const restriction = source.doctorRestriction;
       if (restriction === 'clear_modification') {
-        add('manual_review', 'doctor_restriction_clear_modification', 'doctorRestriction', '医生要求明确调整，需要人工复核。');
+        add('manual_review', 'doctor_restriction_clear_modification', 'doctorRestriction', '医生要求明确调整，需要人工确认。');
       } else if (restriction === 'unclear') {
         add('stop', 'doctor_restriction_unclear', 'doctorRestriction', '医生限制边界不明，应停止自动生成计划。');
       } else if (restriction === 'prohibited') {
         add('stop', 'doctor_restriction_prohibited', 'doctorRestriction', '医生已明确禁止，应停止自动生成计划。');
       } else if (restriction === 'unsure') {
-        add('manual_review', 'doctor_restriction_uncertain', 'doctorRestriction', '是否存在医生限制不确定，需要人工复核。');
+        add('manual_review', 'doctor_restriction_uncertain', 'doctorRestriction', '是否存在医生限制不确定，需要人工确认。');
       } else if (!DOCTOR_RESTRICTION_VALUES.includes(restriction)) {
-        add('manual_review', 'doctor_restriction_invalid', 'doctorRestriction', '医生限制答案无效，需要人工复核。');
+        add('manual_review', 'doctor_restriction_invalid', 'doctorRestriction', '医生限制答案无效，需要人工确认。');
       }
     }
 
@@ -280,11 +280,11 @@
       if (!presentFields.has(definition.field)) continue;
       const value = source[definition.field];
       if (value === 'yes') {
-        add('manual_review', `${definition.stem}_reported`, definition.field, `已报告${definition.label}，需要人工复核。`);
+        add('manual_review', `${definition.stem}_reported`, definition.field, `已报告${definition.label}，需要人工确认。`);
       } else if (value === 'unsure') {
-        add('manual_review', `${definition.stem}_uncertain`, definition.field, `${definition.label}不确定，需要人工复核。`);
+        add('manual_review', `${definition.stem}_uncertain`, definition.field, `${definition.label}不确定，需要人工确认。`);
       } else if (!TRI_STATE_VALUES.includes(value)) {
-        add('manual_review', `${definition.stem}_invalid`, definition.field, `${definition.label}答案无效，按不确定风险人工复核。`);
+        add('manual_review', `${definition.stem}_invalid`, definition.field, `${definition.label}答案无效，按不确定风险人工确认。`);
       }
     }
 
@@ -294,9 +294,9 @@
       if (value === definition.triggerValue) {
         add('manual_review', `${definition.field}_${definition.triggerCode}`, definition.field, definition.triggerMessage);
       } else if (value === 'unsure') {
-        add('manual_review', `${definition.field}_uncertain`, definition.field, `${definition.label}不确定，需要人工复核。`);
+        add('manual_review', `${definition.field}_uncertain`, definition.field, `${definition.label}不确定，需要人工确认。`);
       } else if (value !== definition.safeValue) {
-        add('manual_review', `${definition.field}_invalid`, definition.field, `${definition.label}答案无效，需要人工复核。`);
+        add('manual_review', `${definition.field}_invalid`, definition.field, `${definition.label}答案无效，需要人工确认。`);
       }
     }
 
@@ -305,11 +305,11 @@
       if (pain === 'mild_stable') {
         add('conservative', 'stable_pain_mild', 'stablePain', '存在轻度稳定疼痛，应采用保守方案。');
       } else if (pain === 'unsure') {
-        add('manual_review', 'stable_pain_uncertain', 'stablePain', '疼痛状态不确定，需要人工复核。');
+        add('manual_review', 'stable_pain_uncertain', 'stablePain', '疼痛状态不确定，需要人工确认。');
       } else if (pain === 'acute_or_worsening') {
         add('stop', 'stable_pain_acute_or_worsening', 'stablePain', '疼痛急性或正在加重，应停止自动生成计划。');
       } else if (!STABLE_PAIN_VALUES.includes(pain)) {
-        add('manual_review', 'stable_pain_invalid', 'stablePain', '疼痛答案无效，按不确定风险人工复核。');
+        add('manual_review', 'stable_pain_invalid', 'stablePain', '疼痛答案无效，按不确定风险人工确认。');
       }
     }
 
@@ -320,7 +320,7 @@
       } else if (activity === 'inactive_long_term') {
         add('conservative', 'activity_inactive_long_term', 'activityStatus', '长期不活动，应采用保守方案。');
       } else if (!ACTIVITY_STATUS_VALUES.includes(activity)) {
-        add('manual_review', 'activity_status_invalid', 'activityStatus', '活动状态答案无效，需要人工复核。');
+        add('manual_review', 'activity_status_invalid', 'activityStatus', '活动状态答案无效，需要人工确认。');
       }
     }
 

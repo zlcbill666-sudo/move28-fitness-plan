@@ -82,16 +82,18 @@ test('participant artifact only includes allowlisted local-library media and exc
 test('ordinary pilot review instructions require visible local handoff and media-enabled safety gate',()=>{
   const reviewer=fs.readFileSync(path.join(root,'docs/pilot/reviewer-checklist.md'),'utf8');
   const participant=fs.readFileSync(path.join(root,'docs/pilot/participant-guide.md'),'utf8');
-  for(const document of [reviewer,participant]){
+  const readme=fs.readFileSync(path.join(root,'README.md'),'utf8');
+  const usage=fs.readFileSync(path.join(root,'使用说明.txt'),'utf8');
+  for(const document of [reviewer,participant,readme,usage]){
     assert.equal(/(?:开发者\s*)?Console|控制台命令/i.test(document),false);
     assert.match(document,/文字(?:步骤|说明|指导)/);
-    assert.match(document,/文字(?:步骤|说明|指导)/);
-    assert.match(document,/动图/);
-    assert.match(document,/25项动作图|动图作为动作姿势参考|动图只作辅助示范/);
-    assert.doesNotMatch(document,/25项本地动图库GIF(?:会|均)|首批10项Exact|仍blocked|文字替代/);
+    assert.match(document,/示范图/);
+    assert.match(document,/每个动作(?:都有|的)示范图|示范图作为姿势参考|示范图只作辅助/);
+    assert.doesNotMatch(document,/25项本地动图库GIF(?:会|均)|首批10项Exact|仍blocked|文字替代|已上架动图|下载复核 dossier|下载最小化审核摘要|人工一致性复核/);
   }
-  assert.match(reviewer,/下载复核 dossier/);
+  assert.match(reviewer,/下载给确认人的文件/);
   assert.match(reviewer,/导入/);
-  assert.match(reviewer,/拒绝并要求返工/);
-  assert.match(reviewer,/25项动作|已上架动图/);
+  assert.match(reviewer,/不通过，需要调整/);
+  assert.match(reviewer,/每个动作.*示范图/);
+  assert.match(usage,/参与者请只使用维护者单独发送的 HTTPS 试用网址/);
 });

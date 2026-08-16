@@ -93,8 +93,9 @@ test('经典脚本先加载媒体策略再加载参与者渲染器且首页不�
   assert.ok(policyIndex < scripts.indexOf('src/ui/dashboard.js'));
   assert.ok(policyIndex < scripts.indexOf('src/ui/workout-guide.js'));
   assert.doesNotMatch(html, /<img[^>]+assets\/gifs\//i);
-  assert.match(html, /25项动作图已上架/);
-  assert.match(html, /动作内容按图对齐/);
+  assert.match(html, /每个动作都有示范/);
+  assert.match(html, /动作更容易看懂/);
+  assert.doesNotMatch(html, /已上架|按图对齐|通过复核|曾不匹配/);
   assert.doesNotMatch(html, /动图暂停展示|低质动图已从前台撤回|低质或语义不符动图不进入前台|仅保留文字指导|14项动作图已上架|11项继续文字指导|25项动图已开放|25项本地动图库GIF已开放|剩余15项已完成本地上架|0项继续阻止|10项Exact|15项未匹配|未匹配动作继续文字模式|Exact10已完成本阶段复核|ALL25 READY/);
   const context = {}; vm.createContext(context);
   for (const relative of ['src/namespace.js', 'src/data/exercise-media-policy.js']) {

@@ -47,16 +47,16 @@ test('generated-plan 未问卷仅显示只读示例且不写用户记录',async(
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
 });
 
-test('generated-plan 正常问卷生成后等待人工复核，放行后持久化并显示第1周',async({page})=>{
+test('generated-plan 正常问卷生成后等待计划确认，放行后持久化并显示第1周',async({page})=>{
   await completeOnboarding(page);
-  await expect(page.locator('.cap-result')).toContainText('人工一致性复核完成前不会开放训练入口');
+  await expect(page.locator('.cap-result')).toContainText('计划确认完成前不会开放训练入口');
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(stored.plan.status).toBe('pending_review');
   expect(stored.plan.review).toBeNull();
   expect(stored.plan.weeks).toHaveLength(4);
   expect(stored.plan.intakeRevision).toBe(stored.intakeRevision);
   await page.getByRole('button',{name:'完成，返回首页'}).click();
-  await expect(page.locator('#todayCard')).toContainText('人工一致性复核完成前');
+  await expect(page.locator('#todayCard')).toContainText('计划确认完成前');
   await expect(page.locator('.today-start')).toHaveCount(0);
   await expect(page.locator('.plan-explanation')).toHaveCount(0);
   const runtimeBypass=await page.evaluate(()=>{
@@ -310,9 +310,9 @@ test('generated-plan 跟练在390竖屏、844横屏与1280桌面无横向溢出�
   for(const viewport of [{width:390,height:844},{width:1280,height:800}]){await page.setViewportSize(viewport);await assertNoOverflow()}
 });
 
-test('generated-plan 居家受控能力因缺少已审核膝主导动作原子人工复核且不回显变式枚举',async({page})=>{
+test('generated-plan 居家受控能力因缺少可用膝主导动作原子等待确认且不回显变式枚举',async({page})=>{
   await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','resistance_band','wall'],allowSettingSwap:'no'}, {chairRise:'hands_supported',wallPushup:'limited_range'});
-  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
+  await expect(page.locator('.cap-result')).toContainText('需要确认');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityResult?.status).toBe('conservative');
   expect(state.capabilityRevision).toBe(1);
@@ -329,7 +329,7 @@ test('generated-plan 居家受控能力因缺少已审核膝主导动作原子�
 
 test('generated-plan 缺少审核动作时原子阻断且不回退成用户训练计划',async({page})=>{
   await completeOnboarding(page,{setting:'home',equipment:['stable_chair','exercise_mat','wall'],allowSettingSwap:'no'});
-  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
+  await expect(page.locator('.cap-result')).toContainText('需要确认');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan).toBeNull();
   await page.getByRole('button',{name:'完成，返回首页'}).click();
@@ -423,7 +423,7 @@ test('generated-plan 顺延确认前重新校验安全状态，失效计划不�
     Move28.storage.recordWorkoutStop({sessionId:session.id,reasonCode:'sudden_severe_pain',actionIndex:0,occurredAt:'2030-01-02T03:05:00.000Z'});
   });
   await page.getByRole('button',{name:'仅更新日历显示'}).click();
-  await expect(page.locator('#todayCard')).toContainText('计划未通过有效状态、人工复核或安全校验');
+  await expect(page.locator('#todayCard')).toContainText('计划未通过有效状态、确认或安全校验');
   await expect(page.locator('.shift-display-badge')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
 });

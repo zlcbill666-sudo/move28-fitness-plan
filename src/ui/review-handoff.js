@@ -46,16 +46,16 @@ function createReviewHandoff(options={}){
   function currentState(){try{return trustedLoad&&trustedLoad()}catch(_error){return null}}
   function summary(){
     if(!imported)return'';
-    return '<dl class=review-dossier-summary><div><dt>Participant</dt><dd>'+esc(imported.participantId)+'</dd></div><div><dt>Plan</dt><dd>'+esc(imported.planId)+'</dd></div><div><dt>Revisions</dt><dd>intake '+esc(imported.intakeRevision)+' · capability '+esc(imported.capabilityRevision)+'</dd></div><div><dt>Safety route</dt><dd>'+esc(imported.riskLevel)+' · '+esc(imported.capabilityStatus)+'</dd></div><div><dt>Validation</dt><dd>'+esc(imported.validationResult)+' · '+esc(imported.lineage&&imported.lineage.validationResult)+'</dd></div><div><dt>Plan scope</dt><dd>'+esc(Array.isArray(imported.weeks)?imported.weeks.length:0)+' weeks · text guidance</dd></div></dl>';
+    return '<dl class=review-dossier-summary><div><dt>试用编号</dt><dd>'+esc(imported.participantId)+'</dd></div><div><dt>计划编号</dt><dd>'+esc(imported.planId)+'</dd></div><div><dt>档案版本</dt><dd>问卷 '+esc(imported.intakeRevision)+' · 能力 '+esc(imported.capabilityRevision)+'</dd></div><div><dt>安全路线</dt><dd>'+esc(imported.riskLevel)+' · '+esc(imported.capabilityStatus)+'</dd></div><div><dt>规则检查</dt><dd>'+esc(imported.validationResult)+' · '+esc(imported.lineage&&imported.lineage.validationResult)+'</dd></div><div><dt>计划范围</dt><dd>'+esc(Array.isArray(imported.weeks)?imported.weeks.length:0)+' 周 · 文字步骤</dd></div></dl>';
   }
   function pendingMarkup(){
     const safeReviewer=MACHINE_ID.test(reviewerId)?reviewerId:'';
-    return '<div class=review-handoff-card><div class=review-handoff-copy><span class=review-handoff-kicker>LOCAL REVIEW HANDOFF</span><h3>计划等待人工复核</h3><p>候选计划仍锁定。先下载固定字段 dossier，再由指定复核人在当前浏览器导入同一文件完成批准或返工。</p><ul><li>文件不含原始健康答案、异常详情或网址健康数据</li><li>不上传服务器；决定仅对当前浏览器中的同一 plan/revision 有效</li><li>25项动作图已上架；复核时仍以文字步骤、无痛范围和停止信号优先</li></ul></div><div class=review-handoff-actions><button type=button class=btn data-review-action=download>下载复核 dossier</button><span>最终决定必须回到此浏览器完成。</span></div><details class=reviewer-panel '+(imported?'open':'')+'><summary>指定复核人入口</summary><div class=reviewer-panel-body><label class=review-file>导入刚才下载的 dossier<input type=file accept=.json data-review-file></label><div class='+(imported?'review-import-valid':'review-import-status')+'>'+(imported?'已匹配当前本机候选计划。':'尚未导入。任何字段不一致都会拒绝。')+'</div>'+summary()+'<label class=reviewer-id>复核人编号<input type=text value='+safeReviewer+' maxlength=64 data-reviewer-id></label><fieldset class=review-confirmations><legend>批准前逐项确认</legend><label><input type=checkbox data-review-confirm> plan、intake 与 capability revision 与本次会话一致</label><label><input type=checkbox data-review-confirm> 风险、能力、validator 与 lineage 均通过清单核对</label><label><input type=checkbox data-review-confirm> 确认25项动图仅作辅助；动作执行仍以文字步骤和停止信号优先</label></fieldset><div class=review-decision-actions><button type=button class=btn data-review-action=approve disabled>批准并开放当前计划</button><button type=button class=btn data-review-action=deny disabled>拒绝并要求返工</button></div></div></details><div class=review-handoff-message aria-live=polite>'+esc(message)+'</div></div>';
+    return '<div class=review-handoff-card><div class=review-handoff-copy><span class=review-handoff-kicker>本机确认</span><h3>计划等待确认</h3><p>训练入口暂时关闭。先下载给确认人看的文件，再由指定确认人在当前浏览器导入同一文件，选择通过或需要调整。</p><ul><li>给确认人看的文件不含原始健康答案、异常详情或网址健康数据</li><li>不上传服务器；确认只对当前浏览器里的同一份计划有效</li><li>每个动作都有示范；确认时仍以文字步骤、无痛范围和停止信号优先</li></ul></div><div class=review-handoff-actions><button type=button class=btn data-review-action=download>下载给确认人的文件</button><span>最终确认需要回到此浏览器完成。</span></div><details class=reviewer-panel '+(imported?'open':'')+'><summary>指定确认人入口</summary><div class=reviewer-panel-body><label class=review-file>导入刚才下载的确认文件<input type=file accept=.json data-review-file></label><div class='+(imported?'review-import-valid':'review-import-status')+'>'+(imported?'已匹配当前本机计划。':'尚未导入。任何关键信息不一致都会被拒绝。')+'</div>'+summary()+'<label class=reviewer-id>确认人编号<input type=text value='+safeReviewer+' maxlength=64 data-reviewer-id></label><fieldset class=review-confirmations><legend>通过前逐项确认</legend><label><input type=checkbox data-review-confirm> 计划、问卷和能力档案与本次会话一致</label><label><input type=checkbox data-review-confirm> 风险、能力和规则检查结果均已核对</label><label><input type=checkbox data-review-confirm> 确认示范图仅作辅助；动作执行仍以文字步骤和停止信号优先</label></fieldset><div class=review-decision-actions><button type=button class=btn data-review-action=approve disabled>确认通过并开放当前计划</button><button type=button class=btn data-review-action=deny disabled>不通过，需要调整</button></div></div></details><div class=review-handoff-message aria-live=polite>'+esc(message)+'</div></div>';
   }
   function render(state=currentState()){
     if(state&&state.plan&&state.plan.status==='pending_review'){element.hidden=false;element.innerHTML=pendingMarkup();bind();updateControls();return}
     imported=null;
-    if(state&&state.plan&&state.plan.status==='stale'&&state.plan.staleReason==='review_denied'){element.hidden=false;element.innerHTML='<div class=review-handoff-card><span class=review-handoff-kicker>REWORK REQUIRED</span><h3>复核未通过，训练继续锁定</h3><p>请修复或重新生成候选计划；旧 dossier 不能再次批准。</p></div>';return}
+    if(state&&state.plan&&state.plan.status==='stale'&&state.plan.staleReason==='review_denied'){element.hidden=false;element.innerHTML='<div class=review-handoff-card><span class=review-handoff-kicker>需要调整</span><h3>确认未通过，训练继续锁定</h3><p>请修改或重新生成计划；旧确认文件不能再次用于通过。</p></div>';return}
     element.hidden=true;element.innerHTML='';
   }
   function say(text,kind=''){message=text;tone=kind;const slot=element.querySelector('.review-handoff-message');if(slot){slot.textContent=text;slot.dataset.tone=kind}}
@@ -69,21 +69,21 @@ function createReviewHandoff(options={}){
   function importDossierText(text){
     const parsed=parseReviewDossierText(text);let valid=false;
     try{valid=Boolean(parsed&&trustedValidate&&trustedValidate(parsed))}catch(_error){}
-    imported=valid?parsed:null;mode=valid?'validated':'invalid';message=valid?'dossier 已与当前本机会话匹配；请完成清单后决定。':'dossier 无效、已过期或不属于当前浏览器会话；计划仍保持锁定。';tone=valid?'success':'error';render(currentState());return valid;
+    imported=valid?parsed:null;mode=valid?'validated':'invalid';message=valid?'确认文件已与当前本机会话匹配；请完成清单后决定。':'确认文件无效、已过期或不属于当前浏览器会话；计划仍保持锁定。';tone=valid?'success':'error';render(currentState());return valid;
   }
   async function importFile(file){
     if(!file||!Number.isSafeInteger(file.size)||file.size<1||file.size>MAX_DOSSIER_BYTES||typeof file.text!=='function')return importDossierText('');
     try{return importDossierText(await file.text())}catch(_error){return importDossierText('')}
   }
   function download(){
-    try{const dossier=trustedBuild&&trustedBuild();if(!dossier||!trustedValidate||trustedValidate(dossier)!==true)throw new Error('invalid');const result=downloadReviewDossier(dossier);say(result.ok?'复核 dossier 下载已开始；没有数据上传。':'当前浏览器无法下载 dossier；没有数据上传。',result.ok?'success':'error');mode=result.ok?'downloaded':'error';return result}
-    catch(_error){say('当前本机会话无法安全导出 dossier；计划仍保持锁定。','error');return fixedFailure('download_failed')}
+    try{const dossier=trustedBuild&&trustedBuild();if(!dossier||!trustedValidate||trustedValidate(dossier)!==true)throw new Error('invalid');const result=downloadReviewDossier(dossier);say(result.ok?'确认文件下载已开始；没有数据上传。':'当前浏览器无法下载确认文件；没有数据上传。',result.ok?'success':'error');mode=result.ok?'downloaded':'error';return result}
+    catch(_error){say('当前本机会话无法安全导出确认文件；计划仍保持锁定。','error');return fixedFailure('download_failed')}
   }
   function decide(decision){
     updateControls();const button=element.querySelector('[data-review-action='+decision+']');
     if(!imported||!MACHINE_ID.test(reviewerId)||!trustedValidate||trustedValidate(imported)!==true||!button||button.disabled)return false;
     try{const next=decision==='approve'?trustedApprove({reviewerId,dossier:imported}):trustedDeny({reviewerId,dossier:imported});imported=null;mode=decision==='approve'?'approved':'denied';onDecision(next);render(next);return next}
-    catch(_error){imported=null;message='决定未保存：dossier 或本机会话已经变化，计划仍保持锁定。';tone='error';render(currentState());return false}
+    catch(_error){imported=null;message='决定未保存：确认文件或本机会话已经变化，计划仍保持锁定。';tone='error';render(currentState());return false}
   }
   function bind(){
     const file=element.querySelector('[data-review-file]');if(file)file.addEventListener('change',event=>void importFile(event.target.files&&event.target.files[0]));

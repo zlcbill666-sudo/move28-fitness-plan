@@ -33,16 +33,16 @@ async function setupAction(page, viewport) {
   await page.getByRole('button', { name: '开始本节', exact: true }).click();
 }
 
-test('pending_review 完成后手机首屏显示唯一审核状态、锁定原因和真实下一步', async ({ page }) => {
+test('pending_review 完成后手机首屏显示唯一等待状态、锁定原因和真实下一步', async ({ page }) => {
   const viewport = { width: 390, height: 844 };
   await page.setViewportSize(viewport);
   await resetHttp(page);
   await completeOnboarding(page);
   const completionStatus = page.locator('#capabilityAssessmentView .cap-result');
   const completionCta = page.getByRole('button', { name: '完成，返回首页' });
-  await expect(completionStatus).toContainText('待人工复核（pending_review）');
-  await expect(completionStatus).toContainText('训练入口保持锁定');
-  await expect(completionStatus).toContainText('指定复核人或备用联系人');
+  await expect(completionStatus).toContainText('等待计划确认（pending_review）');
+  await expect(completionStatus).toContainText('训练入口会保持关闭');
+  await expect(completionStatus).toContainText('指定确认人或备用联系人');
   await expect(completionStatus).toContainText('同一台设备和同一个浏览器');
   await expectInsideViewport(completionStatus, viewport);
   await expectInsideViewport(completionCta, viewport);
@@ -50,15 +50,15 @@ test('pending_review 完成后手机首屏显示唯一审核状态、锁定原�
 
   expect(await page.evaluate(() => Move28.storage.loadState().plan.status)).toBe('pending_review');
   const pendingHero = page.locator('.pending-review-hero');
-  const pendingTitle = pendingHero.getByRole('heading', { name: /待人工复核/ });
+  const pendingTitle = pendingHero.getByRole('heading', { name: /等待确认/ });
   const pendingCopy = pendingHero.locator('.hero-copy');
   const nextStep = pendingHero.locator('.hero-next-step');
   await expect(pendingHero).toHaveAttribute('data-workflow-stage', 'human_review');
   await expect(pendingTitle).toBeVisible();
-  await expect(pendingCopy).toContainText('训练入口保持锁定');
-  await expect(nextStep).toContainText('指定复核人或备用联系人');
+  await expect(pendingCopy).toContainText('训练入口会保持关闭');
+  await expect(nextStep).toContainText('指定确认人或备用联系人');
   await expect(nextStep).toContainText('同一台设备和同一个浏览器');
-  const cta = page.getByRole('button', { name: '复核后刷新状态' });
+  const cta = page.getByRole('button', { name: '确认后刷新状态' });
   await expect(cta).toBeVisible();
   await expectInsideViewport(pendingTitle, viewport);
   await expectInsideViewport(pendingCopy, viewport);
@@ -66,7 +66,7 @@ test('pending_review 完成后手机首屏显示唯一审核状态、锁定原�
   await expectInsideViewport(cta, viewport);
   await expect(page.getByRole('button', { name: /生成我的4周计划/ })).toHaveCount(0);
   await expect(page.getByText('暂未生成可执行计划', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('当前需要人工复核，未生成训练计划', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('当前需要确认，未生成训练计划', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '开始今天训练' })).toHaveCount(0);
   await cta.click();
   await expect(pendingHero).toBeVisible();
@@ -81,7 +81,7 @@ test('file:// pending_review 刷新 CTA 只重读同一浏览器本机状态', a
   await page.reload();
   await completeOnboarding(page);
   await page.getByRole('button', { name: '完成，返回首页' }).click();
-  await page.getByRole('button', { name: '复核后刷新状态' }).click();
+  await page.getByRole('button', { name: '确认后刷新状态' }).click();
   await page.waitForFunction(() => window.Move28?.storage?.loadState);
 
   expect(new URL(page.url()).protocol).toBe('file:');

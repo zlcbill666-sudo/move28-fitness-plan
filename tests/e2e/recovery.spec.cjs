@@ -81,7 +81,7 @@ test('sessionStorage不可用不改变安全结论，最终档案仍可持久保
   await confirm(page);
   await expect(page.locator('.ob-saved')).toContainText('请完成能力校准');
   await completeCapability(page);
-  await expect(page.locator('.cap-result')).toContainText('待人工复核（pending_review）');
+  await expect(page.locator('.cap-result')).toContainText('等待计划确认（pending_review）');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.risk.level).toBe('normal');
   expect(state.capabilityRevision).toBe(1);

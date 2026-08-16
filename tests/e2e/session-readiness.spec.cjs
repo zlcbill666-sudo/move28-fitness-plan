@@ -103,7 +103,7 @@ test('键盘主动完成六项后保持原路线，刷新重开恢复六项空�
 test('警示、疼痛和不可用路由都不显示任何继续训练入口',async({page})=>{
   const cases=[
     ['身体信号','warning','出现警示信号，请停止训练'],
-    ['身体信号','pain','今天需要人工复核'],
+    ['身体信号','pain','今天需要人工确认'],
     ['可用时间','20_min','当前条件暂不支持安全适配']
   ];
   for(const [label,value,message] of cases){
@@ -118,11 +118,11 @@ test('警示、疼痛和不可用路由都不显示任何继续训练入口',asy
   }
 });
 
-test('候选先预览原session与候选及有限理由，确认前不进入跟练',async({page})=>{
+test('调整方案先预览原session与本次调整及有限理由，确认前不进入跟练',async({page})=>{
   await previewBodyweight(page);
   await expect(page.locator('.readiness-comparison')).toContainText('原计划');
-  await expect(page.locator('.readiness-comparison')).toContainText('本次候选');
-  await expect(page.locator('.readiness-comparison')).toContainText('器械改为已审核的徒手支持条件');
+  await expect(page.locator('.readiness-comparison')).toContainText('本次调整');
+  await expect(page.locator('.readiness-comparison')).toContainText('器械改为已确认可用的徒手支持条件');
   await expect(page.locator('.readiness-support')).toContainText('稳固椅子');
   await expect(page.locator('.readiness-support')).toContainText('运动垫');
   await expect(page.locator('.readiness-support')).toContainText('墙面');
@@ -148,7 +148,7 @@ test('确认会重载当前存储并在revision变化时重新路由、提案和
   await expect(page.getByRole('button',{name:/按原计划继续|开始适配训练/})).toHaveCount(0);
 });
 
-test('刷新丢弃未确认候选，不能把预览当成正式适配',async({page})=>{
+test('刷新丢弃未确认调整，不能把预览当成正式适配',async({page})=>{
   await previewBodyweight(page);
   const adaptationId=await page.locator('.readiness-comparison').getAttribute('data-adaptation-id');
   expect(adaptationId).toMatch(/^daily\./);

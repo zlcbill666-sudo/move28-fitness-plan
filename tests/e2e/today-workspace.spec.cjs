@@ -32,7 +32,7 @@ test('today-workspace 从首次问卷到人工复核再到今日训练只开放�
   await expect(workflow.locator('[data-step="questionnaire"]')).toHaveClass(/done/);
   await expect(workflow.locator('[data-step="capability"]')).toHaveClass(/done/);
   await expect(workflow.locator('[data-step="review"]')).toHaveAttribute('aria-current','step');
-  await expect(workflow).toContainText('人工一致性复核');
+  await expect(workflow).toContainText('计划确认');
   await expect(page.locator('.hero')).toBeHidden();
   await expect(page.locator('#pendingReviewHero')).toBeVisible();
   await expect(page.locator('.today-start')).toHaveCount(0);

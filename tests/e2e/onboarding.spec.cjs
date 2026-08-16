@@ -92,7 +92,7 @@ test('完整成年安全答案确认后只保存intake并打开能力校准，�
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-onboarding-draft-v1'))).toBeNull();
 });
 
-test('能力校准严格三屏验证，允许逐项跳过，完整档案保存revision且器械组合不足时进入人工复核', async ({ page }) => {
+test('能力校准严格三屏验证，允许逐项跳过，完整档案保存revision且器械组合不足时进入需要确认', async ({ page }) => {
   await open(page); await inject(page); await confirm(page);
   await page.getByRole('button',{name:'继续 →'}).click();
   await expect(page.locator('.cap-errors')).toContainText('未尝试');
@@ -106,7 +106,7 @@ test('能力校准严格三屏验证，允许逐项跳过，完整档案保存re
   await page.getByRole('button',{name:'继续 →'}).click();
   await chooseCapability(page,'walkTolerance','not_attempted');
   await page.getByRole('button',{name:/确认并保存能力档案/}).click();
-  await expect(page.locator('.cap-result')).toContainText('人工复核');
+  await expect(page.locator('.cap-result')).toContainText('需要确认');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityRevision).toBe(1); expect(state.capabilityProfile.completed).toBe(true); expect(state.plan).toBeNull();
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-capability-draft-v1'))).toBeNull();
@@ -135,7 +135,7 @@ test('健身房能力与计划原子保存，写入失败重试不会提前递�
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-capability-draft-v1'))).not.toBeNull();
   await page.evaluate(()=>{Storage.prototype.setItem=window.__move28SetItem;delete window.__move28SetItem;});
   await page.getByRole('button',{name:/确认并保存能力档案/}).click();
-  await expect(page.locator('.cap-result')).toContainText('人工一致性复核');
+  await expect(page.locator('.cap-result')).toContainText('计划确认');
   state=await page.evaluate(()=>JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.capabilityRevision).toBe(1);expect(state.plan.status).toBe('pending_review');expect(state.plan.capabilityRevision).toBe(1);
   expect(await page.evaluate(()=>sessionStorage.getItem('move28-capability-draft-v1'))).toBeNull();

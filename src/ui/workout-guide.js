@@ -219,7 +219,7 @@ function renderExitConfirm(){
 }
 function renderDurationBlocked(){
   getWorkoutAudio().pause();updateMusicUI();$('#guideEyebrow').textContent='NOT COMPLETED';$('#guideTitle').textContent='完成记录保护';
-  $('#guideBody').innerHTML=`<section class="guide-state guide-warning"><h3>本节还不能记为完成</h3><p>本次跟练时间短于已审核的预计时长和动作剂量，或计时不可用。为避免生成不真实的完成记录，本节尚未保存为完成。</p><p>你可以继续本节训练，或普通退出并保留为未完成；如有不适，请优先使用安全停止。</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></section>`;
+  $('#guideBody').innerHTML=`<section class="guide-state guide-warning"><h3>本节还不能记为完成</h3><p>本次跟练时间短于已确认的预计时长和动作剂量，或计时不可用。为避免生成不真实的完成记录，本节尚未保存为完成。</p><p>你可以继续本节训练，或普通退出并保留为未完成；如有不适，请优先使用安全停止。</p><button class="btn danger-outline guide-stop" type="button" onclick="requestSafetyStop()">暂停 / 停止训练</button></section>`;
   setGuideFoot({label:'继续本节训练'},{label:'普通退出（本节未完成）'});
 }
 function renderSafetySelect(){

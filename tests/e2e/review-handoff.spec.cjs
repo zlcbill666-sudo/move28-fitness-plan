@@ -18,12 +18,12 @@ async function submit(page){
   await page.getByRole('button',{name:/确认并保存能力档案/}).click();
   await page.getByRole('button',{name:'完成，返回首页'}).click();
   await expect(page.locator('#reviewHandoff')).toBeVisible();
-  await expect(page.getByRole('heading',{name:'计划等待人工复核'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'计划等待确认'})).toBeVisible();
   expect((await page.evaluate(()=>Move28.storage.loadState())).plan.status).toBe('pending_review');
 }
 async function exportAndImport(page){
   const downloadPromise=page.waitForEvent('download');
-  await page.getByRole('button',{name:'下载复核 dossier'}).click();
+  await page.getByRole('button',{name:'下载给确认人的文件'}).click();
   const download=await downloadPromise,path=await download.path(),parsed=JSON.parse(fs.readFileSync(path,'utf8'));
   expect(parsed.dossierVersion).toBe('move28.review-dossier.v1');
   expect(parsed.planStatus).toBe('pending_review');
@@ -38,7 +38,7 @@ test.beforeEach(async({page})=>reset(page));
 
 test('submit pending export import approve opens only the canonical reviewed plan',async({page})=>{
   await submit(page);await exportAndImport(page);
-  const approve=page.getByRole('button',{name:'批准并开放当前计划'});
+  const approve=page.getByRole('button',{name:'确认通过并开放当前计划'});
   await expect(approve).toBeDisabled();
   const confirmations=page.locator('[data-review-confirm]');
   for(let index=0;index<await confirmations.count();index++)await confirmations.nth(index).check();
@@ -51,10 +51,10 @@ test('submit pending export import approve opens only the canonical reviewed pla
 
 test('submit pending export import deny persists rework and keeps training locked',async({page})=>{
   await submit(page);await exportAndImport(page);
-  await page.getByRole('button',{name:'拒绝并要求返工'}).click();
+  await page.getByRole('button',{name:'不通过，需要调整'}).click();
   const state=await page.evaluate(()=>Move28.storage.loadState());
   expect(state.plan.status).toBe('stale');expect(state.plan.staleReason).toBe('review_denied');expect(state.plan.review.status).toBe('denied');
-  await expect(page.getByRole('heading',{name:'复核未通过，训练继续锁定'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'确认未通过，训练继续锁定'})).toBeVisible();
   await expect(page.getByRole('button',{name:'开始今天训练'})).toHaveCount(0);
 });
 

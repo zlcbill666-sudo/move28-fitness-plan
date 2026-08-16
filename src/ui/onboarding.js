@@ -23,7 +23,7 @@
     { id: 'goal', eyebrow: '训练目标', title: '这4周，你最想建立什么？', rail: '选择一个现实、可持续的首要目标' },
     { id: 'experience', eyebrow: '活动经验', title: '你最近的活动基础如何？', rail: '用于控制首周负荷，而不是评价能力' },
     { id: 'schedule', eyebrow: '时间安排', title: '把计划放进真实生活', rail: '可执行的时间表比理想数字更重要' },
-    { id: 'equipment', eyebrow: '场景器械', title: '你通常在哪里训练？', rail: '仅使用已审核场景与器械' },
+    { id: 'equipment', eyebrow: '场景器械', title: '你通常在哪里训练？', rail: '仅使用已确认可用的场景与器械' },
     { id: 'movement', eyebrow: '疼痛与动作能力', title: '确认当前动作边界', rail: '答案用于安全路由，不用于诊断' },
     { id: 'safety', eyebrow: '安全筛查', title: '逐项完成安全确认', rail: '不确定可以如实选择，但不会被当作安全' },
     { id: 'preferences', eyebrow: '训练偏好', title: '让执行方式更顺手', rail: '只选择偏好，不收集自由文本' },
@@ -143,7 +143,7 @@
     } else if (stepId === 'equipment') {
       ['setting', 'allowSettingSwap'].forEach(field => addEnum(field, '请完成此项。'));
       const allowed = EQUIPMENT[data.setting] || [];
-      if (!Array.isArray(data.equipment) || data.equipment.length < 1 || data.equipment.some(id => !allowed.includes(id)) || new Set(data.equipment).size !== data.equipment.length) errors.push(error('equipment', '请至少选择一项当前场景下的已审核器械。'));
+      if (!Array.isArray(data.equipment) || data.equipment.length < 1 || data.equipment.some(id => !allowed.includes(id)) || new Set(data.equipment).size !== data.equipment.length) errors.push(error('equipment', '请至少选择一项当前场景下已确认可用的器械。'));
       if (data.setting === 'home' && (!Array.isArray(data.equipment) || !data.equipment.includes('stable_chair'))) errors.push(error('equipment', '居家训练至少需要一把稳固椅子。'));
     } else if (stepId === 'movement') {
       if (!Array.isArray(data.painAreas) || data.painAreas.length < 1 || data.painAreas.some(area => !PAIN_AREAS.includes(area)) || (data.painAreas.includes('none') && data.painAreas.length > 1)) errors.push(error('painAreas', '请选择“无疼痛”或具体疼痛部位，二者不能同时选择。'));
@@ -193,7 +193,7 @@
 
   const LABELS = Object.freeze({
     habit:'建立运动习惯', daily_fitness:'提升日常体能', low_impact_fat_loss:'低冲击减脂起步', basic_strength:'建立基础力量',
-    gym:'健身房', home:'居家', normal:'常规起步', conservative:'保守起步', manual_review:'待人工审核', stop:'暂不进入自动计划', unsure:'不确定',
+    gym:'健身房', home:'居家', normal:'常规起步', conservative:'保守起步', manual_review:'需要人工确认', stop:'暂不进入自动计划', unsure:'不确定',
     elliptical:'椭圆机', flat_walk:'0坡度平地走', mixed:'两者交替', none:'暂无偏好',
     stable_chair:'稳固椅子', smith_machine:'史密斯机', exercise_mat:'训练垫', resistance_band:'弹力带', wall:'可用墙面',
     leg_press_machine:'腿举机', leg_curl_machine:'腿弯举机', chest_press_machine:'推胸机', seated_row_machine:'坐姿划船机',
@@ -301,7 +301,7 @@
       if (step === 5) {
         const setting = intake.setting;
         const equipmentOptions = setting === 'gym' ? [['stable_chair','稳固椅/凳'],['smith_machine','史密斯机'],['exercise_mat','训练垫'],['leg_press_machine','腿举机'],['leg_curl_machine','腿弯举机'],['chest_press_machine','推胸机'],['seated_row_machine','坐姿划船机'],['resistance_band','弹力带'],['cable_machine','龙门架'],['elliptical_trainer','椭圆机'],['treadmill','跑步机']] : [['stable_chair','稳固椅子（居家必需）'],['exercise_mat','训练垫'],['resistance_band','弹力带'],['wall','可用墙面']];
-        return `${choices('setting',[['gym','健身房','器械更完整'],['home','居家','最低配置：稳固椅子；推荐弹力带']])}${setting ? `<fieldset class="ob-question"><legend>勾选你确定可用的器械</legend>${checks('equipment',equipmentOptions)}${setting === 'home' && Array.isArray(intake.equipment) && !intake.equipment.includes('resistance_band') ? '<p class="ob-inline-warning">没有弹力带时，居家水平拉动作覆盖有限；后续不会假设你有该器械。</p>' : ''}${setting === 'home' ? '<p class="ob-muted">首版动作目录尚无已审核的哑铃动作，因此本轮不把哑铃列为可用器械。</p>' : ''}</fieldset>` : '<p class="ob-muted">先选择场景，再核对器械。</p>'}${tri('allowSettingSwap','计划是否可以在健身房与居家版本间切换？')}`;
+        return `${choices('setting',[['gym','健身房','器械更完整'],['home','居家','最低配置：稳固椅子；推荐弹力带']])}${setting ? `<fieldset class="ob-question"><legend>勾选你确定可用的器械</legend>${checks('equipment',equipmentOptions)}${setting === 'home' && Array.isArray(intake.equipment) && !intake.equipment.includes('resistance_band') ? '<p class="ob-inline-warning">没有弹力带时，居家水平拉动作覆盖有限；后续不会假设你有该器械。</p>' : ''}${setting === 'home' ? '<p class="ob-muted">首版动作目录尚无可用的哑铃动作，因此本轮不把哑铃列为可用器械。</p>' : ''}</fieldset>` : '<p class="ob-muted">先选择场景，再核对器械。</p>'}${tri('allowSettingSwap','计划是否可以在健身房与居家版本间切换？')}`;
       }
       if (step === 6) {
         const hasPain = Array.isArray(intake.painAreas) && !intake.painAreas.includes('none');
@@ -318,8 +318,8 @@
       const statusClass = `ob-risk-${risk.level}`;
       const functionalFields = Array.isArray(riskApi.FUNCTIONAL_REVIEW_FIELDS) ? riskApi.FUNCTIONAL_REVIEW_FIELDS : [];
       const needsFunctionalReview = Array.isArray(risk.reasons) && risk.reasons.some(reason => functionalFields.includes(reason.field));
-      const manualCopy = needsFunctionalReview ? '<b>基础活动能力需要人工审核</b><span>当前试用不会自动生成计划；请先复核日常活动限制与适合的训练起点。</span>' : '<b>需要人工审核</b><span>在获得人工复核前，不进入计划生成。</span>';
-      const routeCopy = risk.level === 'stop' ? '<b>暂不进入自动计划</b><span>你的答案触发了停止条件。请停止自动训练路由，并向医生或与该情况匹配的合格专业人员咨询；如有紧急症状请联系急救服务。</span>' : risk.level === 'manual_review' ? manualCopy : !evaluation.adult ? '<b>16岁以下需要人工审核</b><span>当前不会自动生成计划，请先完成适龄人工复核。</span>' : risk.level === 'conservative' ? '<b>可以保守起步</b><span>首周将采用更低负荷和更谨慎的进阶边界。</span>' : '<b>可以进入常规生成流程</b><span>当前筛查未触发额外限制；训练中仍需持续观察身体信号。</span>';
+      const manualCopy = needsFunctionalReview ? '<b>基础活动能力需要人工确认</b><span>当前试用不会自动生成计划；请先确认日常活动限制与适合的训练起点。</span>' : '<b>需要人工确认</b><span>确认前不会进入计划生成。</span>';
+      const routeCopy = risk.level === 'stop' ? '<b>暂不进入自动计划</b><span>你的答案触发了停止条件。请停止自动训练路由，并向医生或与该情况匹配的合格专业人员咨询；如有紧急症状请联系急救服务。</span>' : risk.level === 'manual_review' ? manualCopy : !evaluation.adult ? '<b>16岁以下需要人工确认</b><span>当前不会自动生成计划，请先完成适龄确认。</span>' : risk.level === 'conservative' ? '<b>可以保守起步</b><span>首周将采用更低负荷和更谨慎的进阶边界。</span>' : '<b>可以进入常规生成流程</b><span>当前筛查未触发额外限制；训练中仍需持续观察身体信号。</span>';
       return `<div class="ob-route ${statusClass}" data-risk-level="${risk.level}">${routeCopy}</div><div class="ob-summary">${summary.map(row => `<div><span>${esc(row.label)}</span><b>${esc(row.value)}</b></div>`).join('')}</div><div class="ob-edit-links"><button type="button" data-go="1">修改基本情况</button><button type="button" data-go="4">修改时间</button><button type="button" data-go="5">修改器械</button><button type="button" data-go="6">修改疼痛与动作能力</button><button type="button" data-go="7">修改安全筛查</button></div>${risk.reasons && risk.reasons.length ? `<details class="ob-reasons"><summary>查看安全路由依据（${risk.reasons.length}项）</summary><ul>${risk.reasons.map(reason => `<li>${esc(reason.message)}</li>`).join('')}</ul></details>` : ''}<label class="ob-consent"><input type="checkbox" name="finalConfirmed" value="true"${intake.finalConfirmed === true ? ' checked' : ''}><span><b>我确认</b>以上答案准确，并理解此结果不是诊断；最终确认后才保存到本机。</span></label>`;
     }
 

@@ -69,7 +69,7 @@ test('居家缺少弹力带时原子受限，不生成或开放训练计划', as
     equipment: ['stable_chair', 'exercise_mat', 'wall'],
     allowSettingSwap: 'no'
   });
-  await expect(page.locator('.cap-result')).toContainText('需要人工复核');
+  await expect(page.locator('.cap-result')).toContainText('需要确认');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('move28-pilot-v1')));
   expect(state.plan).toBeNull();
   await finishSavedScreen(page);
