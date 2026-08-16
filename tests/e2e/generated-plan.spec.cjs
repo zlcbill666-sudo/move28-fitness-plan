@@ -77,6 +77,18 @@ test('generated-plan 正常问卷生成后等待计划确认，放行后持久�
   await expect(page.locator('.plan-explanation')).toContainText('安全与能力规则支持标准起步');
   await expect(page.locator('.plan-explanation')).toContainText('健身房场景');
   await expect(page.locator('.plan-explanation')).toContainText('不展示原始健康问卷答案');
+  await expect(page.locator('.short-workout-card')).toContainText('没时间版');
+  await expect(page.locator('.short-workout-card')).toContainText('不点“完成本节”');
+  await expect(page.locator('.achievement-strip')).toContainText('本周完成');
+  await expect(page.locator('.four-week-map .week-map-card')).toHaveCount(4);
+  await expect(page.locator('.four-week-map')).toContainText('第1周 · 适应');
+  await expect(page.locator('.four-week-map')).toContainText('第4周 · 巩固');
+  await expect(page.locator('.exercise-filters')).toContainText('部位');
+  await page.locator('.exercise-filters select').nth(0).selectOption('upper');
+  await expect(page.locator('#exerciseGrid')).toContainText('推胸机');
+  await expect(page.locator('#exerciseGrid')).not.toContainText('坐姿腿举');
+  await page.getByRole('button',{name:'重置筛选'}).click();
+  await expect(page.locator('#exerciseGrid')).toContainText('坐姿腿举');
   await expect(page.locator('.plan-explanation')).not.toContainText('pregnancyPostpartum');
   await expect(page.locator('.plan-explanation')).not.toContainText('chestSymptoms');
   await expect(page.locator('.plan-explanation')).not.toContainText('20_40');
@@ -193,7 +205,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
     if(index===expected.actions.length-1)await advanceGuideToReviewedDuration(page);
     await page.locator('#guideNext').click();
   }
-  await expect(page.getByRole('heading',{name:'这节训练感觉如何？'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'今天感觉如何？'})).toBeVisible();
   const summary=page.locator('.guide-completion');
   await expect(summary).toBeVisible();await expect(summary.getByText('本节已完成')).toBeVisible();
   await expect(summary.locator('.guide-completion-actions li')).toHaveCount(expected.actions.length);
@@ -201,7 +213,7 @@ test('generated-plan 跟练严格消费session.actions，每屏一个动作并�
   await expect(summary.locator('.guide-completion-metrics')).toContainText(/实际时长\s*\d+(?:秒|分钟|分\d+秒)/);
   await expect(summary.locator('.guide-completion-next')).toContainText(expected.next);
   await expect(summary).not.toContainText(/kcal|千卡|消耗热量/i);
-  await page.getByRole('button',{name:'刚刚好'}).click();
+  await page.getByRole('button',{name:'刚好'}).click();
   await expect(page.locator('#guideModal')).toHaveAttribute('aria-hidden','true');
   const record=await page.evaluate(()=>{
     const state=JSON.parse(localStorage.getItem('move28-pilot-v1'));
@@ -361,7 +373,7 @@ test('generated-plan 安全顺延只改变本次日历显示并继续使用原se
   await page.getByRole('button',{name:'错过了这节？查看安全顺延'}).click();
   const preview=page.locator('.schedule-shift-preview');
   await expect(preview).toContainText('第1周周一 → 第1周周五');
-  await expect(preview).toContainText('动作、剂量、完成状态和人工审核处方不会改变');
+  await expect(preview).toContainText('动作、剂量、完成状态和已确认安排不会改变');
   await expect(preview.locator('input,select,textarea')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'仅更新日历显示'})).toBeVisible();
   await expect(page.getByRole('button',{name:'关闭',exact:true})).toBeVisible();

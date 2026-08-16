@@ -37,18 +37,25 @@ const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'�
 const SHIFT_UNAVAILABLE_LABELS={NO_SAFE_SHIFT_DAY:'当前没有符合训练间隔与可用日规则的安全空位。',SESSION_ALREADY_COMPLETED:'这节训练已经完成，不需要顺延显示。',CYCLE_COMPLETE:'已到4周计划周期末，无法继续顺延显示。',INVALID_SHIFT_INPUT:'当前训练节无法生成安全顺延建议。'};
 const WORKFLOW_STEPS=[{key:'questionnaire',label:'安全问卷'},{key:'capability',label:'能力校准'},{key:'review',label:'计划确认'},{key:'training',label:'今日训练'}];
 const WORKFLOW_INFO={
-  questionnaire:{title:'先完成安全问卷',detail:'约3分钟，结果只保存在当前浏览器。',index:0,tone:'current'},
+  questionnaire:{title:'今天先完成3分钟问卷',detail:'回答有限选项，生成只保存在当前浏览器的4周计划。',index:0,tone:'current'},
   capability_required:{title:'继续完成能力校准',detail:'五项非极限检查均可跳过；完成前不会生成可训练计划。',index:1,tone:'current'},
   plan_required:{title:'计划需要确认',detail:'档案已保存，但当前还没有可以直接开始训练的完整计划。',index:2,tone:'attention'},
-  human_review:{title:'等待计划确认',detail:'4周计划已生成；确认完成前训练入口保持关闭。',index:2,tone:'current'},
+  human_review:{title:'下一步：发给确认人',detail:'4周计划已生成；确认完成前训练入口保持关闭。',index:2,tone:'current'},
   risk_blocked:{title:'安全筛查暂不开放训练',detail:'请根据页面提示修改问卷，或先咨询合适的专业人员。',index:0,tone:'attention'},
   capability_blocked:{title:'能力校准需要确认',detail:'当前结果不开放自动训练，请先重新筛查或完成指定确认。',index:1,tone:'attention'},
   plan_stale:{title:'计划需要重新确认',detail:'档案已变化，旧计划已失效；重新确认问卷与能力后再生成。',index:2,tone:'attention'},
   rescreen_required:{title:'需要重新安全筛查',detail:'旧计划已经失效；重新确认前不会恢复训练入口。',index:0,tone:'attention'},
   invalid:{title:'本机状态无法验证',detail:'当前数据不会被当作可训练计划，请重新完成相应步骤。',index:-1,tone:'attention'},
-  ready:{title:'今日训练可开始',detail:'计划已完成确认；开始前仍会检查今天的状态。',index:3,tone:'current'},
+  ready:{title:'今天该练什么',detail:'计划已完成确认；开始前仍会检查今天的状态。',index:3,tone:'current'},
   cycle_complete:{title:'4周训练周期已完成',detail:'本周期全部训练已经记录完成；不会自动创建第5周或重新开放已完成训练。',index:3,tone:'done'}
 };
+const REVIEW_MESSAGE='我已生成 Move28 4周训练计划，请帮我确认动作、器械和训练量是否适合我。确认后我再开始训练。';
+const WEEK_MAP_META={1:{label:'适应',detail:'熟悉动作与节奏，只求稳定开始。'},2:{label:'稳定',detail:'把训练节奏固定下来，慢慢增加有氧时间。'},3:{label:'增强',detail:'在无痛和可控前提下，小幅增加训练量。'},4:{label:'巩固',detail:'保持执行，完成后先复盘再进入下一轮。'}};
+const BODY_FILTERS=[['all','全部部位'],['lower','下肢'],['upper','上肢'],['core','核心'],['cardio','有氧/步行'],['mobility','热身/拉伸']];
+const EQUIPMENT_FILTERS=[['all','全部器械'],['home_basic','椅子/墙面'],['band','弹力带'],['mat','地面垫'],['gym_machine','健身房器械'],['cardio_machine','跑台/椭圆']];
+const DIFFICULTY_FILTERS=[['all','全部难度'],['1','难度1'],['2','难度2'],['3','难度3']];
+const RISK_FILTERS=[['all','全部提示'],['low','常规注意'],['has_note','有风险提示'],['no_floor','不含地面动作']];
+const EXCLUSION_LABELS={deep_knee_bend:'深膝屈',overhead:'过头动作',floor:'地面动作',single_leg:'单脚稳定',hinge:'髋铰链'};
 function workflowStageForMode(mode,requested){
   if(mode==='generated')return'ready';if(mode==='demo')return'questionnaire';if(mode==='stale')return requested==='plan_stale'?'plan_stale':'rescreen_required';if(mode==='invalid')return'invalid';
   if(mode==='blocked')return requested==='capability_blocked'?'capability_blocked':'risk_blocked';
@@ -59,6 +66,37 @@ function workflowStepState(stage,index){
   const info=WORKFLOW_INFO[stage]||WORKFLOW_INFO.invalid;if(info.index<0)return index===0?'attention':'locked';
   if(index<info.index)return'done';if(index===info.index)return info.tone;return'locked';
 }
+function copyTextFallback(text){
+  try{const doc=root.document;if(!doc||typeof doc.createElement!=='function')return false;const box=doc.createElement('textarea');box.value=text;box.setAttribute('readonly','');box.style.position='fixed';box.style.left='-9999px';box.style.top='0';doc.body.appendChild(box);box.select();const ok=doc.execCommand&&doc.execCommand('copy');box.remove();return Boolean(ok)}catch(_error){return false}
+}
+function copyReviewMessage(){
+  const done=ok=>Move28.ui.showToast?.(ok?'确认消息已复制':'复制失败，请手动复制确认消息');
+  try{if(root.navigator&&root.navigator.clipboard&&typeof root.navigator.clipboard.writeText==='function'){root.navigator.clipboard.writeText(REVIEW_MESSAGE).then(()=>done(true)).catch(()=>done(copyTextFallback(REVIEW_MESSAGE)));return true}}
+  catch(_error){}
+  const ok=copyTextFallback(REVIEW_MESSAGE);done(ok);return ok;
+}
+function launchOnboarding(){const start=$('#onboardingStart');if(start&&typeof start.click==='function'){start.click();return true}return false}
+function downloadReviewFile(){if(Move28.reviewHandoffController&&typeof Move28.reviewHandoffController.download==='function'){Move28.reviewHandoffController.download();return true}if(root.location)root.location.hash='review';return false}
+function refreshLocalState(){if(root.location&&typeof root.location.reload==='function')root.location.reload()}
+function bindReviewStepActions(scope){
+  const rootNode=scope||root.document;if(!rootNode||typeof rootNode.querySelectorAll!=='function')return;
+  rootNode.querySelectorAll('[data-review-copy]').forEach(button=>{button.onclick=copyReviewMessage});
+  rootNode.querySelectorAll('[data-review-download]').forEach(button=>{button.onclick=downloadReviewFile});
+  rootNode.querySelectorAll('[data-review-refresh]').forEach(button=>{button.onclick=refreshLocalState});
+}
+function reviewStepsMarkup(){return `<div class="review-steps today-review-steps" aria-label="计划确认三步"><article><b>1</b><span>复制确认消息</span><small>先发给确认人，说明计划已生成。</small></article><article><b>2</b><span>下载确认文件</span><small>确认人只看必要摘要，不看原始健康答案。</small></article><article><b>3</b><span>确认后刷新</span><small>通过后回到同一浏览器刷新状态。</small></article></div><div class="review-message-sample">${esc(REVIEW_MESSAGE)}</div><div class="day-controls review-day-controls"><button class="btn primary" type="button" data-review-copy>复制确认消息</button><button class="btn" type="button" data-review-download>下载确认文件</button><button class="btn" type="button" data-review-refresh>确认后刷新</button></div>`}
+function renderPrimaryActionDock(){
+  const dock=$('#primaryActionDock');if(!dock)return;dock.hidden=false;dock.dataset.stage=planContext.workflowStage;dock.innerHTML='';
+  const set=(html,bind)=>{dock.innerHTML=html;if(typeof bind==='function')bind(dock)};
+  if(planContext.mode==='generated'){
+    const session=selectedGeneratedSession();
+    if(session){set(`<div><small>今日任务</small><b>${esc(generatedSessionLabel(session.intent))}</b></div><button class="dock-primary" type="button" data-session-id="${esc(session.id)}">开始今日</button>`,scope=>{const button=scope.querySelector('button');if(button)button.onclick=()=>root.openSessionReadiness?root.openSessionReadiness(button.dataset.sessionId):Move28.openSessionReadiness?.(button.dataset.sessionId)});return}
+    set('<div><small>4周计划</small><b>本周期已完成</b></div><a class="dock-primary" href="#weeks">查看四周记录</a>');return;
+  }
+  if(planContext.workflowStage==='human_review'){dock.hidden=true;return}
+  if(planContext.mode==='demo'){set('<div><small>开始前</small><b>3分钟生成4周计划</b></div><button class="dock-primary" type="button">开始问卷</button>',scope=>{const button=scope.querySelector('button');if(button)button.onclick=launchOnboarding});return}
+  set(`<div><small>当前状态</small><b>${esc((WORKFLOW_INFO[planContext.workflowStage]||WORKFLOW_INFO.invalid).title)}</b></div><button class="dock-primary" type="button">重新处理</button>`,scope=>{const button=scope.querySelector('button');if(button)button.onclick=launchOnboarding});
+}
 function renderWorkflowStatus(){
   const slot=$('#workflowStatus');if(!slot)return;const stage=planContext.workflowStage,info=WORKFLOW_INFO[stage]||WORKFLOW_INFO.invalid;
   slot.dataset.stage=stage;slot.className=`workflow-status workflow-${info.tone}`;
@@ -68,8 +106,8 @@ function renderPendingReviewHero(){
   const pending=planContext.workflowStage==='human_review',defaultHero=root.document&&root.document.querySelector('.hero:not(.pending-review-hero)');
   const pendingHero=$('#pendingReviewHero'),refresh=$('#pendingReviewRefresh');
   if(defaultHero)defaultHero.hidden=pending;
-  if(pendingHero)pendingHero.hidden=!pending;
-  if(refresh)refresh.onclick=()=>{if(root.location&&typeof root.location.reload==='function')root.location.reload()};
+  if(pendingHero){pendingHero.hidden=!pending;if(pending)bindReviewStepActions(pendingHero)}
+  if(refresh)refresh.onclick=refreshLocalState;
 }
 function applyAppMode(){const body=root.document&&root.document.body;if(body)body.classList.toggle('app-mode-generated',planContext.mode==='generated')}
 function dayClass(t){return /力量/.test(t)?'strength':/有氧/.test(t)?'cardio':'recovery'}
@@ -136,9 +174,16 @@ function explanationMarkup(explanation){
   const duration=explanation.durationRange.min===explanation.durationRange.max?`${explanation.durationRange.min}分钟`:`${explanation.durationRange.min}–${explanation.durationRange.max}分钟`;
   const weeklySessions=explanation.weeklySessionRange.min===explanation.weeklySessionRange.max?`每周${explanation.weeklySessionRange.min}节`:`每周${explanation.weeklySessionRange.min}–${explanation.weeklySessionRange.max}节`;
   const reasons=explanation.reasonLabels.length?`<ul>${explanation.reasonLabels.map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:'<p>五项能力检查未触发动作降级；仍以无痛、动作可控和停止信号优先。</p>';
-  return `<details class="plan-explanation"><summary><span>为什么这样安排</span><small>查看依据</small></summary><div class="plan-explanation-body"><div class="plan-explanation-facts"><span>${esc(strategy)}</span><span>${esc(setting)}场景</span><span>${esc(weeklySessions)}</span><span>${esc(duration)}/节</span></div>${reasons}<p class="plan-explanation-note">这里只显示安全与能力规则形成的受控结论，不展示原始健康问卷答案。</p></div></details>`;
+  return `<details class="plan-explanation"><summary><span>为什么这样安排</span><small>安全依据，不展示原始答案</small></summary><div class="plan-explanation-body"><div class="explanation-cards"><article><b>起点</b><span>${esc(strategy)}</span></article><article><b>频率</b><span>${esc(weeklySessions)}</span></article><article><b>时长</b><span>${esc(duration)}/节</span></article><article><b>场景</b><span>${esc(setting)}场景</span></article></div><div class="plan-explanation-facts"><span>RPE 以能控制动作为先</span><span>第1周先适应</span><span>疼痛与停止信号优先</span></div>${reasons}<p class="plan-explanation-note">这里只显示安全与能力规则形成的受控结论，不展示原始健康问卷答案。</p></div></details>`;
 }
 function sessionRpeLabel(actions){let minimum=null,maximum=null;for(let index=0;index<actions.length;index+=1){const value=actions[index]&&actions[index].rpe;if(typeof value!=='number'||!Number.isFinite(value))continue;minimum=minimum===null?value:Math.min(minimum,value);maximum=maximum===null?value:Math.max(maximum,value)}return minimum===null?'RPE —':minimum===maximum?`RPE ${minimum}`:`RPE ${minimum}–${maximum}`}
+function completionRecords(){const records=safeObjectValues(planContext.logs||{}),output=[];for(let index=0;index<records.length;index+=1){const record=records[index];if(record&&record.planId===planContext.plan?.id&&record.status==='completed'&&typeof record.sessionId==='string')output.push(record)}return output}
+function completionDateStreak(records){const unique=[];for(let index=0;index<records.length;index+=1){const at=records[index]&&records[index].completedAt;if(typeof at==='string'&&/^\d{4}-\d{2}-\d{2}/.test(at)){const day=at.slice(0,10);if(!unique.includes(day))unique.push(day)}}unique.sort().reverse();if(!unique.length)return 0;let streak=1;for(let index=1;index<unique.length;index+=1){const previous=Date.parse(`${unique[index-1]}T00:00:00Z`),current=Date.parse(`${unique[index]}T00:00:00Z`);if(Number.isFinite(previous)&&Number.isFinite(current)&&Math.round((previous-current)/86400000)===1)streak+=1;else break}return streak}
+function completionStats(session){const sessions=generatedSessions(),completed=completedSessionIds(),records=completionRecords(),week=session?generatedSessionWeek(session.id):null;let weekDone=0,weekTotal=0;if(week&&safeArrayIsArray(week.sessions)){weekTotal=week.sessions.length;for(let index=0;index<week.sessions.length;index+=1)if(safeSetHas(completed,week.sessions[index].id))weekDone+=1}const done=sessions.filter(item=>safeSetHas(completed,item.id)).length,total=sessions.length;return{done,total,pct:total?Math.round(done/total*100):0,weekDone,weekTotal,streak:completionDateStreak(records)}}
+function achievementMarkup(stats){const streakLabel=stats.streak>1?`${stats.streak}天`:(stats.done>0?'已开始':'从今天开始'),encouragement=stats.done===0?'先完成第一节就很好；不和别人比，只看自己有没有开始。':stats.done<stats.total?'保持这种节奏，能完成就记录，不舒服就停止。':'4周已经完成，先复盘确认，再决定下一轮。';return `<div class="achievement-strip" aria-label="轻量成就"><article><span>本周完成</span><b>${stats.weekDone}/${stats.weekTotal||0}</b></article><article><span>累计完成</span><b>${stats.done}/${stats.total||0}</b></article><article><span>连续行动</span><b>${esc(streakLabel)}</b></article><p>已完成 ${stats.done}/${stats.total||0} · ${esc(encouragement)}</p></div>`}
+function shortVersionMarkup(session){const first=session.actions&&session.actions[0],name=first?(trustedCatalog.find(item=>item.id===first.exerciseId)?.name||first.exerciseId):'第一个动作';return `<div class="short-workout-card" data-short-version><div><span>没时间版</span><h4>只做简短安全版</h4><p>时间不够时不要自行加速或跳高强度；可以只做下面 3 件事，并在每日追踪记为“部分完成”。</p></div><ol><li>2分钟轻松热身或慢走，确认没有停止信号。</li><li>${esc(name)} 只做 1 组或 2 分钟，RPE 控制在 4 以下。</li><li>1–2分钟放松；任何不舒服都直接停止，不点“完成本节”。</li></ol></div>`}
+function weekMeta(number){return WEEK_MAP_META[number]||{label:'计划',detail:'按确认后的四周计划执行。'}}
+function weekMapMarkup(completed){if(!planContext.plan||!safeArrayIsArray(planContext.plan.weeks))return'';const currentSessionId=state.currentSessionId;return `<div class="four-week-map" aria-label="四周训练地图">${planContext.plan.weeks.map(week=>{const meta=weekMeta(week.number),sessions=safeArrayIsArray(week.sessions)?week.sessions:[];let done=0,hasCurrent=false;const dots=sessions.map(session=>{const isDone=safeSetHas(completed,session.id),isCurrent=session.id===currentSessionId&&!isDone;done+=isDone?1:0;hasCurrent=hasCurrent||isCurrent;const tone=isDone?'done':isCurrent?'today':session.intent==='recovery'?'recovery':'pending';return `<span class="week-dot ${tone}" title="${esc(WEEKDAY_LABELS[session.weekday]||session.weekday)} · ${esc(generatedSessionLabel(session.intent))}"></span>`}).join('');const cardState=done===sessions.length?'completed':hasCurrent||week.number===state.currentWeek?'current':'pending';return `<article class="week-map-card ${cardState}" data-week-map="${week.number}"><span>第${week.number}周 · ${esc(meta.label)}</span><b>${done}/${sessions.length}</b><p>${esc(meta.detail)}</p><div class="week-map-dots">${dots}</div></article>`}).join('')}</div>`}
 function renderGeneratedToday(){
   const session=selectedGeneratedSession();
   if(!session){
@@ -146,24 +191,25 @@ function renderGeneratedToday(){
     $('#todayCard').innerHTML='<div class="today-content"><span class="chip">计划受限</span><h3>暂未生成可执行计划</h3><p>请修改问卷或等待指定确认；系统不会用示例动作替代你的计划。</p></div>';return
   }
   state.currentSessionId=session.id;
-  const sessions=generatedSessions(),completed=completedSessionIds(),done=sessions.filter(item=>safeSetHas(completed,item.id)).length,pct=Math.round(done/sessions.length*100);
-  const week=generatedSessionWeek(session.id);
+  const stats=completionStats(session),completed=completedSessionIds(),week=generatedSessionWeek(session.id);
   const isCompleted=safeSetHas(completed,session.id),actionNames=session.actions.map(action=>trustedCatalog.find(item=>item.id===action.exerciseId)?.name||action.exerciseId),display=isCompleted?null:displayedSchedule(session);
   const displayedWeek=display?.weekNumber||week.number,displayedWeekday=display?.weekday||session.weekday,settingLabel=session.setting==='gym'?'健身房':'居家',rpeLabel=sessionRpeLabel(session.actions);
   const shiftBadge=display?`<span class="chip shift-display-badge">顺延显示 · 原${esc(WEEKDAY_LABELS[display.originalWeekday])}</span>`:'';
   const shiftControl=display?'<button class="btn shift-display-restore" type="button" onclick="restoreScheduleShiftDisplay()">恢复原日历</button>':(!isCompleted&&!planContext.shiftDisplay?'<button class="btn shift-preview-open" type="button" onclick="previewScheduleShift()">错过了这节？查看安全顺延</button>':'');
   const startControl=isCompleted?'<span class="chip session-complete-status">本节已完成</span>':`<button class="btn primary today-start" data-session-id="${esc(session.id)}" onclick="openSessionReadiness(this.dataset.sessionId)">▶ 开始今天训练</button>`;
   const shiftPanel=isCompleted?'':shiftPanelMarkup(session);
-  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${displayedWeek}周</span><strong>${String(displayedWeek).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[displayedWeekday]||displayedWeekday)}</span>${shiftBadge}<span class="chip">已确认</span></div><h3>${generatedSessionLabel(session.intent)}</h3><div class="today-summary-grid"><div data-today-metric="duration"><small>预计时长</small><strong>${session.estimatedMinutes}分钟</strong></div><div data-today-metric="actions"><small>本节安排</small><strong>${session.actions.length}个动作</strong></div><div data-today-metric="setting"><small>训练地点</small><strong>${settingLabel}</strong></div><div data-today-metric="rpe"><small>计划强度</small><strong>${rpeLabel}</strong></div></div><div class="day-controls">${startControl}${shiftControl}</div><div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div>${shiftPanel}${explanationMarkup(planContext.explanation)}<div class="progress-wrap"><div class="progress-line"><i style="width:${pct}%"></i></div><div class="progress-text">已完成 ${done}/${sessions.length} 节 · ${pct}%</div></div><span class="tiny-help">动作和剂量已经过校验；跟练中每屏只显示一个确定动作。</span></div>`;
+  $('#todayCard').innerHTML=`<div class="today-day"><span>USER PLAN / 第${displayedWeek}周</span><strong>${String(displayedWeek).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">${esc(WEEKDAY_LABELS[displayedWeekday]||displayedWeekday)}</span>${shiftBadge}<span class="chip">已确认</span></div><h3>${generatedSessionLabel(session.intent)}</h3><div class="today-summary-grid"><div data-today-metric="duration"><small>预计时长</small><strong>${session.estimatedMinutes}分钟</strong></div><div data-today-metric="actions"><small>本节安排</small><strong>${session.actions.length}个动作</strong></div><div data-today-metric="setting"><small>训练地点</small><strong>${settingLabel}</strong></div><div data-today-metric="rpe"><small>计划强度</small><strong>${rpeLabel}</strong></div></div><div class="day-controls">${startControl}${shiftControl}</div>${achievementMarkup(stats)}<div class="today-block"><div class="label">本节固定动作</div><div class="today-value">${actionNames.map(esc).join(' · ')}</div></div>${shortVersionMarkup(session)}${shiftPanel}${explanationMarkup(planContext.explanation)}</div>`;
 }
 function renderDemoToday(){const d=DATA.days[state.currentDay-1],p=legacyProgress();$('#todayCard').innerHTML=`<div class="today-day"><span>只读示例 / 第${d.week}周</span><strong>${String(d.day).padStart(2,'0')}</strong></div><div class="today-content"><div class="today-top"><span class="chip">示例计划</span><span class="chip">${esc(d.weekday)} · ${esc(d.place)}</span><span class="chip">${esc(d.duration)}</span></div><h3>${esc(d.type)}</h3><div class="today-grid"><div class="today-block"><div class="label">热身与力量</div><div class="today-value">${esc(d.strength)}</div></div><div class="today-block"><div class="label">有氧 / 步行</div><div class="today-value">${esc(d.cardio)}</div></div></div><div class="progress-text">示例只用于了解结构，不会写入训练记录。旧示例记录：${p.done}/28。</div><div class="day-controls"><button class="btn" onclick="moveDay(-1)">← 前一天</button><button class="btn" onclick="moveDay(1)">后一天 →</button></div></div>`}
 function renderToday(){
-  if(planContext.mode==='generated'){renderGeneratedToday();return}
-  if(planContext.mode==='demo'){renderDemoToday();return}
-  if(planContext.workflowStage==='human_review'){
-    $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">等待确认</span><h3>计划已生成，训练暂未开放</h3><p>${esc(planContext.message||'计划确认完成前不会开放训练入口。')}</p><p class="tiny-help">联系指定确认人或备用联系人；通过后请在同一台设备和同一个浏览器刷新页面。</p></div>`;return
+  if(planContext.mode==='generated')renderGeneratedToday();
+  else if(planContext.mode==='demo')renderDemoToday();
+  else if(planContext.workflowStage==='human_review'){
+    $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">等待确认</span><h3>计划已生成，训练暂未开放</h3><p>${esc(planContext.message||'计划确认完成前不会开放训练入口。')}</p><p class="tiny-help">按下面 3 步交给确认人处理；通过后请在同一台设备和同一个浏览器刷新页面。</p>${reviewStepsMarkup()}</div>`;
+    bindReviewStepActions($('#todayCard'));
   }
-  $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要确认'}</span><h3>${planContext.mode==='stale'?'当前计划不可继续训练':'当前没有可执行计划'}</h3><p>${esc(planContext.message||'请修改问卷或等待指定确认；当前不会开放训练入口。')}</p></div>`
+  else $('#todayCard').innerHTML=`<div class="today-content"><span class="chip">${planContext.mode==='stale'?'计划已失效':'需要确认'}</span><h3>${planContext.mode==='stale'?'当前计划不可继续训练':'当前没有可执行计划'}</h3><p>${esc(planContext.message||'请修改问卷或等待指定确认；当前不会开放训练入口。')}</p></div>`;
+  renderPrimaryActionDock();
 }
 function persistLocal(key,value){try{storage.setItem(key,value);return true}catch(_error){showToast('本机保存失败，请检查浏览器存储权限后重试');return false}}
 Move28.moveDay=n=>{if(planContext.mode!=='demo')return;const next=Math.min(28,Math.max(1,state.currentDay+n));if(persistLocal('move28-current-day',next))state.currentDay=next;renderToday()};
@@ -172,7 +218,7 @@ function renderWeeks(){
     const completed=completedSessionIds();
     $('#weekTabs').innerHTML=planContext.plan.weeks.map(week=>`<button class="tab ${week.number===state.currentWeek?'active':''}" onclick="pickWeek(${week.number})">第${week.number}周</button>`).join('');
     const week=planContext.plan.weeks[state.currentWeek-1];
-    $('#weekView').innerHTML=`<div class="week-focus"><span>本周重点</span>${esc(week.focus)}</div><div class="days-grid generated-days">${week.sessions.map(session=>{const isCompleted=safeSetHas(completed,session.id),display=isCompleted?null:displayedSchedule(session),weekday=display?.weekday||session.weekday;return`<article class="day-card ${generatedSessionClass(session.intent)} ${isCompleted?'completed':''}" data-session-id="${esc(session.id)}"><div class="num">${esc(WEEKDAY_LABELS[weekday]||weekday)}</div>${display?`<div class="type shift-display-badge">顺延显示 · 原${esc(WEEKDAY_LABELS[display.originalWeekday])}</div>`:''}<h3>${generatedSessionLabel(session.intent)}</h3><div class="type">${session.estimatedMinutes}分钟 · ${isCompleted?'已完成':'待完成'}</div><button class="btn" type="button" data-session-id="${esc(session.id)}" onclick="selectGeneratedSession(this.dataset.sessionId)">查看此节</button></article>`}).join('')}</div>`;
+    $('#weekView').innerHTML=`${weekMapMarkup(completed)}<div class="week-focus"><span>第${week.number}周 · ${esc(weekMeta(week.number).label)}</span>${esc(week.focus)}</div><div class="days-grid generated-days">${week.sessions.map(session=>{const isCompleted=safeSetHas(completed,session.id),display=isCompleted?null:displayedSchedule(session),weekday=display?.weekday||session.weekday,status=isCompleted?'已完成':session.intent==='recovery'?'恢复/休息':'待完成';return`<article class="day-card ${generatedSessionClass(session.intent)} ${isCompleted?'completed':''}" data-session-id="${esc(session.id)}"><div class="num">${esc(WEEKDAY_LABELS[weekday]||weekday)}</div>${display?`<div class="type shift-display-badge">顺延显示 · 原${esc(WEEKDAY_LABELS[display.originalWeekday])}</div>`:''}<h3>${generatedSessionLabel(session.intent)}</h3><div class="type">${session.estimatedMinutes}分钟 · ${status}</div><button class="btn" type="button" data-session-id="${esc(session.id)}" onclick="selectGeneratedSession(this.dataset.sessionId)">查看此节</button></article>`}).join('')}</div>`;
     return;
   }
   if(planContext.mode!=='demo'){$('#weekTabs').innerHTML='';$('#weekView').innerHTML=`<div class="week-focus"><span>计划受限</span>${esc(planContext.message||'没有可执行计划')}</div>`;return}
@@ -239,8 +285,17 @@ function exerciseMediaHtml(exercise){
   const title=presentation&&typeof presentation.title==='string'?presentation.title:'动作媒体暂不可用',message=presentation&&typeof presentation.message==='string'?presentation.message:'请仅按文字动作说明和安全提示执行。';
   return`<div class="exercise-media media-blocked" role="note" aria-label="${esc(exercise.name)}动作媒体未开放"><span>TEXT GUIDE</span><b>${esc(title)}</b><p>${esc(message)}</p></div>`;
 }
-function renderExercises(){const groups=['全部','力量A','力量B','有氧C'];$('#exerciseTabs').innerHTML=groups.map(g=>`<button class="tab ${g===state.exerciseFilter?'active':''}" onclick="pickExercise('${g}')">${g}</button>`).join('');const list=DATA.exercises.filter(e=>state.exerciseFilter==='全部'||e.groups.includes(state.exerciseFilter));$('#exerciseGrid').innerHTML=list.map(e=>`<article class="exercise">${exerciseMediaHtml(e)}<div class="exercise-body"><h3>${esc(e.name)}</h3><div class="tags">${e.groups.map(g=>`<span class="tag">${g}</span>`).join('')}</div><details class="detail" open><summary>起始姿势</summary><p>${esc(e.start)}</p></details><details class="detail"><summary>动作步骤</summary><p>${esc(e.steps)}</p></details><details class="detail"><summary>呼吸与节奏</summary><p>${esc(e.breath)}</p></details><details class="detail"><summary>常见错误</summary><p>${esc(e.errors)}</p></details><details class="detail"><summary>安全保护要点</summary><p class="danger-text">${esc(e.safety)}</p></details></div></article>`).join('')}
+function ensureExerciseFilterState(){if(!state.exerciseAreaFilter)state.exerciseAreaFilter='all';if(!state.exerciseEquipmentFilter)state.exerciseEquipmentFilter='all';if(!state.exerciseDifficultyFilter)state.exerciseDifficultyFilter='all';if(!state.exerciseRiskFilter)state.exerciseRiskFilter='all'}
+function exerciseArea(exercise){if(['horizontal_push','horizontal_pull'].includes(exercise.pattern))return'upper';if(['anti_rotation','anti_extension'].includes(exercise.pattern))return'core';if(['cardio','locomotion'].includes(exercise.pattern))return'cardio';if(exercise.pattern==='mobility')return'mobility';return'lower'}
+function exerciseEquipmentBucket(exercise,bucket){const equipment=exercise.equipment||[];if(bucket==='home_basic')return equipment.includes('stable_chair')||equipment.includes('wall');if(bucket==='band')return equipment.includes('resistance_band')||equipment.includes('cable_machine');if(bucket==='mat')return equipment.includes('exercise_mat');if(bucket==='gym_machine')return equipment.some(id=>/_machine$/.test(id)||id==='smith_machine');if(bucket==='cardio_machine')return equipment.includes('elliptical_trainer')||equipment.includes('treadmill')||equipment.includes('flat_walking_route');return true}
+function exerciseRiskBucket(exercise){return exercise.contraindications&&exercise.contraindications.length?'has_note':'low'}
+function exerciseRiskText(exercise){const tags=exercise.contraindications||[];return tags.length?`需注意：${tags.map(tag=>EXCLUSION_LABELS[tag]||tag).join('、')}`:'常规注意：以无痛范围和停止信号为准'}
+function exerciseFilterMatches(exercise){ensureExerciseFilterState();if(state.exerciseFilter!=='全部'&&!exercise.groups.includes(state.exerciseFilter))return false;if(state.exerciseAreaFilter!=='all'&&exerciseArea(exercise)!==state.exerciseAreaFilter)return false;if(state.exerciseEquipmentFilter!=='all'&&!exerciseEquipmentBucket(exercise,state.exerciseEquipmentFilter))return false;if(state.exerciseDifficultyFilter!=='all'&&String(exercise.difficulty)!==state.exerciseDifficultyFilter)return false;if(state.exerciseRiskFilter==='low'&&exerciseRiskBucket(exercise)!=='low')return false;if(state.exerciseRiskFilter==='has_note'&&exerciseRiskBucket(exercise)!=='has_note')return false;if(state.exerciseRiskFilter==='no_floor'&&(exercise.contraindications||[]).includes('floor'))return false;return true}
+function filterSelectMarkup(label,kind,value,options){return `<label>${esc(label)}<select onchange="setExerciseFilter('${kind}',this.value)">${options.map(option=>`<option value="${esc(option[0])}" ${option[0]===value?'selected':''}>${esc(option[1])}</option>`).join('')}</select></label>`}
+function renderExercises(){ensureExerciseFilterState();const groups=['全部','力量A','力量B','有氧C'];$('#exerciseTabs').innerHTML=`<div class="exercise-tab-row">${groups.map(g=>`<button class="tab ${g===state.exerciseFilter?'active':''}" onclick="pickExercise('${g}')">${g}</button>`).join('')}</div><div class="exercise-filters" aria-label="动作筛选">${filterSelectMarkup('部位','area',state.exerciseAreaFilter,BODY_FILTERS)}${filterSelectMarkup('器械','equipment',state.exerciseEquipmentFilter,EQUIPMENT_FILTERS)}${filterSelectMarkup('难度','difficulty',state.exerciseDifficultyFilter,DIFFICULTY_FILTERS)}${filterSelectMarkup('风险提示','risk',state.exerciseRiskFilter,RISK_FILTERS)}<button class="btn" type="button" onclick="clearExerciseFilters()">重置筛选</button></div>`;const list=DATA.exercises.filter(exerciseFilterMatches);$('#exerciseGrid').innerHTML=list.length?list.map(e=>`<article class="exercise" data-body-area="${exerciseArea(e)}" data-difficulty="${e.difficulty}">${exerciseMediaHtml(e)}<div class="exercise-body"><h3>${esc(e.name)}</h3><div class="tags">${e.groups.map(g=>`<span class="tag">${g}</span>`).join('')}<span class="tag">难度${e.difficulty}</span><span class="tag">${esc(exerciseRiskText(e))}</span></div><details class="detail" open><summary>起始姿势</summary><p>${esc(e.start)}</p></details><details class="detail"><summary>动作步骤</summary><p>${esc(e.steps)}</p></details><details class="detail"><summary>呼吸与节奏</summary><p>${esc(e.breath)}</p></details><details class="detail"><summary>常见错误</summary><p>${esc(e.errors)}</p></details><details class="detail"><summary>安全保护要点</summary><p class="danger-text">${esc(e.safety)}</p></details></div></article>`).join(''):`<div class="exercise-empty"><b>没有符合条件的动作</b><p>请减少筛选条件；系统不会临时展示未确认动作。</p></div>`}
 Move28.pickExercise=g=>{state.exerciseFilter=g;renderExercises()};
+Move28.setExerciseFilter=(kind,value)=>{ensureExerciseFilterState();if(kind==='area')state.exerciseAreaFilter=value;else if(kind==='equipment')state.exerciseEquipmentFilter=value;else if(kind==='difficulty')state.exerciseDifficultyFilter=value;else if(kind==='risk')state.exerciseRiskFilter=value;renderExercises()};
+Move28.clearExerciseFilters=()=>{state.exerciseAreaFilter='all';state.exerciseEquipmentFilter='all';state.exerciseDifficultyFilter='all';state.exerciseRiskFilter='all';renderExercises()};
 const inputSkip=new Set(['天数','周次','星期','计划训练']);
 function fieldType(label){if(/日期$/.test(label))return'date';if(/备注|异常症状/.test(label))return'textarea';if(/时间/.test(label))return'time';if(/完成状态/.test(label))return'status';if(/精力/.test(label))return'scale';return'number'}
 function renderDayList(){$('#dayList').innerHTML=DATA.days.map(d=>`<button class="day-pick ${d.day===state.trackDay?'active':''}" onclick="selectTrackDay(${d.day})">${String(d.day).padStart(2,'0')} · ${d.weekday}</button>`).join('')}
@@ -256,9 +311,9 @@ function exportCSV(){const hs=['天数','周次','星期','计划训练',...TRAC
 function clearTrack(){const b=$('#clearBtn');if(!state.clearArmed){state.clearArmed=true;b.textContent='再点一次确认';showToast(`再次点击即可清空第${state.trackDay}天`);clearTimeout(state.clearArmTimer);state.clearArmTimer=setTimeout(()=>{state.clearArmed=false;b.textContent='清空这天'},3000);return}state.clearArmed=false;clearTimeout(state.clearArmTimer);const next={...state.tracker};delete next[state.trackDay];if(!persistLocal(state.storeKey,JSON.stringify(next))){b.textContent='清空这天';return false}state.tracker=next;renderForm();renderOverview();renderToday();b.textContent='清空这天';showToast(`第${state.trackDay}天记录已清空`);return true}
 function renderSafety(){$('#safetyGrid').innerHTML=DATA.safety.map(x=>`<article class="safety-card"><h3>${esc(x.title)}</h3><div>${esc(x.text)}</div></article>`).join('')}
 function reveal(){const io=new root.IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.08});$$('.reveal').forEach(x=>io.observe(x))}
-const ui={setPlanContext,renderToday,renderWeeks,renderExercises,exerciseMediaHtml,renderDayList,renderForm,renderOverview,renderSafety,reveal,saveTrack,exportCSV,clearTrack,showToast};
+const ui={setPlanContext,renderToday,renderWeeks,renderExercises,exerciseMediaHtml,renderDayList,renderForm,renderOverview,renderSafety,reveal,saveTrack,exportCSV,clearTrack,showToast,copyReviewMessage,renderPrimaryActionDock,setExerciseFilter:Move28.setExerciseFilter,clearExerciseFilters:Move28.clearExerciseFilters};
 Object.assign(Move28.ui||{},ui);
-const actions={moveDay:Move28.moveDay,pickWeek:Move28.pickWeek,selectGeneratedSession:Move28.selectGeneratedSession,previewScheduleShift:Move28.previewScheduleShift,closeScheduleShiftPreview:Move28.closeScheduleShiftPreview,applyScheduleShiftDisplay:Move28.applyScheduleShiftDisplay,restoreScheduleShiftDisplay:Move28.restoreScheduleShiftDisplay,pickExercise:Move28.pickExercise,setStatus:Move28.setStatus,selectTrackDay:Move28.selectTrackDay,openTrack:Move28.openTrack};
+const actions={moveDay:Move28.moveDay,pickWeek:Move28.pickWeek,selectGeneratedSession:Move28.selectGeneratedSession,previewScheduleShift:Move28.previewScheduleShift,closeScheduleShiftPreview:Move28.closeScheduleShiftPreview,applyScheduleShiftDisplay:Move28.applyScheduleShiftDisplay,restoreScheduleShiftDisplay:Move28.restoreScheduleShiftDisplay,pickExercise:Move28.pickExercise,setExerciseFilter:Move28.setExerciseFilter,clearExerciseFilters:Move28.clearExerciseFilters,setStatus:Move28.setStatus,selectTrackDay:Move28.selectTrackDay,openTrack:Move28.openTrack};
 if(root.window===root)for(const name of Object.keys(actions))root[name]=actions[name];
 return Object.assign({},ui,actions);
 });

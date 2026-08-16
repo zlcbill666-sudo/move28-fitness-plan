@@ -186,7 +186,7 @@ test('17岁保留normal风险并进入常规生成流程', async ({ page }) => {
 
 test('明显肿胀与基础活动受限写入正式人工审核理由', async ({ page }) => {
   await open(page); await inject(page,{dailyActivityLimited:'yes'});
-  await expect(page.locator('[data-risk-level="manual_review"]')).toContainText('需要人工审核');
+  await expect(page.locator('[data-risk-level="manual_review"]')).toContainText('需要人工确认');
   const evaluation=await page.evaluate(()=>Move28.onboardingController.getState().evaluation);
   expect(evaluation.risk.level).toBe('manual_review');
   expect(evaluation.risk.reasons.some(reason=>reason.code==='dailyActivityLimited_reported')).toBe(true);

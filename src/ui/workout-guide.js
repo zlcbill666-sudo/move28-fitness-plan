@@ -32,7 +32,7 @@ let activeAdaptation=null,activeGuideSnapshot=null,guideStartedAtMs=null,guideCo
 const WEEKDAY_LABELS={mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
 function sessionIntentLabel(intent){return intent==='full_body_strength'?'全身力量':intent==='low_impact_cardio'?'低冲击有氧':intent==='recovery'?'恢复训练':'计划受限'}
 const STOP_REASONS=Object.freeze([['chest_pain_or_pressure','胸部不适或压迫感'],['near_faint_or_faint','明显晕厥感或已经晕厥'],['abnormal_shortness_of_breath','异常气短'],['sudden_severe_pain','突发剧痛'],['unable_to_bear_weight','无法承重'],['neurologic_or_consciousness_change','意识或神经异常']].map(Object.freeze));
-const FEEDBACK_OPTIONS=Object.freeze([['too_easy','轻松偏简单'],['appropriate','刚刚好'],['too_hard','太难了'],['pain','出现疼痛']].map(Object.freeze));
+const FEEDBACK_OPTIONS=Object.freeze([['too_easy','轻松'],['appropriate','刚好'],['too_hard','有点吃力'],['pain','不舒服']].map(Object.freeze));
 const SAFETY_RULE='胸部不适、晕厥感、异常气短、突发剧痛、无法承重、意识或神经异常时应立即停止，并按情况联系急救或合适的专业人员。';
 const nativeStructuredClone=typeof root.structuredClone==='function'?root.structuredClone.bind(root):null;
 const safeArrayIsArray=Array.isArray,safeGetPrototypeOf=Object.getPrototypeOf,safeGetOwnPropertyDescriptor=Object.getOwnPropertyDescriptor,safeObjectKeys=Object.keys,safeOwnKeys=Reflect.ownKeys;
@@ -209,7 +209,7 @@ function renderAction(){
   $('#guideTitle').textContent=`${WEEKDAY_LABELS[state.guideSession.weekday]||state.guideSession.weekday} · ${sessionIntentLabel(state.guideSession.intent)}`;
   $('#guideBar').style.width=`${(state.guideStep+1)/total*100}%`;
   const variantHtml=variantGuidance?`<section class="guide-variant"><b>受控变式 · ${esc(variantGuidance.label)}</b><p><strong>设置指导</strong>${esc(variantGuidance.setup)}</p><p><strong>幅度指导</strong>${esc(variantGuidance.range)}</p></section>`:'';
-  $('#guideBody').innerHTML=`<div class="guide-action" data-exercise-id="${esc(action.exerciseId)}">${guideMediaHtml(exercise)}<div class="guide-instruction"><span class="guide-phase">${state.guideSession.intent==='recovery'?'恢复训练':action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div>${variantHtml}<div class="guide-cues"><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)} 安全停止入口固定在底部，与下一步同时可见。</p></div></div></div>`;
+  $('#guideBody').innerHTML=`<div class="guide-action guide-action-focus" data-exercise-id="${esc(action.exerciseId)}">${guideMediaHtml(exercise)}<div class="guide-instruction"><div class="guide-focus-strip"><span>现在只做</span><b>第 ${state.guideStep+1} / ${total} 个动作</b></div><span class="guide-phase">${state.guideSession.intent==='recovery'?'恢复训练':action.phase==='main'?'力量训练':'低冲击有氧'}</span><h3>${esc(exercise.name)}</h3><div class="guide-dose">${esc(doseText(action))}</div><div class="guide-primary-cue"><b>这一轮只记住</b><span>${esc(exercise.cues.movement)}</span></div>${variantHtml}<div class="guide-cues" aria-label="动作细节"><div class="guide-cues-title">需要时再看细节</div><div class="guide-cue"><b>准备姿势</b>${esc(exercise.cues.setup)}</div><div class="guide-cue"><b>动作要领</b>${esc(exercise.cues.movement)}</div><div class="guide-cue"><b>呼吸节奏</b>${esc(exercise.cues.breathing)}</div><div class="guide-cue"><b>疼痛边界</b>${esc(exercise.cues.pain)}</div></div><div class="guide-runtime-safety"><p>${esc(SAFETY_RULE)} 安全停止入口固定在底部，与下一步同时可见。</p></div></div></div>`;
   setGuideFoot({label:'← 上一步',hidden:state.guideStep===0},{label:state.guideStep===total-1?'完成本节并记录 ✓':'完成此项，下一项 →'});
 }
 function renderExitConfirm(){
@@ -325,9 +325,9 @@ function completionSummaryHtml(){
 function renderFeedback(){
   const saving=state.guideMode==='feedback_saving',failed=state.guideMode==='feedback_failed';
   getWorkoutAudio().pause();updateMusicUI();
-  $('#guideEyebrow').textContent='WORKOUT FEEDBACK';$('#guideTitle').textContent='这节训练感觉如何？';$('#guideBar').style.width='100%';
+  $('#guideEyebrow').textContent='10 秒反馈';$('#guideTitle').textContent='这节训练感觉如何？';$('#guideBar').style.width='100%';
   const buttons=safeArrayJoin(safeArrayMap(FEEDBACK_OPTIONS,entry=>`<button class="btn${entry[0]==='pain'?' danger-outline':''}" type="button" onclick="submitWorkoutFeedback('${entry[0]}')"${saving?' disabled':''}>${esc(entry[1])}</button>`),'');
-  $('#guideBody').innerHTML=`${completionSummaryHtml()}<section class="guide-state guide-feedback"><h3>这节训练感觉如何？</h3><p>选择一个固定选项，帮助调整后续训练。</p>${failed?'<p class="guide-feedback-error" role="alert">反馈尚未保存，请检查本机存储后重试。</p>':''}<div class="guide-state-actions guide-feedback-options">${buttons}</div></section>`;
+  $('#guideBody').innerHTML=`${completionSummaryHtml()}<section class="guide-state guide-feedback"><h3>今天感觉如何？</h3><p>点一个选项即可保存；不舒服会优先触发重新安全筛查。</p>${failed?'<p class="guide-feedback-error" role="alert">反馈尚未保存，请检查本机存储后重试。</p>':''}<div class="guide-state-actions guide-feedback-options">${buttons}</div></section>`;
   setGuideFoot({label:'稍后反馈',hidden:false,disabled:saving},{label:'',hidden:true});
 }
 function renderGuide(){

@@ -46,7 +46,7 @@ test('today-workspace 从首次问卷到人工复核再到今日训练只开放�
   await expect(page.locator('.beginner-strip')).toBeHidden();
   await expect(workflow).toHaveAttribute('data-stage','ready');
   await expect(workflow.locator('[data-step="training"]')).toHaveAttribute('aria-current','step');
-  await expect(workflow).toContainText('今日训练可开始');
+  await expect(workflow).toContainText('今天该练什么');
   await expect(page.locator('#todayCard')).toContainText('全身力量');
   await expect(page.locator('#todayCard [data-today-metric="duration"]')).toContainText('分钟');
   await expect(page.locator('#todayCard [data-today-metric="actions"]')).toContainText('个动作');
