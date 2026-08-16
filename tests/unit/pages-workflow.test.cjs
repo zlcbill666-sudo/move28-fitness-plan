@@ -21,7 +21,7 @@ test('Pages workflow uses only official actions pinned to full commit SHAs',()=>
 test('Pages workflow tests and builds before uploading only dist',()=>{
   const ordered=[
     'run: npm ci',
-    'run: npm test',
+    'run: npm run test:release',
     'run: npm run build',
     'run: npm run test:artifact',
     'uses: actions/upload-pages-artifact@'

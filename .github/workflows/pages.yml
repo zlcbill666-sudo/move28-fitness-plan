@@ -32,8 +32,8 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Run release-safe tests
+        run: npm run test:release
 
       - name: Build the allowlisted participant runtime
         run: npm run build
